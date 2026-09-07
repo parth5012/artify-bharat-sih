@@ -1,0 +1,47 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.sqlite3
+*.db
+artify_bharat.db
+
+# Media storage
+media_storage/
+dist/
+build/
+*.egg-info/
+
+# Tests & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Android / Kotlin
+android/.gradle/
+android/build/
+android/*/build/
+android/local.properties
+android/*.iml
+android/*/*.iml
+android/.idea/
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+
+# Node / Web Portal
+web-portal/node_modules/
+web-portal/dist/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.env
+extracted_playbook.txt
