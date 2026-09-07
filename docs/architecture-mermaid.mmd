@@ -1,0 +1,118 @@
+flowchart TD
+    %% ==========================================
+    %% ARTIFY BHARAT (SIH PS 26090) ARCHITECTURE
+    %% ==========================================
+
+    subgraph SellerFlow["📱 PART A: ARTISAN 7-STAGE MOBILE JOURNEY (Kotlin + Jetpack Compose)"]
+        direction TB
+        P1["🎙️ Page 1: Voice Onboarding<br/>(Dialect STT + 4-Digit PIN)"]
+        P2["🖼️ Page 2: Zero-Skill Dashboard<br/>(Single CTA: 'Naya Product Bechein')"]
+        P3["📸 Page 3: AI Camera Studio<br/>(1:1 Square + On-Device Mask Preview)"]
+        P4["🗣️ Page 4: Voice Auto-Cataloger<br/>(Regional Dialect Audio Description)"]
+        P5["💰 Page 5: Dynamic Pricing Engine<br/>(Raw Cost + Labor Days + Fair Wage Slider)"]
+        P6["🔐 Page 6: Heritage Passport<br/>(Deterministic SHA-256 + QR Code)"]
+        P7["🚀 Page 7: One-Tap Multi-Channel Export<br/>(Batch Catalog Publication)"]
+        RoomDB[("💾 Room Offline Task Queue<br/>(SQLite Low-Bandwidth Sync)")]
+
+        P1 --> P2
+        P2 --> P3
+        P3 --> P4
+        P4 --> P5
+        P5 --> P6
+        P6 --> P7
+        P3 -.-> RoomDB
+        P4 -.-> RoomDB
+        P7 -.-> RoomDB
+    end
+
+    subgraph BackendGateway["⚡ FASTAPI ASYNC BACKEND & CORE SERVICES"]
+        direction TB
+        API["🌐 FastAPI Gateway (/api/v1)"]
+
+        subgraph CoreServices["Domain Engines & Microservices"]
+            CVService["👁️ Computer Vision Service<br/>• U²-Net Salient Segmentation<br/>• OpenCV CLAHE LAB Equalization<br/>• Visual Complexity Scoring"]
+            NLPService["🧠 Multilingual NLP Service<br/>• Whisper Regional Dialect ASR<br/>• IndicTrans2 Multi-Language MT<br/>• Fine-Tuned Mistral-7B LLM"]
+            PricingService["📊 Dynamic Pricing Engine<br/>• Statutory Fair Wage Floor<br/>• XGBoost Regression Model<br/>• Net Profit Margin Protection"]
+            PassportCrypto["🔒 Passport Crypto Engine<br/>• Deterministic SHA-256 Hash<br/>• High-Contrast QR Code Generator"]
+            ExportService["🔄 Channel Export Adapters<br/>• JSON-to-XML/CSV Engines<br/>• Beckn Protocol Serializers"]
+        end
+
+        API --> CoreServices
+    end
+
+    subgraph AsyncInfrastructure["⚙️ ASYNCHRONOUS PIPELINE & TASK QUEUE"]
+        CeleryWorker["⚡ Celery Distributed Workers"]
+        RedisBroker[("🔴 Redis In-Memory Broker & Cache")]
+        ScraperCron["🕷️ Daily Market Price Scraper<br/>(GeM, Amazon Karigar, ONDC)"]
+
+        RedisBroker <--> CeleryWorker
+        ScraperCron --> RedisBroker
+        CeleryWorker --> PricingService
+        CeleryWorker --> CVService
+        CeleryWorker --> NLPService
+    end
+
+    subgraph StorageLayer["🗄️ PERSISTENCE & OBJECT STORAGE"]
+        PostgresDB[("🐘 PostgreSQL / SQLite<br/>• Artisan Profiles & TRIFED IDs<br/>• Product Catalogs & GI Tags<br/>• Cryptographic SHA-256 Hashes<br/>• Statutory Pricing Logs")]
+        ObjectStorage[("☁️ AWS S3 / MinIO Storage<br/>• Raw Photos & 1:1 Studio PNGs<br/>• Dialect Voice Story Audio<br/>• Generated QR Code Assets")]
+    end
+
+    subgraph TargetChannels["🌐 MULTI-CHANNEL GOVERNMENT & ENTERPRISE EXPORTS"]
+        direction TB
+        GeM["🏛️ GeM (Govt e-Marketplace)<br/>XML / CSV with HSN & TRIFED ID"]
+        ONDC["🛍️ ONDC Network<br/>Beckn Protocol JSON Specifications"]
+        Karigar["🛒 Amazon Karigar / Commercial<br/>B2C E-Commerce Listings"]
+        B2B["🏢 Direct B2B Institutional<br/>Bulk Procurement Tiered Pricing"]
+    end
+
+    subgraph BuyerVerification["🔍 PART B: BUYER TRUST & PROVENANCE VERIFICATION"]
+        direction TB
+        ScanQR["📷 Scan Passport QR Code<br/>(Printed Tag / Digital Listing)"]
+        WebPortal["🏛️ Public Heritage Passport Portal<br/>(http://localhost:8000/verify/{hash})"]
+        
+        subgraph TrustFeatures["Verified Trust Badges"]
+            ArtisanBio["👤 Verified Artisan Profile<br/>TRIFED ID & Pehchan ID & GI Status"]
+            VoiceClip["🎙️ Original Voice Story Stream<br/>(Artisan Native Dialect Audio)"]
+            CostBreakdown["⚖️ 0% Middleman Cost Transparency<br/>• Raw Materials: ₹500<br/>• Fair Wage (15 Days): ₹2,250<br/>• Artisan Direct Profit: ₹1,750"]
+        end
+
+        ScanQR --> WebPortal
+        WebPortal --> TrustFeatures
+    end
+
+    %% Wiring Connections
+    SellerFlow ==>|REST API / Multipart| API
+    RoomDB -.->|Auto Retry on 4G/WiFi| API
+    API <--> PostgresDB
+    CoreServices <--> PostgresDB
+    CoreServices <--> ObjectStorage
+    CoreServices <--> RedisBroker
+
+    ExportService ==>|GeM XML Spec| GeM
+    ExportService ==>|Beckn Protocol| ONDC
+    ExportService ==>|B2C Payload| Karigar
+    ExportService ==>|Bulk Contract| B2B
+
+    GeM -.->|Display QR Tag| ScanQR
+    ONDC -.->|Display QR Tag| ScanQR
+    Karigar -.->|Display QR Tag| ScanQR
+    B2B -.->|Display QR Tag| ScanQR
+
+    WebPortal <==>|Public Verification API| API
+
+    %% ==========================================
+    %% COLOR SCHEMES & STYLES (INDIAN HERITAGE PALETTE)
+    %% ==========================================
+    classDef sellerStyle fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#9A3412;
+    classDef backendStyle fill:#EFF6FF,stroke:#2563EB,stroke-width:2px,color:#1E40AF;
+    classDef aiStyle fill:#FAF5FF,stroke:#9333EA,stroke-width:2px,color:#6B21A8;
+    classDef dataStyle fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#166534;
+    classDef exportStyle fill:#FEFCE8,stroke:#CA8A04,stroke-width:2px,color:#854D0E;
+    classDef buyerStyle fill:#F8FAFC,stroke:#0F172A,stroke-width:2px,color:#0F172A;
+
+    class P1,P2,P3,P4,P5,P6,P7,RoomDB sellerStyle;
+    class API,CeleryWorker,RedisBroker,ScraperCron backendStyle;
+    class CVService,NLPService,PricingService,PassportCrypto,ExportService aiStyle;
+    class PostgresDB,ObjectStorage dataStyle;
+    class GeM,ONDC,Karigar,B2B exportStyle;
+    class ScanQR,WebPortal,ArtisanBio,VoiceClip,CostBreakdown buyerStyle;
