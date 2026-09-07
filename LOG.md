@@ -47,3 +47,32 @@
   - `tests/test_nlp_catalog.py`: PASSED
   - `tests/test_passport_crypto.py`: PASSED
   - `tests/test_pricing_engine.py`: PASSED
+
+---
+
+## Session: 2026-09-07 - Agent Harness Construction & Matt Pocock Skills Setup
+
+### Status: Done
+
+### Changes Implemented:
+1. **Matt Pocock Skills Configuration**:
+   - Configured GitHub issue tracker mapping (`docs/agents/issue-tracker.md`).
+   - Configured canonical 5-role triage labels (`docs/agents/triage-labels.md`).
+   - Configured multi-context domain exploration rules (`docs/agents/domain.md`).
+   - Created root `CONTEXT.md`, `CONTEXT-MAP.md`, and per-context domain files (`backend/CONTEXT.md`, `android/CONTEXT.md`, `web-portal/CONTEXT.md`).
+   - Initialized `AGENTS.md` with `## Agent skills` block and guardrails.
+2. **Agent Harness Construction (`harness/`)**:
+   - `action_space.py`: Schema-first typed action models with granularity rules (micro/medium/macro).
+   - `observation.py`: Structured observation envelope (`status`, `summary`, `next_actions`, `artifacts`).
+   - `recovery.py`: Error recovery contract with root cause hints, safe retry instructions, and stop gates.
+   - `evaluator.py`: Pass@1, Pass@3, completion rate, and token cost tracking evaluator.
+   - `harness_config.json`: Action space, timeout, and context budget parameters.
+   - `tests/test_agent_harness.py`: Added 4 unit tests verifying harness contracts.
+
+### Verification Results:
+- `uv run pytest -v`: 14 passed in 2.21s.
+  - `tests/test_agent_harness.py::test_observation_envelope_formatting`: PASSED
+  - `tests/test_agent_harness.py::test_error_recovery_contract_stop_condition`: PASSED
+  - `tests/test_agent_harness.py::test_action_space_validation_and_execution`: PASSED
+  - `tests/test_agent_harness.py::test_benchmark_evaluator_metrics`: PASSED
+  - All 10 existing pipeline tests: PASSED

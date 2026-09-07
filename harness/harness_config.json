@@ -1,0 +1,34 @@
+{
+  "harness_version": "1.0.0",
+  "project": "ArtifyBharat (SIH PS 26090)",
+  "action_space": {
+    "granularity_rules": {
+      "micro_tools": ["issue_passport", "execute_payment"],
+      "medium_tools": ["calculate_pricing", "export_channels", "enhance_studio_image"],
+      "macro_tools": ["run_verification", "deploy_staging"]
+    },
+    "schema_validation": "strict",
+    "allow_dynamic_tools": false
+  },
+  "observation_contract": {
+    "required_fields": ["status", "summary", "next_actions", "artifacts"],
+    "max_summary_length": 250,
+    "format": "structured_envelope"
+  },
+  "error_recovery": {
+    "max_retries": 3,
+    "exponential_backoff_base_seconds": 2,
+    "require_root_cause_hint": true,
+    "explicit_stop_condition_required": true
+  },
+  "context_budget": {
+    "max_prompt_tokens": 8000,
+    "compact_at_phase_boundaries": true,
+    "prefer_file_references": true
+  },
+  "benchmarking": {
+    "track_pass_at_1": true,
+    "track_pass_at_3": true,
+    "track_cost_per_task": true
+  }
+}

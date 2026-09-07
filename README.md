@@ -42,10 +42,25 @@ artify-bharat-sih/
 │   │   └── build.gradle.kts
 │   └── gradle/libs.versions.toml   # Dependency Version Catalog
 │
+├── harness/                        # Agent Harness (Schema-First Actions & Benchmarking)
+│   ├── action_space.py             # Typed action schemas (micro, medium, macro tools)
+│   ├── observation.py              # Standardized observation envelope formatter
+│   ├── recovery.py                 # Error recovery contracts with stop gates
+│   ├── evaluator.py                # Pass@1, Pass@3, completion rate benchmarking
+│   └── harness_config.json         # Agent action space & budget constraints
+│
 ├── web-portal/                     # Public Heritage Passport Verification Portal
 │   ├── index.html                  # Responsive provenance & cost transparency viewer
 │   └── package.json                # Vite tooling configuration
 │
+├── docs/agents/                    # Matt Pocock Engineering Skills Configuration
+│   ├── issue-tracker.md            # GitHub issue tracker conventions
+│   ├── triage-labels.md            # Canonical five-role triage mapping
+│   └── domain.md                   # Multi-context domain exploration rules
+│
+├── CONTEXT.md                      # Core ubiquitous language & domain concepts
+├── CONTEXT-MAP.md                  # Monorepo bounded contexts map
+├── AGENTS.md                       # Agent instructions & skill registry
 ├── docker-compose.yml              # Complete local stack (PostgreSQL, Redis, MinIO, Backend, Worker, Web)
 ├── .env.example                    # Environment variable configuration template
 ├── .gitignore                      # Ignore rules for Python, Android, Node, and Media
@@ -56,7 +71,7 @@ artify-bharat-sih/
 
 ## 🚀 Quickstart Guide
 
-### 1. Backend (FastAPI + uv)
+### 1. Backend & Agent Harness Tests
 ```bash
 cd backend
 uv sync --extra dev
