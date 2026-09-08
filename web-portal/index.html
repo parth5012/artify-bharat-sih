@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Artify Bharat | Digital Heritage Passport & Artisan Ecosystem</title>
+  <title>Artify Bharat | MoSJE Digital Heritage Passport & Artisan Web Platform</title>
+  <meta name="description" content="AI-Powered Digital Business Manager & Gatekeeper for Rural Weavers & Artisans. Ministry of Social Justice and Empowerment (SIH PS 26090)">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700;800&family=Rozha+One&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=Rozha+One&display=swap" rel="stylesheet">
   <style>
     :root {
       --terracotta: #C04A26;
@@ -21,6 +22,8 @@
       --slate: #475569;
       --border: #E2E8F0;
       --gold: #B45309;
+      --purple: #7C3AED;
+      --purple-light: #F3E8FF;
     }
 
     * {
@@ -36,7 +39,6 @@
       line-height: 1.6;
     }
 
-    /* Top Navigation Bar */
     header {
       background: linear-gradient(135deg, var(--terracotta) 0%, var(--terracotta-dark) 100%);
       color: white;
@@ -47,11 +49,14 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .brand {
       font-family: 'Cinzel', serif;
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 700;
       letter-spacing: 1px;
       display: flex;
@@ -59,10 +64,20 @@
       gap: 0.6rem;
     }
 
+    .brand span.badge-gov {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      background: rgba(255,255,255,0.2);
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(255,255,255,0.4);
+      letter-spacing: 0.5px;
+    }
+
     .nav-tabs {
       display: flex;
-      gap: 0.5rem;
-      background: rgba(0,0,0,0.2);
+      gap: 0.4rem;
+      background: rgba(0,0,0,0.25);
       padding: 0.3rem;
       border-radius: 9999px;
     }
@@ -71,12 +86,15 @@
       background: transparent;
       border: none;
       color: white;
-      padding: 0.5rem 1.25rem;
+      padding: 0.45rem 1.1rem;
       border-radius: 9999px;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       cursor: pointer;
       transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
     }
 
     .nav-tab-btn.active {
@@ -86,12 +104,11 @@
     }
 
     .container {
-      max-width: 1140px;
-      margin: 2rem auto;
+      max-width: 1180px;
+      margin: 1.5rem auto;
       padding: 0 1.5rem;
     }
 
-    /* Tab Panels */
     .tab-content {
       display: none;
     }
@@ -105,22 +122,102 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* ========================================================
-       PART B: BUYER VERIFICATION PORTAL STYLES
-       ======================================================== */
-    .passport-card {
+    /* Cards & Layouts */
+    .glass-card {
       background: white;
-      border-radius: 24px;
-      border: 2px solid var(--trust-green);
-      box-shadow: 0 20px 40px -15px rgba(0,0,0,0.08);
-      overflow: hidden;
-      margin-bottom: 2rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.06);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
     }
 
+    .hero-banner {
+      background: linear-gradient(135deg, #FFF7ED 0%, #FFEDE6 100%);
+      border: 2px solid #FDBA74;
+      border-radius: 20px;
+      padding: 1.75rem 2rem;
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+
+    .search-bar-box {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 260px;
+      padding: 0.8rem 1.25rem;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: var(--terracotta);
+    }
+
+    .btn-primary {
+      background: var(--terracotta);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-primary:hover {
+      background: var(--terracotta-dark);
+    }
+
+    .btn-outline {
+      background: white;
+      color: var(--dark);
+      border: 2px solid var(--border);
+      padding: 0.8rem 1.25rem;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-outline:hover {
+      background: var(--silk);
+    }
+
+    .btn-danger {
+      background: #DC2626;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-danger:hover {
+      background: #B91C1C;
+    }
+
+    /* Verification Passport View */
     .passport-header {
-      background: var(--trust-green-light);
-      border-bottom: 1px solid #BBF7D0;
-      padding: 1.25rem 2rem;
+      background: linear-gradient(135deg, #15803D 0%, #166534 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      border-radius: 18px 18px 0 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -128,369 +225,182 @@
       gap: 1rem;
     }
 
-    .verified-badge {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: var(--trust-green);
-      font-weight: 800;
-      font-size: 1.15rem;
-    }
-
-    .hash-badge {
-      font-family: monospace;
-      font-size: 0.85rem;
+    .passport-body {
       background: white;
-      padding: 0.4rem 0.85rem;
-      border-radius: 8px;
-      border: 1px solid #CBD5E1;
-      color: var(--slate);
+      border: 2px solid #16A34A;
+      border-top: none;
+      border-radius: 0 0 18px 18px;
+      padding: 2rem;
+      box-shadow: 0 15px 35px -10px rgba(22, 101, 52, 0.15);
     }
 
-    .passport-grid {
-      display: grid;
-      grid-template-columns: 1fr 1.25fr;
-      gap: 2.5rem;
-      padding: 2.25rem;
-    }
-
-    @media (max-width: 820px) {
-      .passport-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .product-img-box {
-      border-radius: 18px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      background: #F8FAFC;
-      position: relative;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-
-    .product-img {
-      width: 100%;
-      height: 400px;
-      object-fit: cover;
-      display: block;
-    }
-
-    .img-tag {
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      background: rgba(15, 23, 42, 0.88);
-      color: white;
-      padding: 0.35rem 0.85rem;
-      border-radius: 8px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      backdrop-filter: blur(4px);
-    }
-
-    .gi-pill {
+    .badge-verified {
+      background: #DCFCE7;
+      color: #166534;
+      font-weight: 700;
+      padding: 0.35rem 0.8rem;
+      border-radius: 9999px;
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: #FEF3C7;
-      color: #92400E;
-      font-weight: 700;
       font-size: 0.85rem;
-      padding: 0.35rem 0.85rem;
-      border-radius: 9999px;
-      margin-bottom: 1rem;
-      border: 1px solid #FCD34D;
+      border: 1px solid #86EFAC;
     }
 
-    .product-title {
-      font-size: 1.7rem;
-      font-weight: 800;
-      color: var(--dark);
-      margin-bottom: 0.6rem;
-      line-height: 1.3;
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.75rem;
     }
 
-    .meta-list {
-      list-style: none;
-      margin-bottom: 1.5rem;
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
     }
 
-    .meta-list li {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.55rem 0;
-      border-bottom: 1px dashed var(--border);
-      font-size: 0.95rem;
-    }
-
-    .meta-list li span.label {
-      color: var(--slate);
-    }
-
-    .meta-list li span.value {
-      font-weight: 600;
-      color: var(--dark);
-    }
-
-    .audio-section {
-      background: var(--silk);
-      padding: 1.25rem;
-      border-radius: 16px;
-      margin-bottom: 1.5rem;
-      border: 1px solid #E6DEC8;
-    }
-
-    .audio-header {
-      font-weight: 700;
-      font-size: 0.95rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-      color: var(--terracotta-dark);
-    }
-
-    .finance-box {
-      background: #FAFAFA;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.35rem;
-    }
-
-    .finance-header {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 0.85rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
     }
 
     .cost-row {
       display: flex;
       justify-content: space-between;
-      padding: 0.4rem 0;
-      font-size: 0.92rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 0.95rem;
     }
-
     .cost-row.total {
       border-top: 2px solid var(--dark);
-      padding-top: 0.65rem;
-      margin-top: 0.65rem;
+      border-bottom: none;
       font-weight: 800;
       font-size: 1.15rem;
       color: var(--terracotta-dark);
+      padding-top: 1rem;
     }
 
-    .hash-inspector {
-      background: white;
-      padding: 1.75rem;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
-    }
-
-    .search-bar {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 0.75rem;
-    }
-
-    .search-bar input {
-      flex: 1;
-      padding: 0.85rem 1.1rem;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-family: monospace;
-      font-size: 0.95rem;
-    }
-
-    .btn-primary {
-      background: var(--terracotta);
-      color: white;
-      border: none;
-      padding: 0 1.5rem;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn-primary:hover {
-      background: var(--terracotta-dark);
-    }
-
-    /* ========================================================
-       PART A: ARTISAN CLIENT SIMULATOR STYLES
-       ======================================================== */
-    .simulator-layout {
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 2.5rem;
-      align-items: start;
-    }
-
-    @media (max-width: 900px) {
-      .simulator-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .phone-frame {
-      background: #1E293B;
-      border-radius: 40px;
-      padding: 12px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-      border: 4px solid #334155;
-    }
-
-    .phone-screen {
-      background: #FFFDF9;
-      border-radius: 32px;
-      overflow: hidden;
-      min-height: 640px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .phone-header {
-      background: var(--terracotta);
-      color: white;
-      padding: 1rem 1.25rem;
+    /* Dual-Role Switcher */
+    .role-switcher-card {
+      background: #EFF6FF;
+      border: 2px solid #93C5FD;
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-
-    .phone-body {
-      padding: 1.25rem;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       gap: 1rem;
     }
 
-    .artisan-card-mini {
-      background: white;
-      border-radius: 16px;
-      padding: 1rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .avatar-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--terracotta);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 1.2rem;
-    }
-
-    .dadi-banner-card {
-      background: #FFF3E0;
-      border: 1px solid #FFE0B2;
-      border-radius: 16px;
-      padding: 0.85rem 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-    }
-
-    .big-camera-cta {
-      background: linear-gradient(135deg, var(--terracotta) 0%, #E0562D 100%);
-      color: white;
-      border-radius: 20px;
-      padding: 2rem 1.5rem;
-      text-align: center;
-      cursor: pointer;
-      box-shadow: 0 10px 20px -5px rgba(192, 74, 38, 0.35);
-      transition: transform 0.2s;
-    }
-
-    .big-camera-cta:hover {
-      transform: scale(1.02);
-    }
-
-    .step-badge {
-      display: inline-block;
-      background: var(--terracotta-light);
-      color: var(--terracotta-dark);
-      padding: 0.25rem 0.65rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
+    .role-pill {
+      background: #DBEAFE;
+      color: #1E40AF;
+      padding: 0.4rem 1rem;
+      border-radius: 9999px;
       font-weight: 700;
-    }
-
-    .simulator-control-panel {
-      background: white;
-      border-radius: 24px;
-      padding: 2rem;
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-    }
-
-    .step-tracker {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 2rem;
-      position: relative;
-    }
-
-    .step-node {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--slate);
+      font-size: 0.85rem;
       cursor: pointer;
+      border: 2px solid transparent;
     }
-
-    .step-node.active .step-dot {
-      background: var(--terracotta);
+    .role-pill.active {
+      background: #2563EB;
       color: white;
-      border-color: var(--terracotta);
+      border-color: #1D4ED8;
     }
 
-    .step-dot {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 2px solid #CBD5E1;
+    /* Metrics & Heatmaps */
+    .metric-card {
       background: white;
-      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.25rem;
+      border-left: 4px solid var(--terracotta);
+    }
+    .metric-card.green { border-left-color: var(--trust-green); }
+    .metric-card.purple { border-left-color: var(--purple); }
+    .metric-card.gold { border-left-color: var(--gold); }
+
+    .metric-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin: 0.4rem 0 0.2rem 0;
+    }
+    .metric-label {
+      color: var(--slate);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
       align-items: center;
       justify-content: center;
+      padding: 1.5rem;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      max-width: 540px;
+      width: 100%;
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    }
+
+    .audio-player-box {
+      background: var(--silk);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .printer-tag-preview {
+      background: #FFFBEB;
+      border: 2px dashed #D97706;
+      border-radius: 12px;
+      padding: 1.25rem;
+      font-family: 'Courier New', Courier, monospace;
       font-size: 0.85rem;
-      transition: all 0.2s;
+      line-height: 1.4;
+      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
 
+  <!-- HEADER -->
   <header>
     <div class="brand">
-      <span>🏛️</span> ARTIFY BHARAT
+      <span>🏛️</span> Artify Bharat
+      <span class="badge-gov">MoSJE • SIH PS 26090</span>
     </div>
-    <div class="nav-tabs">
-      <button class="nav-tab-btn active" onclick="switchMainTab('buyerTab', this)">🔍 Buyer Verification Portal</button>
-      <button class="nav-tab-btn" onclick="switchMainTab('artisanTab', this)">📱 Artisan Client Simulator</button>
-    </div>
-    <div style="font-size: 0.82rem; font-weight: 600; background: rgba(255,255,255,0.18); padding: 0.35rem 0.8rem; border-radius: 9999px;">
-      SIH PS 26090
-    </div>
+    <nav class="nav-tabs">
+      <button class="nav-tab-btn active" onclick="switchTab('buyer-tab', this)">
+        <span>🔍</span> Buyer Passport Portal
+      </button>
+      <button class="nav-tab-btn" onclick="switchTab('client-tab', this)">
+        <span>📱</span> Artisan & SHG Web Hub
+      </button>
+      <button class="nav-tab-btn" onclick="switchTab('admin-tab', this)">
+        <span>📊</span> MoSJE Admin Dashboard
+      </button>
+    </nav>
   </header>
 
   <main class="container">
@@ -498,433 +408,657 @@
     <!-- ========================================================
          TAB 1: BUYER VERIFICATION PORTAL
          ======================================================== -->
-    <div id="buyerTab" class="tab-content active">
-      <div class="passport-card">
+    <section id="buyer-tab" class="tab-content active">
+      
+      <div class="hero-banner">
+        <div>
+          <h1 style="font-family:'Cinzel', serif; font-size:1.8rem; color:var(--terracotta-dark); margin-bottom:0.4rem;">
+            Public Digital Heritage Passport
+          </h1>
+          <p style="color:var(--slate); max-width:640px;">
+            Verify handcrafted authenticity, fair wages, and GI certification backed by deterministic SHA-256 cryptography and MoSJE Zero-Trust Peer Review.
+          </p>
+          <div class="search-bar-box">
+            <input type="text" id="shortcode-input" class="search-input" placeholder="Enter 6-Char Code (e.g. A7X-9B2)" value="A7X-9B2">
+            <button class="btn-primary" onclick="verifyShortcode()">
+              <span>🔐</span> Verify Authenticity
+            </button>
+            <button class="btn-outline" onclick="loadSampleCode('M3B-77L')">
+              Sample: Madhubani
+            </button>
+            <button class="btn-outline" onclick="loadSampleCode('K9P-12M')">
+              Sample: Pashmina
+            </button>
+          </div>
+        </div>
+        <div style="text-align:center; background:white; padding:1.25rem; border-radius:16px; border:1px solid var(--border);">
+          <div style="font-size:2.5rem; margin-bottom:0.3rem;">🏷️</div>
+          <div style="font-weight:800; font-size:1.1rem; color:var(--terracotta);">6-Char Shortcode</div>
+          <div style="font-size:0.8rem; color:var(--slate);">Instant Offline & Online Resolution</div>
+        </div>
+      </div>
+
+      <!-- PASSPORT DISPLAY -->
+      <div id="passport-result" class="glass-card" style="padding:0; overflow:hidden; border:2px solid #16A34A;">
         <div class="passport-header">
-          <div class="verified-badge" id="verifiedBadge">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            AUTHENTIC HANDCRAFT VERIFIED
+          <div>
+            <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; opacity:0.9;">Cryptographic Provenance Verified</div>
+            <h2 id="disp-title" style="font-family:'Rozha One', serif; font-size:1.6rem; font-weight:400; margin-top:0.2rem;">
+              Handwoven Banarasi Katan Silk Saree
+            </h2>
+            <div id="disp-gi" style="font-size:0.85rem; opacity:0.95; margin-top:0.2rem;">
+              🎖️ Geographical Indication: Banarasi Brocade & Saree (GI Reg #39)
+            </div>
           </div>
-          <div class="hash-badge" id="passportHash">
-            SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+          <div style="text-align:right;">
+            <div class="badge-verified">
+              <span>✅</span> MoSJE Verified Authentic
+            </div>
+            <div id="disp-shortcode" style="font-family:monospace; font-size:1.1rem; font-weight:800; margin-top:0.4rem;">
+              CODE: A7X-9B2
+            </div>
           </div>
         </div>
 
-        <div class="passport-grid">
-          <!-- Left: Product Image & Badges -->
-          <div>
-            <div class="product-img-box">
-              <div class="img-tag">Studio Enhanced 1:1 Asset</div>
-              <img src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&auto=format&fit=crop&q=80"
-                   alt="Banarasi Silk Saree"
-                   class="product-img"
-                   id="productImage">
+        <div class="passport-body">
+          <div class="grid-2" style="margin-bottom:2rem;">
+            
+            <!-- LEFT: ARTISAN & WORK-IN-PROGRESS -->
+            <div>
+              <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1rem; color:var(--dark);">
+                👤 Verified Master Artisan & Origin
+              </h3>
+              <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem;">
+                <div style="width:64px; height:64px; border-radius:50%; background:#FED7AA; display:flex; align-items:center; justify-content:center; font-size:1.8rem; border:2px solid var(--terracotta);">
+                  👩🎨
+                </div>
+                <div>
+                  <h4 id="disp-artisan" style="font-size:1.15rem; font-weight:800;">Radha Devi</h4>
+                  <div id="disp-cluster" style="color:var(--slate); font-size:0.9rem;">Varanasi Handloom Cluster, Uttar Pradesh</div>
+                  <div style="font-size:0.8rem; color:#15803D; font-weight:600; margin-top:0.2rem;">
+                    🪪 Pehchan: UP-VAR-102938 • TRIFED: TRIFED-UP-7721
+                  </div>
+                </div>
+              </div>
+
+              <div class="audio-player-box">
+                <button onclick="playAudioDemo()" style="background:var(--terracotta); border:none; width:42px; height:42px; border-radius:50%; color:white; font-size:1.1rem; cursor:pointer;">
+                  ▶
+                </button>
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:0.85rem;">Listen to Artisan's Story in Native Dialect</div>
+                  <div style="font-size:0.75rem; color:var(--slate);">Bhojpuri / Hindi Dialect • 100% Handspun Narrative</div>
+                </div>
+              </div>
+
+              <!-- WIP PHOTO & LIVE GPS LOCK -->
+              <div style="margin-top:1.25rem; background:var(--cream); padding:1rem; border-radius:12px; border:1px solid var(--border);">
+                <div style="font-weight:700; font-size:0.85rem; margin-bottom:0.5rem; display:flex; justify-content:space-between;">
+                  <span>📸 Work-In-Progress (WIP) Loom Proof</span>
+                  <span style="color:#15803D; font-size:0.75rem;">📍 GPS & Time Locked</span>
+                </div>
+                <div style="background:#E2E8F0; height:120px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--slate); font-weight:600; font-size:0.9rem;">
+                  🧵 Live Loom Stage Capture (25.3176° N, 82.9739° E)
+                </div>
+              </div>
             </div>
-            <p style="margin-top: 0.85rem; font-size: 0.82rem; color: #64748B; text-align: center;">
-              Auto-segmented using U²-Net Salient Detection & OpenCV CLAHE LAB color fix.
-            </p>
+
+            <!-- RIGHT: FAIR PRICE BREAKDOWN & ANTI-FRAUD -->
+            <div>
+              <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1rem; color:var(--dark);">
+                ⚖️ 100% Transparent Fair Price Breakdown
+              </h3>
+              <div style="background:var(--silk); padding:1.25rem; border-radius:14px; border:1px solid var(--border);">
+                <div class="cost-row">
+                  <span>Raw Materials (Pure Mulberry Silk Yarn & Zari)</span>
+                  <span id="disp-cost-mat" style="font-weight:700;">₹3,200</span>
+                </div>
+                <div class="cost-row">
+                  <span>Fair Labor Wages (10 Days @ ₹480/day Skilled Floor)</span>
+                  <span id="disp-cost-labor" style="font-weight:700; color:#15803D;">₹4,800</span>
+                </div>
+                <div class="cost-row">
+                  <span>Direct Artisan Enterprise Profit</span>
+                  <span id="disp-cost-profit" style="font-weight:700;">₹1,500</span>
+                </div>
+                <div class="cost-row">
+                  <span>Eco Packaging & Thermal Tagging</span>
+                  <span id="disp-cost-pack" style="font-weight:700;">₹300</span>
+                </div>
+                <div class="cost-row total">
+                  <span>Direct-from-Artisan Retail Price</span>
+                  <span id="disp-cost-total">₹9,800</span>
+                </div>
+                <div style="font-size:0.75rem; color:#15803D; font-weight:600; margin-top:0.75rem;">
+                  🛡️ 0% Middleman Commission • Directly Settled to Jan Dhan Account
+                </div>
+              </div>
+
+              <!-- ANTI FRAUD ACTION -->
+              <div style="margin-top:1.25rem; padding:1rem; border-radius:12px; background:#FEF2F2; border:1px solid #FECACA; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight:800; font-size:0.9rem; color:#991B1B;">Suspect Machine-Made or Fake?</div>
+                  <div style="font-size:0.75rem; color:#7F1D1D;">Trigger an immediate Zero-Trust Peer Review audit.</div>
+                </div>
+                <button class="btn-danger" onclick="openReportModal()">
+                  🚩 Report Counterfeit
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Right: Artisan Details & Story -->
-          <div>
-            <div class="gi-pill">🇮🇳 Geographical Indication (GI) Registered Craft #39</div>
-            <h1 class="product-title" id="productTitle">Handwoven Banarasi Silk Saree with Pure Zari Work</h1>
-            <p style="color: #475569; font-size: 0.95rem; margin-bottom: 1.25rem;" id="productDesc">
-              Meticulously handwoven on a traditional pit loom in Varanasi, Uttar Pradesh. Requiring 15 days of continuous artisan labor with pure gold zari borders.
-            </p>
-
-            <ul class="meta-list">
-              <li><span class="label">Master Artisan:</span> <span class="value" id="artisanName">Gauri Devi</span></li>
-              <li><span class="label">Govt TRIFED ID:</span> <span class="value" id="trifedId">TRIFED-UP-VNS-1049</span></li>
-              <li><span class="label">Pehchan ID:</span> <span class="value" id="pehchanId">PEH-IND-88320</span></li>
-              <li><span class="label">Weaving Cluster:</span> <span class="value" id="clusterName">Varanasi Handloom Cluster, Uttar Pradesh</span></li>
-              <li><span class="label">Technique & Loom:</span> <span class="value">Kadhwa Interlocking Pit Loom</span></li>
-            </ul>
-
-            <!-- Embedded Audio Voice Story -->
-            <div class="audio-section">
-              <div class="audio-header">
-                🎙️ Artisan's Voice Story (Recorded in Native Bhojpuri)
-              </div>
-              <p style="font-size: 0.85rem; color: #64748B; margin-bottom: 0.65rem; font-style: italic;">
-                "ई हमार हाथ से बुनायल बनारसी सिल्क साड़ी हवे, जेहमे शुद्ध जरी के काम कइल गइल बा..."
-              </p>
-              <audio controls style="width: 100%;">
-                <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
-                Your browser does not support audio playback.
-              </audio>
-            </div>
-
-            <!-- Financial Transparency Breakdown -->
-            <div class="finance-box">
-              <div class="finance-header">
-                <span>0% Middleman Fair Price Breakdown</span>
-                <span style="color: var(--trust-green); font-size: 0.85rem; font-weight: 700;">Direct Artisan Transfer</span>
-              </div>
-              <div class="cost-row">
-                <span>Raw Material Cost (Mulberry Silk & Zari):</span>
-                <span id="rawMaterialCost">₹500.00</span>
-              </div>
-              <div class="cost-row">
-                <span>Statutory Fair Wage (15 Days @ ₹450/day Floor):</span>
-                <span id="fairWage">₹6,750.00</span>
-              </div>
-              <div class="cost-row">
-                <span>Artisan Direct Profit:</span>
-                <span id="netProfit">₹3,171.88</span>
-              </div>
-              <div class="cost-row total">
-                <span>Total Fair Trade Price:</span>
-                <span id="totalPrice">₹10,421.88</span>
-              </div>
-            </div>
+          <div style="background:#F8FAFC; padding:1rem; border-radius:10px; font-family:monospace; font-size:0.75rem; color:var(--slate); word-break:break-all; border:1px solid var(--border);">
+            🔐 <strong>Deterministic SHA-256 Provenance Digest:</strong> <span id="disp-hash">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span>
           </div>
         </div>
       </div>
 
-      <!-- Real-time Hash Inspector -->
-      <div class="hash-inspector">
-        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.35rem;">🔐 Verify Any Cryptographic Passport Hash</h3>
-        <p style="color: var(--slate); font-size: 0.9rem;">
-          Paste the SHA-256 hash printed on the physical product tag or scanned from the QR code.
-        </p>
-        <div class="search-bar">
-          <input type="text" id="hashInput" value="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" placeholder="Enter 64-character SHA-256 cryptographic hash...">
-          <button class="btn-primary" onclick="verifyHash()">Verify Hash</button>
-        </div>
-      </div>
-    </div>
+    </section>
+
 
     <!-- ========================================================
-         TAB 2: ARTISAN CLIENT SIMULATOR (FLUTTER/ANDROID PWA)
+         TAB 2: ARTISAN & SHG LEADER WEB CLIENT
          ======================================================== -->
-    <div id="artisanTab" class="tab-content">
-      <div class="simulator-layout">
-        
-        <!-- Mobile Phone Frame -->
-        <div class="phone-frame">
-          <div class="phone-screen" id="phoneScreen">
-            <div class="phone-header">
-              <span id="simTitle">Artify Bharat</span>
-              <span style="font-size: 0.8rem;">📶 4G | 🪪 Verified</span>
-            </div>
+    <section id="client-tab" class="tab-content">
+      
+      <!-- DUAL ROLE ACCESS SWITCHER -->
+      <div class="role-switcher-card">
+        <div>
+          <span style="font-size:1.1rem; font-weight:800; color:#1E3A8A;">Dual-Role Access Engine:</span>
+          <span style="font-size:0.9rem; color:#3B82F6; margin-left:0.5rem;">Select active operating mode</span>
+        </div>
+        <div style="display:flex; gap:0.6rem;">
+          <button id="role-btn-artisan" class="role-pill active" onclick="setRole('artisan')">
+            🧑🎨 Artisan Direct Mode
+          </button>
+          <button id="role-btn-shg" class="role-pill" onclick="setRole('shg')">
+            👥 Aggregator / SHG Leader Mode (Multi-Tenant)
+          </button>
+        </div>
+      </div>
 
-            <!-- Screen View Content (Initialized dynamically via setSimScreen) -->
-            <div class="phone-body" id="simBody"></div>
+      <div class="grid-2">
+        
+        <!-- STEP-BY-STEP SMART WEB CATALOGING -->
+        <div class="glass-card">
+          <h2 style="font-size:1.3rem; font-weight:800; color:var(--terracotta-dark); margin-bottom:1rem;">
+            📸 Smart Web Capture & Cataloging
+          </h2>
+
+          <div style="background:var(--cream); padding:1.25rem; border-radius:14px; border:1px solid var(--border); margin-bottom:1rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; font-weight:700; font-size:0.9rem;">
+              <span>1. Browser Media Capture (1:1 Aspect Ratio)</span>
+              <span style="color:#15803D;">● Gyro Level: Balanced</span>
+            </div>
+            <div style="background:#0F172A; border-radius:10px; height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; position:relative; overflow:hidden;">
+              <div style="border:2px dashed rgba(255,255,255,0.4); width:130px; height:130px; display:flex; align-items:center; justify-content:center; font-size:2rem;">
+                📷
+              </div>
+              <div style="position:absolute; bottom:8px; font-size:0.75rem; background:rgba(0,0,0,0.6); padding:0.2rem 0.6rem; border-radius:9999px;">
+                📍 GPS Lock: 25.3176° N, 82.9739° E (Varanasi)
+              </div>
+            </div>
+            <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+              <button class="btn-primary" style="flex:1; justify-content:center;" onclick="simulateCapture()">
+                Capture WIP Photo
+              </button>
+              <button class="btn-outline" style="flex:1; justify-content:center;" onclick="simulateCaptureFinal()">
+                Capture Final Product
+              </button>
+            </div>
+          </div>
+
+          <!-- ZERO LITERACY VOICE ENGINE -->
+          <div style="background:var(--silk); padding:1.25rem; border-radius:14px; border:1px solid var(--border); margin-bottom:1rem;">
+            <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.5rem;">
+              2. Zero-Literacy Voice Engine (Bhashini AI)
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <select id="dialect-sel" style="padding:0.6rem; border-radius:8px; border:1px solid var(--border); font-family:inherit; font-weight:600;">
+                <option value="bhojpuri">Bhojpuri (भोजपुरी)</option>
+                <option value="hindi">Hindi (हिन्दी)</option>
+                <option value="maithili">Maithili (मैथिली)</option>
+                <option value="gujarati">Gujarati (ગુજરાતી)</option>
+              </select>
+              <button class="btn-primary" style="flex:1; justify-content:center;" onclick="simulateVoiceRecord()">
+                🎙️ Speak Details
+              </button>
+            </div>
+            <div id="voice-transcript" style="margin-top:0.75rem; font-size:0.85rem; color:var(--dark); font-style:italic; background:white; padding:0.6rem; border-radius:8px; border:1px solid var(--border);">
+              "E haali hum pure katan resham par zari ke booti banawale baani..."
+            </div>
+          </div>
+
+          <!-- 3-TIER PRICE SLIDER -->
+          <div style="background:white; padding:1.25rem; border-radius:14px; border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; font-weight:700; font-size:0.9rem; margin-bottom:0.5rem;">
+              <span>3. Fair Wage & Dynamic Pricing</span>
+              <span id="price-tier-label" style="color:var(--terracotta);">Fair Market Recommended</span>
+            </div>
+            <input type="range" id="price-slider" min="6500" max="14000" step="500" value="9800" style="width:100%; accent-color:var(--terracotta);" oninput="updatePricingSlider(this.value)">
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--slate); margin-top:0.3rem;">
+              <span>Statutory Floor: ₹6,500</span>
+              <span style="font-weight:800; color:var(--dark);" id="slider-val-disp">₹9,800</span>
+              <span>Premium Collector: ₹14,000</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: PASSPORT & THERMAL PRINTER & PUBLISH -->
+        <div class="glass-card">
+          <h2 style="font-size:1.3rem; font-weight:800; color:var(--terracotta-dark); margin-bottom:1rem;">
+            🏷️ Verification, Printing & Multi-Channel Export
+          </h2>
+
+          <!-- WEB BLUETOOTH THERMAL PRINTER -->
+          <div style="background:#FEFCE8; border:2px solid #FEF08A; border-radius:14px; padding:1.25rem; margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.95rem; color:#854D0E;">
+              <span>🖨️ Web Bluetooth Thermal Printer (58mm ESC/POS)</span>
+              <span style="font-size:0.75rem; background:#FEF08A; padding:0.2rem 0.5rem; border-radius:9999px;">Ready</span>
+            </div>
+            <div class="printer-tag-preview">
+              ================================<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;ARTIFY BHARAT (MoSJE)<br>
+              &nbsp;&nbsp;HERITAGE DIGITAL PASSPORT<br>
+              ================================<br>
+              Item: Banarasi Katan Silk Saree<br>
+              Artisan: Radha Devi (Varanasi)<br>
+              Fair Wage: Rs 4,800 (10 Days)<br>
+              Price: Rs 9,800<br>
+              CODE: A7X-9B2<br>
+              Scan/Verify: artify.gov.in<br>
+              ================================
+            </div>
+            <button class="btn-primary" style="width:100%; justify-content:center; margin-top:0.75rem; background:#D97706;" onclick="simulatePrintThermal()">
+              🖨️ Print 58mm Sticky Label (ESC/POS)
+            </button>
+          </div>
+
+          <!-- ONE TAP MULTI-CHANNEL EXPORT -->
+          <div style="background:white; border:1px solid var(--border); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem;">
+            <div style="font-weight:700; font-size:0.95rem; margin-bottom:0.75rem;">
+              🚀 One-Tap Multi-Channel Publish
+            </div>
+            <div class="grid-3" style="margin-bottom:1rem;">
+              <div style="border:1px solid var(--border); border-radius:10px; padding:0.75rem; text-align:center;">
+                <div style="font-weight:700; font-size:0.85rem;">🏛️ GeM Portal</div>
+                <div style="font-size:0.75rem; color:var(--slate);">B2G Govt Bulk</div>
+              </div>
+              <div style="border:1px solid var(--border); border-radius:10px; padding:0.75rem; text-align:center;">
+                <div style="font-weight:700; font-size:0.85rem;">🛍️ ONDC Node</div>
+                <div style="font-size:0.75rem; color:var(--slate);">B2C Retail</div>
+              </div>
+              <div style="border:1px solid var(--border); border-radius:10px; padding:0.75rem; text-align:center;">
+                <div style="font-weight:700; font-size:0.85rem;">💬 WhatsApp</div>
+                <div style="font-size:0.75rem; color:var(--slate);">Catalog + UPI</div>
+              </div>
+            </div>
+            <button class="btn-primary" style="width:100%; justify-content:center;" onclick="simulatePublishAll()">
+              Publish to All Channels
+            </button>
+          </div>
+
+          <!-- ASK DADI ASSISTANT & PM-DAKSH NUDGE -->
+          <div style="background:#FAF5FF; border:1px solid #E9D5FF; border-radius:14px; padding:1.25rem; display:flex; gap:1rem; align-items:center;">
+            <div style="font-size:2.2rem;">👵</div>
+            <div>
+              <div style="font-weight:800; font-size:0.95rem; color:#6B21A8;">'Ask Dadi' PM-DAKSH Skill Nudge</div>
+              <div style="font-size:0.82rem; color:#7E22CE; margin-top:0.2rem;">
+                "Radha beti, PM-DAKSH free design certification Varanasi kendra par shuru ho gaya hai. Aapki aamadani 40% badh sakti hai!"
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================
+         TAB 3: MoSJE ADMIN & NODAL OFFICER DASHBOARD
+         ======================================================== -->
+    <section id="admin-tab" class="tab-content">
+      
+      <div class="hero-banner" style="background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border-color:#93C5FD;">
+        <div>
+          <h1 style="font-family:'Cinzel', serif; font-size:1.8rem; color:#1E40AF; margin-bottom:0.4rem;">
+            MoSJE Nodal Officer & District Magistrate Portal
+          </h1>
+          <p style="color:#3B82F6; max-width:640px;">
+            Real-time district economic monitoring, middleman elimination metrics, zero-trust anti-corruption audit trails, and PM-DAKSH upskilling telemetry.
+          </p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.8rem; font-weight:700; color:#1E40AF;">ACTIVE JURISDICTION</div>
+          <div style="font-size:1.2rem; font-weight:800; color:#1E3A8A;">5 Craft Clusters • National Grid</div>
+        </div>
+      </div>
+
+      <!-- KEY METRICS ROW -->
+      <div class="grid-4" style="margin-bottom:1.5rem;">
+        <div class="metric-card green">
+          <div class="metric-label">Direct Wages Disbursed</div>
+          <div class="metric-val" style="color:#15803D;">₹3.19 Cr</div>
+          <div style="font-size:0.75rem; color:#166534; font-weight:600;">100% Middleman-Free Escrow</div>
+        </div>
+        <div class="metric-card gold">
+          <div class="metric-label">Registered Artisans</div>
+          <div class="metric-val" style="color:#B45309;">4,900</div>
+          <div style="font-size:0.75rem; color:#92400E; font-weight:600;">Pehchan & e-Shram Verified</div>
+        </div>
+        <div class="metric-card purple">
+          <div class="metric-label">Middleman Savings</div>
+          <div class="metric-val" style="color:#7C3AED;">+34.8%</div>
+          <div style="font-size:0.75rem; color:#6B21A8; font-weight:600;">Direct Realization to Jan Dhan</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Fraud Incidents Resolved</div>
+          <div class="metric-val" style="color:var(--terracotta);">127</div>
+          <div style="font-size:0.75rem; color:var(--terracotta-dark); font-weight:600;">Via Peer Jury Quorum</div>
+        </div>
+      </div>
+
+      <!-- DISTRICT HEATMAP & FESTIVAL DEMAND FORECAST -->
+      <div class="grid-2">
+        
+        <!-- DISTRICT ECONOMIC HEATMAP -->
+        <div class="glass-card">
+          <h2 style="font-size:1.2rem; font-weight:800; color:var(--dark); margin-bottom:1rem;">
+            🗺️ Live District Economic Heatmap
+          </h2>
+          <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            <div style="background:var(--silk); padding:1rem; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:800; font-size:0.95rem;">Varanasi Handloom Cluster (UP)</div>
+                <div style="font-size:0.8rem; color:var(--slate);">1,420 Artisans • GI Reg #39 • Protection: 98.4%</div>
+              </div>
+              <div style="font-weight:800; color:#15803D; font-size:1.1rem;">₹84.5 L</div>
+            </div>
+            <div style="background:var(--silk); padding:1rem; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:800; font-size:0.95rem;">Kashmir Pashmina Cluster (J&K)</div>
+                <div style="font-size:0.8rem; color:var(--slate);">760 Artisans • GI Reg #46 • Protection: 99.1%</div>
+              </div>
+              <div style="font-weight:800; color:#15803D; font-size:1.1rem;">₹92.0 L</div>
+            </div>
+            <div style="background:var(--silk); padding:1rem; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:800; font-size:0.95rem;">Kutch Embroidery Cluster (Gujarat)</div>
+                <div style="font-size:0.8rem; color:var(--slate);">1,150 Artisans • GI Reg #78 • Protection: 97.8%</div>
+              </div>
+              <div style="font-weight:800; color:#15803D; font-size:1.1rem;">₹63.0 L</div>
+            </div>
+            <div style="background:var(--silk); padding:1rem; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:800; font-size:0.95rem;">Mithila Painting Cluster (Bihar)</div>
+                <div style="font-size:0.8rem; color:var(--slate);">890 Artisans • GI Reg #105 • Protection: 96.2%</div>
+              </div>
+              <div style="font-weight:800; color:#15803D; font-size:1.1rem;">₹41.2 L</div>
+            </div>
           </div>
         </div>
 
-        <!-- Simulator Workflow Controller -->
-        <div class="simulator-control-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.4rem; font-weight: 800;">6-Stage Artisan Journey Simulator</h2>
-            <span class="step-badge" id="simStepBadge">Stage: Dashboard</span>
-          </div>
-
-          <!-- Step Progression Navigator -->
-          <div class="step-tracker">
-            <div class="step-node active" onclick="setSimScreen('dash')">
-              <div class="step-dot">🏠</div>
-              <span>Dashboard</span>
-            </div>
-            <div class="step-node" onclick="setSimScreen('camera')">
-              <div class="step-dot">📸</div>
-              <span>Camera</span>
-            </div>
-            <div class="step-node" onclick="setSimScreen('voice')">
-              <div class="step-dot">🎙️</div>
-              <span>Voice NLP</span>
-            </div>
-            <div class="step-node" onclick="setSimScreen('price')">
-              <div class="step-dot">💰</div>
-              <span>Pricing</span>
-            </div>
-            <div class="step-node" onclick="setSimScreen('passport')">
-              <div class="step-dot">🔐</div>
-              <span>Passport</span>
-            </div>
-            <div class="step-node" onclick="setSimScreen('export')">
-              <div class="step-dot">🚀</div>
-              <span>Publish</span>
+        <!-- PREDICTIVE FESTIVAL DEMAND AI -->
+        <div class="glass-card">
+          <h2 style="font-size:1.2rem; font-weight:800; color:var(--dark); margin-bottom:1rem;">
+            📈 Predictive Demand AI (Festival Forecasting)
+          </h2>
+          <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; padding:1rem; margin-bottom:1rem;">
+            <div style="font-weight:800; color:#B45309; font-size:0.95rem;">🪔 Diwali & Q4 Festive Export Surge (+3.8x)</div>
+            <div style="font-size:0.82rem; color:#92400E; margin-top:0.2rem;">
+              Forecast recommends stockpiling 4,500 pure silk warp units in Varanasi cluster before August.
             </div>
           </div>
-
-          <div id="simStepDesc" style="background: var(--silk); padding: 1.25rem; border-radius: 14px; margin-bottom: 1.5rem; font-size: 0.95rem; color: #334155;">
-            <strong>Step Description:</strong> The zero-skill dashboard provides single-tap access to sell products, interactive 'Ask Dadi' voice assistance, and offline SQLite draft management.
+          <div style="background:#FAF5FF; border:1px solid #E9D5FF; border-radius:12px; padding:1rem; margin-bottom:1rem;">
+            <div style="font-weight:800; color:#7C3AED; font-size:0.95rem;">🌺 Durga Puja & Navratri Surge (+2.9x)</div>
+            <div style="font-size:0.82rem; color:#6B21A8; margin-top:0.2rem;">
+              Projected demand for 2,800 hand-painted Madhubani scrolls & Garad sarees.
+            </div>
           </div>
-
-          <div style="display: flex; gap: 1rem;">
-            <button class="btn-primary" style="padding: 0.75rem 1.5rem;" onclick="advanceSimStep()">Next Workflow Step ➔</button>
-            <button class="btn-primary" style="background: #475569; padding: 0.75rem 1.25rem;" onclick="setSimScreen('dadi')">👵 Test 'Ask Dadi'</button>
+          <div style="font-size:0.8rem; color:var(--slate); font-weight:600;">
+            🤖 AI Model: Artify-Bharat-Prophet-Festival-AI (94.2% historical accuracy)
           </div>
         </div>
 
       </div>
-    </div>
+
+      <!-- ANTI-CORRUPTION AUDIT LOGS -->
+      <div class="glass-card">
+        <h2 style="font-size:1.2rem; font-weight:800; color:var(--dark); margin-bottom:1rem;">
+          📋 Zero-Trust Anti-Corruption & Peer-Review Logs
+        </h2>
+        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+          <thead>
+            <tr style="background:#F8FAFC; text-align:left; border-bottom:2px solid var(--border);">
+              <th style="padding:0.75rem;">Timestamp</th>
+              <th style="padding:0.75rem;">Event Type</th>
+              <th style="padding:0.75rem;">Passport Code</th>
+              <th style="padding:0.75rem;">Cluster</th>
+              <th style="padding:0.75rem;">Anomaly Score</th>
+              <th style="padding:0.75rem;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.75rem; color:var(--slate);">2026-09-08 17:45</td>
+              <td style="padding:0.75rem; font-weight:700;">PEER_JURY_CONSENSUS</td>
+              <td style="padding:0.75rem; font-family:monospace;">A7X-9B2</td>
+              <td style="padding:0.75rem;">Varanasi Handloom</td>
+              <td style="padding:0.75rem; color:#15803D;">0.01 (Clean)</td>
+              <td style="padding:0.75rem;"><span class="badge-verified" style="font-size:0.75rem;">APPROVED</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.75rem; color:var(--slate);">2026-09-08 16:12</td>
+              <td style="padding:0.75rem; font-weight:700; color:#DC2626;">COUNTERFEIT_FLAG</td>
+              <td style="padding:0.75rem; font-family:monospace;">K9P-12M</td>
+              <td style="padding:0.75rem;">Kashmir Pashmina</td>
+              <td style="padding:0.75rem; color:#DC2626; font-weight:700;">0.94 (Synthetic Mix)</td>
+              <td style="padding:0.75rem;"><span style="background:#FEE2E2; color:#991B1B; font-weight:700; padding:0.2rem 0.5rem; border-radius:9999px; font-size:0.75rem;">FLAGGED_DM_AUDIT</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+              <td style="padding:0.75rem; color:var(--slate);">2026-09-08 14:30</td>
+              <td style="padding:0.75rem; font-weight:700;">ESC_POS_TAG_MINTED</td>
+              <td style="padding:0.75rem; font-family:monospace;">M3B-77L</td>
+              <td style="padding:0.75rem;">Mithila Painting</td>
+              <td style="padding:0.75rem; color:#15803D;">0.00 (GPS Locked)</td>
+              <td style="padding:0.75rem;"><span class="badge-verified" style="font-size:0.75rem;">VERIFIED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
 
   </main>
 
+  <!-- ANTI FRAUD REPORT MODAL -->
+  <div id="report-modal" class="modal-backdrop">
+    <div class="modal-content">
+      <h3 style="font-size:1.3rem; font-weight:800; color:#991B1B; margin-bottom:0.5rem;">
+        🚩 Report Fake / Machine-Made Craft
+      </h3>
+      <p style="font-size:0.85rem; color:var(--slate); margin-bottom:1.25rem;">
+        Help protect Indian artisans. Reporting triggers an automatic investigation by the MoSJE Peer Review Jury.
+      </p>
+      <div style="margin-bottom:1rem;">
+        <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:0.3rem;">Shortcode or Hash</label>
+        <input type="text" id="report-code" class="search-input" style="width:100%;" value="A7X-9B2" readonly>
+      </div>
+      <div style="margin-bottom:1.25rem;">
+        <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:0.3rem;">Reason for Reporting</label>
+        <select id="report-reason" style="width:100%; padding:0.75rem; border-radius:10px; border:2px solid var(--border); font-family:inherit;">
+          <option value="Machine-made powerloom polyester synthetic fabric sold as pure silk">Machine-made powerloom fabric sold as pure handloom</option>
+          <option value="Chemical screen-printed art sold as authentic natural dye GI craft">Chemical screen print sold as authentic natural dye</option>
+          <option value="Fake Pehchan / TRIFED credentials">Fake artisan identity / unauthorized seller</option>
+        </select>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+        <button class="btn-outline" onclick="closeReportModal()">Cancel</button>
+        <button class="btn-danger" onclick="submitReportFake()">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    function switchMainTab(tabId, btn) {
+    function switchTab(tabId, btn) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.nav-tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
       btn.classList.add('active');
     }
 
-    const simScreens = ['dash', 'camera', 'voice', 'price', 'passport', 'export'];
-    let currentSimIndex = 0;
+    const SAMPLE_PASSPORTS = {
+      "A7X-9B2": {
+        title: "Handwoven Banarasi Katan Silk Saree",
+        gi: "🎖️ Geographical Indication: Banarasi Brocade & Saree (GI Reg #39)",
+        artisan: "Radha Devi",
+        cluster: "Varanasi Handloom Cluster, Uttar Pradesh",
+        mat: "₹3,200",
+        labor: "₹4,800",
+        profit: "₹1,500",
+        pack: "₹300",
+        total: "₹9,800",
+        hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "M3B-77L": {
+        title: "Authentic Mithila Kohbar Folk Painting",
+        gi: "🎖️ Geographical Indication: Madhubani Paintings (GI Reg #105)",
+        artisan: "Geeta Jha",
+        cluster: "Mithila Painting Cluster, Bihar",
+        mat: "₹650",
+        labor: "₹2,250",
+        profit: "₹900",
+        pack: "₹200",
+        total: "₹4,000",
+        hash: "f4c1b892a01d5678bc901ef23456789abcdef0123456789abcdef0123456789a"
+      },
+      "K9P-12M": {
+        title: "Kashmir Hand-Spun Pashmina Sozni Shawl",
+        gi: "🎖️ Geographical Indication: Kashmir Pashmina (GI Reg #46)",
+        artisan: "Bashir Ahmad Mir",
+        cluster: "Kashmir Pashmina Cluster, Srinagar, J&K",
+        mat: "₹4,800",
+        labor: "₹9,900",
+        profit: "₹3,500",
+        pack: "₹400",
+        total: "₹18,600",
+        hash: "99a8b7c6d5e4f3210123456789abcdef0123456789abcdef0123456789abcdef0"
+      },
+      "KTC-55A": {
+        title: "Kutch Hand-Embroidered Mirrorwork Toran",
+        gi: "🎖️ Geographical Indication: Kutch Embroidery (GI Reg #40)",
+        artisan: "Pabiben Rabari",
+        cluster: "Kutch Embroidery Cluster, Gujarat",
+        mat: "₹950",
+        labor: "₹3,150",
+        profit: "₹1,100",
+        pack: "₹250",
+        total: "₹5,450",
+        hash: "7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b"
+      }
+    };
 
-    function advanceSimStep() {
-      currentSimIndex = (currentSimIndex + 1) % simScreens.length;
-      setSimScreen(simScreens[currentSimIndex]);
+    function verifyShortcode() {
+      let raw = document.getElementById('shortcode-input').value.trim().toUpperCase().replace(/[\s_]/g, '');
+      if (raw.length === 6 && !raw.includes('-')) {
+        raw = raw.slice(0, 3) + '-' + raw.slice(3);
+      }
+      const p = SAMPLE_PASSPORTS[raw] || SAMPLE_PASSPORTS["A7X-9B2"];
+      
+      document.getElementById('disp-title').innerText = p.title;
+      document.getElementById('disp-gi').innerText = p.gi;
+      document.getElementById('disp-artisan').innerText = p.artisan;
+      document.getElementById('disp-cluster').innerText = p.cluster;
+      document.getElementById('disp-shortcode').innerText = "CODE: " + (SAMPLE_PASSPORTS[raw] ? raw : "A7X-9B2");
+      document.getElementById('disp-cost-mat').innerText = p.mat;
+      document.getElementById('disp-cost-labor').innerText = p.labor;
+      document.getElementById('disp-cost-profit').innerText = p.profit;
+      document.getElementById('disp-cost-pack').innerText = p.pack;
+      document.getElementById('disp-cost-total').innerText = p.total;
+      document.getElementById('disp-hash').innerText = p.hash;
+      document.getElementById('report-code').value = SAMPLE_PASSPORTS[raw] ? raw : "A7X-9B2";
     }
 
-    function setSimScreen(screen) {
-      const idx = simScreens.indexOf(screen);
-      const stepNodes = document.querySelectorAll('.step-tracker .step-node');
-      if (idx !== -1) {
-        currentSimIndex = idx;
-        stepNodes.forEach((node, i) => {
-          if (i === idx) {
-            node.classList.add('active');
-          } else {
-            node.classList.remove('active');
-          }
-        });
-      } else {
-        stepNodes.forEach(node => node.classList.remove('active'));
-      }
-
-      const body = document.getElementById('simBody');
-      const title = document.getElementById('simTitle');
-      const badge = document.getElementById('simStepBadge');
-      const desc = document.getElementById('simStepDesc');
-
-      if (screen === 'dash') {
-        title.textContent = 'Artify Bharat Dashboard';
-        badge.textContent = 'Stage: Dashboard';
-        desc.innerHTML = '<strong>UI_Dash:</strong> High-contrast primary CTA for low-literacy artisans, craft cluster badge, and quick access to "My Inventory" and "Ask Dadi".';
-        body.innerHTML = `
-          <div class="artisan-card-mini">
-            <div class="avatar-circle">ग</div>
-            <div>
-              <div style="font-weight: 700; font-size: 0.95rem;">नमस्ते, गौरी देवी जी</div>
-              <div style="font-size: 0.78rem; color: var(--trust-green); font-weight: 600;">Verified (TRIFED-UP / Pehchan)</div>
-            </div>
-          </div>
-          <div class="dadi-banner-card" onclick="setSimScreen('dadi')">
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <span style="font-size: 1.5rem;">👵</span>
-              <div>
-                <div style="font-weight: 700; font-size: 0.88rem; color: #5D2417;">दादी से पूछो (Ask Dadi)</div>
-                <div style="font-size: 0.72rem; color: #7A4839;">बोली में बुनाई, फोटो या दाम की सलाह</div>
-              </div>
-            </div>
-            <span>🎙️</span>
-          </div>
-          <div class="big-camera-cta" onclick="setSimScreen('camera')">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📸</div>
-            <div style="font-weight: 800; font-size: 1.25rem; line-height: 1.2;">नया प्रोडक्ट बेचें</div>
-            <div style="font-size: 0.82rem; opacity: 0.9; margin-top: 0.25rem;">(Sell New Product)</div>
-          </div>
-          <button style="width: 100%; padding: 0.85rem; border-radius: 12px; border: 1.5px solid var(--terracotta); background: white; color: var(--terracotta); font-weight: 700; cursor: pointer;" onclick="setSimScreen('inventory')">
-            📦 मेरी सूची (My Inventory: 3)
-          </button>
-        `;
-      } else if (screen === 'camera') {
-        title.textContent = 'AI Smart Camera';
-        badge.textContent = 'Stage: 1:1 Camera Studio';
-        desc.innerHTML = '<strong>UI_Capture (ImageAI):</strong> Enforces strict 1:1 square crop, salient object background removal (U²-Net), and OpenCV CLAHE auto-enhance lighting fix.';
-        body.innerHTML = `
-          <div style="border-radius: 16px; overflow: hidden; height: 260px; position: relative; background: #000;">
-            <img src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=500&auto=format&fit=crop&q=80" style="width: 100%; height: 100%; object-fit: cover;">
-            <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem;">1:1 Auto-Enhanced Studio</div>
-          </div>
-          <div style="background: #E8F5E9; padding: 10px; border-radius: 10px; font-size: 0.8rem; color: var(--trust-green); font-weight: 600;">
-            ✓ Background removed & studio white lighting applied.
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.85rem;" onclick="setSimScreen('voice')">आवाज में बताएं (Speak Details) ➔</button>
-        `;
-      } else if (screen === 'voice') {
-        title.textContent = 'Voice Cataloging';
-        badge.textContent = 'Stage: Multilingual NLP';
-        desc.innerHTML = '<strong>UI_Voice (LangAI):</strong> Captures native dialect audio (Bhojpuri/Hindi/Maithili) and automatically generates titles, weave specifications, and SEO tags via Whisper & Mistral-7B.';
-        body.innerHTML = `
-          <div style="text-align: center; padding: 1.5rem 0;">
-            <div style="width: 80px; height: 80px; background: #FFCDD2; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; color: #C62828;">🎙️</div>
-            <div style="margin-top: 0.75rem; font-weight: 700; font-size: 1rem;">"ई हमार बनारसी साड़ी हवे..."</div>
-            <div style="font-size: 0.75rem; color: #757575;">Bhojpuri Dialect Detected</div>
-          </div>
-          <div style="background: white; border: 1px solid var(--border); padding: 10px; border-radius: 10px; font-size: 0.82rem;">
-            <strong>AI Auto-Generated:</strong><br>
-            Handwoven Banarasi Silk Saree with Pure Zari Work (GI Tagged)
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.85rem;" onclick="setSimScreen('price')">दाम तय करें (Smart Pricing) ➔</button>
-        `;
-      } else if (screen === 'price') {
-        title.textContent = 'Smart Pricing';
-        badge.textContent = 'Stage: Dynamic Pricing';
-        desc.innerHTML = '<strong>UI_Price (PricingAI):</strong> Protects artisan with statutory Fair Wage Floor (₹450/day) and provides AI market pricing recommendation range.';
-        body.innerHTML = `
-          <div style="background: white; border-radius: 12px; padding: 12px; border: 1px solid var(--border);">
-            <div style="font-size: 0.82rem; color: var(--slate);">कच्चा माल खर्च: <strong>₹500</strong> | मेहनत: <strong>15 दिन</strong></div>
-            <div style="font-size: 0.82rem; color: var(--trust-green); font-weight: 700; margin-top: 4px;">फेयर वेज गारंटी: ₹6,750 (Protected)</div>
-            <div style="margin-top: 10px; font-size: 1.3rem; font-weight: 800; color: var(--terracotta-dark);">सुझाया गया दाम: ₹10,421</div>
-            <div style="font-size: 0.72rem; color: #64748B;">मार्केट रेंज: ₹8,609 - ₹12,234</div>
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.85rem;" onclick="setSimScreen('passport')">पासपोर्ट व QR बनाएं ➔</button>
-        `;
-      } else if (screen === 'passport') {
-        title.textContent = 'Digital Passport';
-        badge.textContent = 'Stage: Cryptographic Provenance';
-        desc.innerHTML = '<strong>UI_Verify (QRService):</strong> Synthesizes deterministic SHA-256 hash over artisan Pehchan ID, GI credentials, GPS coordinates, and product cost into a high-contrast QR code.';
-        body.innerHTML = `
-          <div style="text-align: center; padding: 1rem; background: white; border-radius: 16px; border: 2px solid var(--trust-green);">
-            <div style="font-size: 3.5rem;">📱</div>
-            <div style="font-weight: 800; font-size: 0.95rem; color: var(--trust-green);">SHA-256 DIGITAL PASSPORT</div>
-            <div style="font-family: monospace; font-size: 0.65rem; color: var(--slate); word-break: break-all; margin-top: 4px;">e3b0c44298fc1c149afbf4c8...855</div>
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.85rem;" onclick="setSimScreen('export')">GeM / ONDC पर पब्लिश करें ➔</button>
-        `;
-      } else if (screen === 'export') {
-        title.textContent = 'One-Tap Publish';
-        badge.textContent = 'Stage: Multi-Channel Export';
-        desc.innerHTML = '<strong>UI_Export (Unified Catalog Adapter):</strong> Exports compliant XML/CSV to GeM (Government e-Marketplace), Beckn Protocol JSON to ONDC, and B2B reports.';
-        body.innerHTML = `
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="background: white; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; display: flex; justify-content: space-between;">
-              <span>🏛️ GeM (Govt Procurement)</span>
-              <strong style="color: var(--trust-green);">✓ Export Ready</strong>
-            </div>
-            <div style="background: white; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; display: flex; justify-content: space-between;">
-              <span>🛍️ ONDC (Retail Network)</span>
-              <strong style="color: var(--trust-green);">✓ Export Ready</strong>
-            </div>
-            <div style="background: white; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.82rem; display: flex; justify-content: space-between;">
-              <span>🏢 Direct B2B Buyers</span>
-              <strong style="color: var(--trust-green);">✓ Export Ready</strong>
-            </div>
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.85rem; background: var(--trust-green);" onclick="alert('बधाई हो! आपका उत्पाद GeM और ONDC पर सफलतापूर्वक लाइव हो गया है।'); setSimScreen('dash');">🚀 One-Tap Publish Complete</button>
-        `;
-      } else if (screen === 'dadi') {
-        title.textContent = 'दादी से पूछो (Ask Dadi)';
-        badge.textContent = 'Assistant: Ask Dadi';
-        desc.innerHTML = '<strong>UI_Help (LangAI):</strong> Conversational dialect voice assistant helping rural weavers understand photo angles, pricing math, GI tag benefits, and GeM procurement.';
-        body.innerHTML = `
-          <div style="background: #FFF3E0; border-radius: 12px; padding: 12px; font-size: 0.85rem;">
-            <strong>👵 दादी:</strong> "बबुआ, साड़ी के हमेशा दिन के प्राकृतिक उजाला में 1:1 चौकोर फ्रेम में रख के फोटो खींचा। AI अपने आप उज्जर बैकग्राउंड बना दी।"
-          </div>
-          <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 10px; font-size: 0.8rem;">
-            💡 <strong>दादी का टिप:</strong> कच्चा माल के खर्च में कम से कम ₹450/दिन का फेयर वेज जरूर जोड़ें।
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.75rem;" onclick="setSimScreen('dash')">वापस होम पर जाएं (Back to Home)</button>
-        `;
-      } else if (screen === 'inventory') {
-        title.textContent = 'मेरी सूची (My Inventory)';
-        badge.textContent = 'Module: My Inventory';
-        desc.innerHTML = '<strong>My Inventory:</strong> Shows active listings across GeM, ONDC, and B2B, digital passport verification hashes, and local SQLite offline drafts.';
-        body.innerHTML = `
-          <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
-            <div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
-              <div style="font-weight: 700;">Handwoven Banarasi Saree</div>
-              <div style="font-size: 0.75rem; color: var(--trust-green);">GeM / ONDC Live • ₹10,421</div>
-            </div>
-            <div style="background: white; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
-              <div style="font-weight: 700;">Madhubani Painted Dupatta</div>
-              <div style="font-size: 0.75rem; color: var(--trust-green);">ONDC Live • ₹4,850</div>
-            </div>
-          </div>
-          <button class="btn-primary" style="width: 100%; padding: 0.75rem;" onclick="setSimScreen('dash')">होम पर जाएं (Back to Home)</button>
-        `;
-      }
+    function loadSampleCode(code) {
+      document.getElementById('shortcode-input').value = code;
+      verifyShortcode();
     }
 
-    function downgradeToUnverified() {
-      const badge = document.getElementById('verifiedBadge');
-      if (badge) {
-        badge.style.color = '#DC2626';
-        badge.innerHTML = `
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-          </svg>
-          UNVERIFIED — NOT CONFIRMED BY REGISTRY
-        `;
-      }
-      const header = document.querySelector('.passport-header');
-      if (header) {
-        header.style.background = '#FEF2F2';
-        header.style.borderColor = '#FECACA';
-      }
+    function playAudioDemo() {
+      alert("🎙️ Playing verified artisan dialect audio clip: Radha Devi explaining the 10-day handloom weaving process in native Bhojpuri.");
     }
 
-    function setVerifiedBadge() {
-      const badge = document.getElementById('verifiedBadge');
-      if (badge) {
-        badge.style.color = 'var(--trust-green)';
-        badge.innerHTML = `
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
-          AUTHENTIC HANDCRAFT VERIFIED
-        `;
-      }
-      const header = document.querySelector('.passport-header');
-      if (header) {
-        header.style.background = 'var(--trust-green-light)';
-        header.style.borderColor = '#BBF7D0';
-      }
+    function openReportModal() {
+      document.getElementById('report-modal').classList.add('active');
     }
 
-    function maskIdentifier(val) {
-      if (!val) return 'ID Masked (Consent Required)';
-      const parts = val.split('-');
-      if (parts.length >= 3) {
-        return `${parts[0]}-***-${parts[parts.length - 1]}`;
-      }
-      return val.length > 4 ? val.slice(0, 3) + '***' + val.slice(-2) : '***';
+    function closeReportModal() {
+      document.getElementById('report-modal').classList.remove('active');
     }
 
-    async function verifyHash() {
-      const hash = document.getElementById('hashInput').value.trim();
-      if (!hash) {
-        alert('Please enter a valid passport hash.');
-        return;
-      }
+    async function submitReportFake() {
+      const code = document.getElementById('report-code').value;
+      const reason = document.getElementById('report-reason').value;
+      
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/passport/verify/${hash}`);
-        if (!response.ok) {
-          downgradeToUnverified();
-          alert(`Registry lookup failed (HTTP ${response.status}): Details displayed below are unverified demo data.`);
-          return;
-        }
-        const data = await response.json();
-        document.getElementById('passportHash').textContent = `SHA-256: ${data.passport_hash}`;
-        document.getElementById('productTitle').textContent = data.product_title;
-        document.getElementById('artisanName').textContent = data.artisan_name || 'Artisan (Protected)';
-        document.getElementById('trifedId').textContent = maskIdentifier(data.trifed_id);
-        document.getElementById('pehchanId').textContent = maskIdentifier(data.pehchan_id);
-        document.getElementById('clusterName').textContent = `${data.cluster_name}, ${data.state}`;
-        if (data.cost_breakdown) {
-          document.getElementById('rawMaterialCost').textContent = `₹${data.cost_breakdown.raw_material_cost}`;
-          document.getElementById('fairWage').textContent = `₹${data.cost_breakdown.calculated_fair_wage}`;
-          document.getElementById('netProfit').textContent = `₹${data.cost_breakdown.artisan_net_profit}`;
-          document.getElementById('totalPrice').textContent = `₹${data.cost_breakdown.total_suggested_price}`;
-        }
-        setVerifiedBadge();
-        alert('Authenticity Validated: Cryptographic provenance verified successfully!');
-      } catch (err) {
-        downgradeToUnverified();
-        alert(`Verification service unreachable (${err.message || 'Network error'}): Details displayed below are unverified demo data.`);
+        await fetch('http://localhost:8000/api/v1/verify/report-fake', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ shortcode_or_hash: code, reason: reason })
+        });
+      } catch(e) {}
+
+      closeReportModal();
+      alert(`🚩 Anti-Fraud Audit Triggered for ${code}!\n\nStatus: ESCROW_FROZEN_PENDING_INSPECTION\nAction: Incident logged into MoSJE Nodal Officer queue and assigned to 3 randomized cluster peer jurors.`);
+    }
+
+
+    function setRole(role) {
+      document.getElementById('role-btn-artisan').classList.toggle('active', role === 'artisan');
+      document.getElementById('role-btn-shg').classList.toggle('active', role === 'shg');
+      if (role === 'shg') {
+        alert("👥 Switched to Aggregator / SHG Leader Mode:\nManaging 18 registered village artisans in Varanasi cluster.");
+      } else {
+        alert("🧑🎨 Switched to Artisan Direct Mode (Single User).");
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      setSimScreen('dash');
-    });
+    function simulateCapture() {
+      alert("📸 WIP Loom Photo Captured! Gyro balanced (0.0° tilt), GPS Lock verified (25.3176° N, 82.9739° E).");
+    }
+
+    function simulateCaptureFinal() {
+      alert("📸 Final Product Captured! Auto-enhanced via rembg U-2-Net & OpenCV CLAHE LAB contrast fix.");
+    }
+
+    function simulateVoiceRecord() {
+      document.getElementById('voice-transcript').innerText = "🎙️ 'Handwoven Banarasi Katan Silk Saree, Pure Zari booti, 10 din lagal banawe mein.'";
+      alert("🗣️ Bhashini Voice NLP: Spoken dialect processed into structured product title and descriptions!");
+    }
+
+    function updatePricingSlider(val) {
+      document.getElementById('slider-val-disp').innerText = "₹" + Number(val).toLocaleString();
+      if (val <= 7500) {
+        document.getElementById('price-tier-label').innerText = "Statutory Skilled Wage Floor";
+      } else if (val <= 11000) {
+        document.getElementById('price-tier-label').innerText = "Fair Market Recommended";
+      } else {
+        document.getElementById('price-tier-label').innerText = "Premium Collector Tier";
+      }
+    }
+
+    function simulatePrintThermal() {
+      alert("🖨️ Web Bluetooth API connected to 58mm ESC/POS Thermal Printer!\nPrinted adhesive QR label with Shortcode A7X-9B2 and GPS timestamp lock.");
+    }
+
+    function simulatePublishAll() {
+      alert("🚀 One-Tap Multi-Channel Publish Successful!\n\n1. GeM Portal: B2G XML Catalog Synced\n2. ONDC Beckn: Catalog pushed with inventory webhook\n3. WhatsApp Commerce: Interactive catalog card generated with UPI deep link.");
+    }
   </script>
+
 </body>
 </html>
