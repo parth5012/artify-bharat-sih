@@ -1,91 +1,145 @@
 flowchart TD
-    %% ==========================================
-    %% OPTIMIZED ARTIFY BHARAT - SIH PS 26090
-    %% ==========================================
+    %% =======================================================
+    %% ARTIFY BHARAT WEB ARCHITECTURE (SIH PS 26090)
+    %% Ministry of Social Justice and Empowerment (MoSJE)
+    %% =======================================================
 
-    subgraph Client["📱 CLIENT LAYER (Flutter - iOS/Android)"]
+    subgraph Client["🌐 CLIENT LAYER (Responsive Web - React / Next.js & Tailwind CSS)"]
         direction TB
-        UI_Dash["🏠 Dashboard: 'Naya Product' Button<br>+ My Inventory"]
-        UI_Capture["📸 AI Smart Camera<br>(1:1 Crop + Auto-Enhance Preview)"]
-        UI_Voice["🎙️ Voice Cataloging<br>(Speak in Dialect, AI Writes Description)"]
-        UI_Price["💰 Smart Pricing<br>(Enter Cost + Labor, AI suggests Market Range)"]
-        UI_Verify["✅ Verify & Passport<br>(Review AI Output + Generate QR)"]
-        UI_Export["🚀 One-Tap Publish<br>(Select GeM / ONDC / B2B)"]
-        UI_Help["💬 Voice Assistant<br>('Ask Dadi' - Interactive Help)"]
         
-        OfflineDB[("📂 Local SQLite<br>(Offline Drafts & Cache)")]
+        subgraph UserModes["👤 Dual-Role Access Engine"]
+            ArtisanUI["🧑🎨 Artisan Direct Mode<br>(Single-User Browser Portal)"]
+            SHGUI["👥 Aggregator / SHG Leader Mode<br>(Multi-Tenant Coordinator Hub)"]
+        end
+
+        UI_Dash["🏠 Smart Web Dashboard<br>('Naya Product' + Live Inventory Sync)"]
         
-        UI_Dash --> UI_Capture --> UI_Voice --> UI_Price --> UI_Verify --> UI_Export
+        subgraph SmartCaptureBox["📸 Web Media Capture & Authentication"]
+            UI_Capture["📸 Browser Media Capture<br>(MediaDevices API, 1:1 Aspect Ratio, WIP + Final Upload)"]
+            UI_GPS["📍 Geolocation API & Timestamp Lock<br>(Live Metadata Verification)"]
+        end
+
+        UI_Voice["🎙️ Zero-Literacy Audio Engine<br>(Web Speech API / Bhashini Audio Stream)"]
+        UI_Price["💰 Fair Wage & Dynamic Pricing<br>(Cost + Hours + Interactive Range Slider)"]
+        UI_Verify["✅ Verification & Tagging<br>(Digital Passport + 6-Char Shortcode)"]
+        
+        subgraph HardwareLayer["🖨️ Physical Hardware Layer"]
+            ThermalPrinter["🖨️ Web Bluetooth API Printer<br>(58mm ESC/POS Browser-to-Printer Bridge)"]
+        end
+
+        UI_Export["🚀 One-Tap Multi-Channel Publish<br>(GeM / ONDC / WhatsApp Web)"]
+        UI_Help["💬 'Ask Dadi' Voice Assistant<br>(Interactive Guidance + PM-DAKSH Nudges)"]
+        
+        OfflineDB[("📂 Browser IndexedDB<br>(Offline Drafts, Audio Cache & Shortcodes)")]
+        SyncEngine["🔄 Service Worker Sync<br>(Background Auto-Retry Queue)"]
+
+        UserModes --> UI_Dash
+        UI_Dash --> UI_Capture --> UI_GPS --> UI_Voice --> UI_Price --> UI_Verify
+        UI_Verify --> ThermalPrinter
+        UI_Verify --> UI_Export
         UI_Capture -.-> OfflineDB
         UI_Voice -.-> OfflineDB
         UI_Verify -.-> OfflineDB
+        OfflineDB --> SyncEngine
         UI_Dash --> UI_Help
     end
 
     subgraph Backend["⚡ BACKEND API GATEWAY (FastAPI / Node.js)"]
         direction TB
-        Gateway["🌐 API Router<br>(Auth, Rate Limiting, File Upload)"]
+        Gateway["🌐 API Gateway & Router<br>(Auth, Rate Limiting, File Uploads, Webhook Receiver)"]
         
-        subgraph CoreServices["🧠 AI CORE SERVICES (Microservices)"]
-            AuthService["🪪 Verification Service<br>(Pehchan Card / TRIFED ID Lookup)"]
-            ImageAI["🖼️ AI Image Studio<br>(Background Removal + Lighting Fix)"]
-            LangAI["🗣️ Multilingual NLP<br>(ASR + IndicTrans2 + Title Generation)"]
-            PricingAI["📊 Dynamic Pricing<br>(Market Comparison + Profit Optimizer)"]
-            QRService["🔐 Digital Passport<br>(SHA-256 Hash + QR Code Generator)"]
+        subgraph CoreServices["🧠 AI CORE SERVICES & DPI MICROSERVICES"]
+            AuthService["🪪 MoSJE & e-Shram Auth<br>(PM-SURAJ / PM-DAKSH / e-KYC Lookup)"]
+            ImageAI["🖼️ Image Studio Engine<br>(rembg U-2-Net Background Removal + OpenCV CLAHE)"]
+            LangAI["🗣️ Multilingual Voice NLP<br>(Whisper ASR + IndicTrans2 + Audio TTS)"]
+            PricingAI["📊 Dynamic Pricing Engine<br>(Fair Skilled-Wage Floor + Market Benchmarks)"]
+            VerifyService["🔐 Zero-Trust Verification Engine<br>(Random Peer Jury + AI Rubber-Stamp Anomaly Check)"]
+            QRService["🏷️ Digital Passport Service<br>(SHA-256 Hash + QR & Shortcode Generator)"]
+            LogisticsService["📦 First-Mile Logistics Adapter<br>(India Post / CSC Drop-off PIN & Barcode)"]
+            PayoutService["💳 Direct Jan Dhan / UPI Payout<br>(Middleman-Free Escrow & Settlement)"]
+            NotifyService["📲 SMS & IVR Engine<br>(Bhashini Voice Alerts for Offline Orders)"]
         end
-        
+
         Gateway --> AuthService
         Gateway --> ImageAI
         Gateway --> LangAI
         Gateway --> PricingAI
+        Gateway --> VerifyService
         Gateway --> QRService
+        Gateway --> LogisticsService
+        Gateway --> PayoutService
+        Gateway --> NotifyService
     end
 
     subgraph Storage["🗄️ DATA & OBJECT STORAGE"]
-        SQL_DB[("🐘 PostgreSQL<br>Artisans, Products, Prices, Hashes")]
-        Media_DB[("☁️ AWS S3 / MinIO<br>Images, Audio Clips, QR Codes")]
+        SQL_DB[("🐘 PostgreSQL DB<br>Artisans, Audit Hashes, Benchmarks, Verification Jury Queue")]
+        Media_DB[("☁️ AWS S3 / MinIO<br>Raw/WIP Images, Studio Images, Audio Clips, QR SVGs")]
+        PII_Vault[("🛡️ Secure PII Vault<br>(Tokenized E-Shram & Bank Details - DPDP Compliant)")]
     end
 
-    subgraph Exports["🌐 MULTI-CHANNEL EXPORT ADAPTERS"]
-        Adapter["🔄 Unified Catalog Adapter"]
-        GeM["🏛️ GeM Portal<br>(Government Bulk Procure)"]
-        ONDC["🛍️ ONDC Network<br>(Retail & Resellers)"]
-        B2B["🏢 Direct B2B Buyers<br>(CSV / Email Reports)"]
+    subgraph Exports["🌐 MULTI-CHANNEL EXPORT & SYNC ADAPTERS"]
+        Adapter["🔄 Unified Bi-Directional Sync Adapter"]
+        GeM["🏛️ GeM Portal<br>(Government B2G Bulk Orders)"]
+        ONDC["🛍️ ONDC Beckn Node<br>(B2C Retail Marketplaces)"]
+        WA["💬 WhatsApp Commerce Bot<br>(Direct Customer Catalog & UPI Link)"]
+        NGO["🏢 SHG / NGO Bulk Portal<br>(B2B Wholesale Catalog)"]
         
-        Adapter --> GeM
-        Adapter --> ONDC
-        Adapter --> B2B
+        Adapter <-->|Bi-Directional Order Sync| GeM
+        Adapter <-->|Stock Deduction Webhooks| ONDC
+        Adapter <-->|Catalog Push| WA
+        Adapter <-->|Wholesale Export| NGO
     end
 
-    subgraph Buyer["🔍 PART B: BUYER VERIFICATION PORTAL"]
-        Scan["📷 Scan QR Code<br>(On Product / Listing)"]
-        Portal["🌐 Public Verification Page"]
-        Story["👤 Provenance & Craft Narrative<br>(Approved Public Story + Native Audio Clip)"]
-        Cost["⚖️ Fair Price Breakdown<br>(Materials + Labor + Direct Profit)"]
-        
+    subgraph Buyer["🔍 BUYER VERIFICATION PORTAL"]
+        Scan["📷 Scan QR Code OR Enter 6-Char Code<br>(e.g., artify.gov.in/A7X-9B2)"]
+        Portal["🌐 Public Digital Passport Portal"]
+        Story["👤 Verified Artisan Origin<br>(MoSJE Status + WIP Photo + Native Audio Story)"]
+        Cost["⚖️ Fair Price Breakdown<br>(Materials + Fair Labor + Profit + Packaging)"]
+        Report["🚩 Anti-Fraud Feedback Loop<br>('Report Fake / Machine-Made' Audit Trigger)"]
+
         Scan --> Portal --> Story
         Portal --> Cost
+        Portal --> Report
     end
 
-    %% ========== CONNECTIONS ==========
-    Client <-->|REST APIs| Gateway
+    subgraph AdminPortal["📊 MINISTRY & ADMIN DASHBOARD"]
+        AdminWeb["🌐 MoSJE Nodal Officer / DM Dashboard<br>(React / Next.js)"]
+        Heatmap["🗺️ Live District Economic Heatmap"]
+        AuditLog["📋 Anti-Corruption & Peer-Review Logs"]
+        UpskillMetrics["🎓 Skill Upskilling Analytics (PM-DAKSH)"]
+        DemandForecast["📈 Predictive Demand AI<br>(Festival Trend Forecasting)"]
+
+        AdminWeb --> Heatmap
+        AdminWeb --> AuditLog
+        AdminWeb --> UpskillMetrics
+        AdminWeb --> DemandForecast
+    end
+
+    %% ========== SYSTEM CONNECTIONS ==========
+    Client <-->|REST APIs & WebSockets| Gateway
+    SyncEngine ==>|Batch Uploads| Gateway
     CoreServices <--> Storage
+    CoreServices <--> PII_Vault
     Adapter <--> CoreServices
     Adapter --> Exports
-    
-    Exports -.->|QR Passport on Listing| Scan
-    Portal -.->|Public Verification API<br>(Approved Public Fields & Consent Controls)| Gateway
-    
+
+    Exports -.->|QR Passport on Product Listing| Scan
+    Portal -.->|Verification API| Gateway
+    Report -.->|Flags Verifier & Triggers Audit| VerifyService
+    Gateway <--> AdminWeb
+
     %% ========== STYLING ==========
-    classDef mobile fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#9A3412;
+    classDef web fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#9A3412;
     classDef backend fill:#EFF6FF,stroke:#2563EB,stroke-width:2px,color:#1E40AF;
     classDef ai fill:#FAF5FF,stroke:#9333EA,stroke-width:2px,color:#6B21A8;
     classDef data fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#166534;
     classDef export fill:#FEFCE8,stroke:#CA8A04,stroke-width:2px,color:#854D0E;
     classDef buyer fill:#F8FAFC,stroke:#0F172A,stroke-width:2px,color:#0F172A;
+    classDef admin fill:#FEF2F2,stroke:#DC2626,stroke-width:2px,color:#991B1B;
 
-    class UI_Dash,UI_Capture,UI_Voice,UI_Price,UI_Verify,UI_Export,UI_Help,OfflineDB mobile;
-    class Gateway,AuthService,ImageAI,LangAI,PricingAI,QRService backend;
-    class SQL_DB,Media_DB data;
-    class Adapter,GeM,ONDC,B2B export;
-    class Scan,Portal,Story,Cost buyer;
+    class UI_Dash,UI_Capture,UI_GPS,UI_Voice,UI_Price,UI_Verify,ThermalPrinter,UI_Export,UI_Help,OfflineDB,SyncEngine,ArtisanUI,SHGUI web;
+    class Gateway,AuthService,ImageAI,LangAI,PricingAI,VerifyService,QRService,LogisticsService,PayoutService,NotifyService backend;
+    class SQL_DB,Media_DB,PII_Vault data;
+    class Adapter,GeM,ONDC,WA,NGO export;
+    class Scan,Portal,Story,Cost,Report buyer;
+    class AdminWeb,Heatmap,AuditLog,UpskillMetrics,DemandForecast admin;

@@ -177,5 +177,40 @@ class ExportAdapterService:
         await db.commit()
         return exports
 
+    async def lock_inventory_on_sale(
+        self,
+        db: AsyncSession,
+        product_id: str,
+        originating_channel: str,
+    ) -> Dict[str, Any]:
+        """
+        Multi-Channel Race Condition Guard (SIH PS 26090):
+        When a unique 1-of-1 handcrafted item is purchased on ONDC/GeM/WhatsApp,
+        instantly locks inventory and marks listings on all other channels as OUT_OF_STOCK.
+        """
+        product = (await db.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
+        if not product:
+            raise ValueError(f"Product {product_id} not found")
+
+        product.status = "sold_out"
+
+        exports = (await db.execute(select(ChannelExport).where(ChannelExport.product_id == product_id))).scalars().all()
+        broadcasted_channels = []
+        for exp in exports:
+            if exp.channel.lower() != originating_channel.lower():
+                exp.sync_status = "delisted_sold"
+                broadcasted_channels.append(exp.channel)
+
+        await db.commit()
+
+        return {
+            "product_id": product_id,
+            "status": "sold_out",
+            "purchased_on": originating_channel,
+            "delisted_from_channels": broadcasted_channels,
+            "inventory_locked": True,
+        }
+
 
 export_adapter_service = ExportAdapterService()
+

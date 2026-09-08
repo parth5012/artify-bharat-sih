@@ -11,14 +11,31 @@ from app.schemas.auth import (
     ArtisanIdVerificationRequest,
     ArtisanIdVerificationResponse,
 )
+from app.schemas.mosje import (
+    MoSJEAuthRequest,
+    MoSJEAuthResponse,
+    EShramLookupRequest,
+    EShramLookupResponse,
+    PMSurajLookupRequest,
+    PMSurajLookupResponse
+)
 
 router = APIRouter(prefix="/auth", tags=["Voice Authentication & Verification Service (AuthService)"])
 
 
-# Master registry mock database for Pehchan Card and TRIFED IDs
+# Master registry mock database for Pehchan Card, TRIFED, e-Shram, and MoSJE schemes
 MASTER_ARTISAN_REGISTRY = {
     "PEH-IND-88320": {
         "artisan_name": "Gauri Devi",
+        "craft_category": "Handloom Textile",
+        "cluster_name": "Varanasi Handloom Cluster",
+        "gi_certified": True,
+        "gi_tag_name": "Banarasi Brocade & Saree (GI Reg #39)",
+        "state": "Uttar Pradesh",
+        "district": "Varanasi",
+    },
+    "UP-VAR-102938": {
+        "artisan_name": "Radha Devi",
         "craft_category": "Handloom Textile",
         "cluster_name": "Varanasi Handloom Cluster",
         "gi_certified": True,
@@ -159,4 +176,67 @@ async def verify_artisan_id(payload: ArtisanIdVerificationRequest):
         state=None,
         district=None,
         verification_source="National Artisan Registry (Unverified / Record Not Found)"
+    )
+
+
+@router.post("/mosje-verify", response_model=MoSJEAuthResponse)
+async def verify_mosje_scheme(payload: MoSJEAuthRequest):
+    """
+    MoSJE DPI Microservice:
+    Validates artisan enrollment in PM-DAKSH, PM-SURAJ, or e-KYC registries.
+    """
+    scheme = payload.scheme_type.upper()
+    is_valid = bool(payload.scheme_registration_number and len(payload.scheme_registration_number) >= 4)
+    
+    return MoSJEAuthResponse(
+        verified=is_valid,
+        scheme_type=payload.scheme_type,
+        scheme_registration_number=payload.scheme_registration_number,
+        beneficiary_name="Radha Devi",
+        craft_cluster="Varanasi Handloom Cluster",
+        state="Uttar Pradesh",
+        skill_certification_level="Master Artisan Level 4 (PM-DAKSH)",
+        stipend_eligible=True,
+        details={
+            "subsidy_eligible": True,
+            "interest_subvention_pct": 5.0,
+            "escrow_bank": "State Bank of India (Jan Dhan Account)"
+        }
+    )
+
+
+@router.post("/eshram-lookup", response_model=EShramLookupResponse)
+async def lookup_eshram_worker(payload: EShramLookupRequest):
+    """
+    e-Shram DPI Microservice:
+    Validates 12-digit UAN number for unorganized handicraft workers.
+    """
+    is_valid = len(payload.uan_number.replace("-", "").replace(" ", "")) == 12
+    return EShramLookupResponse(
+        valid=is_valid,
+        uan_number=payload.uan_number,
+        worker_name="Radha Devi",
+        primary_occupation="Handloom Silk Weaver & Artisan",
+        sub_category="Weaving and Allied Craft Work",
+        state="Uttar Pradesh",
+        district="Varanasi",
+        social_category="OBC / Recognized Artisan",
+        pension_scheme_enrolled=True
+    )
+
+
+@router.post("/pmsuraj-lookup", response_model=PMSurajLookupResponse)
+async def lookup_pmsuraj_credit(payload: PMSurajLookupRequest):
+    """
+    PM-SURAJ DPI Microservice:
+    Validates credit sanction and concessional loan status under MoSJE.
+    """
+    return PMSurajLookupResponse(
+        verified=True,
+        application_id=payload.application_id,
+        beneficiary_name="Radha Devi",
+        sanctioned_amount_inr=100000.0,
+        subsidy_percentage=35.0,
+        credit_status="SANCTIONED_DISBURSED",
+        nodal_agency="National Scheduled Castes Finance and Development Corporation (NSFDC / MoSJE)"
     )
