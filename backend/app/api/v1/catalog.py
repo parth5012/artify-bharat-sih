@@ -4,6 +4,8 @@ from sqlalchemy import select
 from typing import Optional, List
 from app.core.database import get_db
 from app.core.storage import storage_manager
+from app.core.security import get_current_artisan, AuthenticatedPrincipal
+from app.config import get_settings
 from app.services.nlp_service import nlp_service
 from app.models.product import Product
 from app.models.passport import HeritagePassport
@@ -76,16 +78,28 @@ async def auto_catalog_from_voice(
 @router.get("/my-inventory", response_model=InventoryListResponse)
 async def get_my_inventory(
     artisan_id: Optional[str] = Query(None, description="Artisan ID"),
+    current_artisan: AuthenticatedPrincipal = Depends(get_current_artisan),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Client Layer Dashboard: 'My Inventory' listing.
-    Retrieves all active listings, verification passport hashes, and published channel statuses.
+    Requires authentication. Derives default artisan ID from authenticated principal.
+    Permits cross-artisan access only for authorized administrative roles.
     """
-    stmt = select(Product)
+    settings = get_settings()
+
+    # Determine effective artisan ID and enforce authorization
     if artisan_id:
-        stmt = stmt.where(Product.artisan_id == artisan_id)
-    
+        if artisan_id != current_artisan.id and current_artisan.role not in ["admin", "supervisor", "procurement_officer"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access inventory for other artisans."
+            )
+        effective_artisan_id = artisan_id
+    else:
+        effective_artisan_id = current_artisan.id
+
+    stmt = select(Product).where(Product.artisan_id == effective_artisan_id)
     res = await db.execute(stmt)
     products = res.scalars().all()
 
@@ -124,8 +138,8 @@ async def get_my_inventory(
             )
         )
 
-    # If no products in DB yet, provide realistic sample inventory for dashboard preview
-    if not items:
+    # If no items found, return empty inventory with zero counts unless explicit dev demo flag is on
+    if not items and settings.ENABLE_DEMO_INVENTORY:
         items = [
             InventoryItemResponse(
                 product_id="prod-demo-01",

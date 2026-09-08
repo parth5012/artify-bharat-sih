@@ -70,11 +70,11 @@ This document breaks down the entire Artify Bharat project into sequential, bite
 - **Description**:
   Build scheduled scraper worker to continuously aggregate market price points across handloom and handicraft portals (GeM, Amazon Karigar, ONDC).
 - **Acceptance Criteria**:
-  - [ ] Implement Celery Beat task `scrape_market_prices_daily` running on a 24-hour cron schedule.
+  - [ ] Implement Celery Beat task `scrape_handicraft_benchmarks` in `app.workers.tasks_scraper` running on a 24-hour cron schedule.
   - [ ] Aggregate and normalize prices by craft category (Handloom, Pottery, Woodcraft, Metalwork).
   - [ ] Cache aggregated benchmark price percentiles (P25, P50, P75) in Redis for downstream pricing inference.
 - **Target Files**:
-  - `backend/app/workers/scraper_tasks.py`
+  - `backend/app/workers/tasks_scraper.py`
   - `backend/app/services/pricing_service.py`
 
 ---
@@ -147,6 +147,7 @@ This document breaks down the entire Artify Bharat project into sequential, bite
   Implement Page 6 Cryptographic Verification & Digital Artisan Passport QR Code generator.
 - **Acceptance Criteria**:
   - [ ] Generate deterministic SHA-256 hash binding: `artisan_id`, `trifed_id`, `geo_coords`, `product_title`, `timestamp`, `raw_material_cost`, and `labor_days`.
+  - [ ] Preserve immutable first-issuance timestamp when hashing an existing passport so previously issued QR tags are not invalidated on reissue.
   - [ ] Render high-contrast Base64 QR code encoding the public verification URL.
   - [ ] `POST /api/v1/passport/issue/{product_id}`: Store snapshot and issue passport.
   - [ ] `GET /api/v1/passport/verify/{passport_hash}`: Public REST verification endpoint.

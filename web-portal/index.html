@@ -501,7 +501,7 @@
     <div id="buyerTab" class="tab-content active">
       <div class="passport-card">
         <div class="passport-header">
-          <div class="verified-badge">
+          <div class="verified-badge" id="verifiedBadge">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
@@ -611,41 +611,8 @@
               <span style="font-size: 0.8rem;">📶 4G | 🪪 Verified</span>
             </div>
 
-            <!-- Screen View Content -->
-            <div class="phone-body" id="simBody">
-              <!-- Default Dashboard View -->
-              <div class="artisan-card-mini">
-                <div class="avatar-circle">ग</div>
-                <div>
-                  <div style="font-weight: 700; font-size: 0.95rem;">नमस्ते, गौरी देवी जी</div>
-                  <div style="font-size: 0.78rem; color: var(--trust-green); font-weight: 600;">Verified (TRIFED-UP / Pehchan)</div>
-                </div>
-              </div>
-
-              <!-- Dadi Voice Help Banner -->
-              <div class="dadi-banner-card" onclick="setSimScreen('dadi')">
-                <div style="display: flex; align-items: center; gap: 0.6rem;">
-                  <span style="font-size: 1.5rem;">👵</span>
-                  <div>
-                    <div style="font-weight: 700; font-size: 0.88rem; color: #5D2417;">दादी से पूछो (Ask Dadi)</div>
-                    <div style="font-size: 0.72rem; color: #7A4839;">बोली में बुनाई, फोटो या दाम की सलाह</div>
-                  </div>
-                </div>
-                <span>🎙️</span>
-              </div>
-
-              <!-- Big Camera CTA -->
-              <div class="big-camera-cta" onclick="setSimScreen('camera')">
-                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📸</div>
-                <div style="font-weight: 800; font-size: 1.25rem; line-height: 1.2;">नया प्रोडक्ट बेचें</div>
-                <div style="font-size: 0.82rem; opacity: 0.9; margin-top: 0.25rem;">(Sell New Product)</div>
-              </div>
-
-              <!-- Inventory Button -->
-              <button style="width: 100%; padding: 0.85rem; border-radius: 12px; border: 1.5px solid var(--terracotta); background: white; color: var(--terracotta); font-weight: 700; cursor: pointer;" onclick="setSimScreen('inventory')">
-                📦 मेरी सूची (My Inventory: 3)
-              </button>
-            </div>
+            <!-- Screen View Content (Initialized dynamically via setSimScreen) -->
+            <div class="phone-body" id="simBody"></div>
           </div>
         </div>
 
@@ -716,6 +683,21 @@
     }
 
     function setSimScreen(screen) {
+      const idx = simScreens.indexOf(screen);
+      const stepNodes = document.querySelectorAll('.step-tracker .step-node');
+      if (idx !== -1) {
+        currentSimIndex = idx;
+        stepNodes.forEach((node, i) => {
+          if (i === idx) {
+            node.classList.add('active');
+          } else {
+            node.classList.remove('active');
+          }
+        });
+      } else {
+        stepNodes.forEach(node => node.classList.remove('active'));
+      }
+
       const body = document.getElementById('simBody');
       const title = document.getElementById('simTitle');
       const badge = document.getElementById('simStepBadge');
@@ -861,6 +843,51 @@
       }
     }
 
+    function downgradeToUnverified() {
+      const badge = document.getElementById('verifiedBadge');
+      if (badge) {
+        badge.style.color = '#DC2626';
+        badge.innerHTML = `
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          UNVERIFIED — NOT CONFIRMED BY REGISTRY
+        `;
+      }
+      const header = document.querySelector('.passport-header');
+      if (header) {
+        header.style.background = '#FEF2F2';
+        header.style.borderColor = '#FECACA';
+      }
+    }
+
+    function setVerifiedBadge() {
+      const badge = document.getElementById('verifiedBadge');
+      if (badge) {
+        badge.style.color = 'var(--trust-green)';
+        badge.innerHTML = `
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          AUTHENTIC HANDCRAFT VERIFIED
+        `;
+      }
+      const header = document.querySelector('.passport-header');
+      if (header) {
+        header.style.background = 'var(--trust-green-light)';
+        header.style.borderColor = '#BBF7D0';
+      }
+    }
+
+    function maskIdentifier(val) {
+      if (!val) return 'ID Masked (Consent Required)';
+      const parts = val.split('-');
+      if (parts.length >= 3) {
+        return `${parts[0]}-***-${parts[parts.length - 1]}`;
+      }
+      return val.length > 4 ? val.slice(0, 3) + '***' + val.slice(-2) : '***';
+    }
+
     async function verifyHash() {
       const hash = document.getElementById('hashInput').value.trim();
       if (!hash) {
@@ -870,25 +897,34 @@
       try {
         const response = await fetch(`http://localhost:8000/api/v1/passport/verify/${hash}`);
         if (!response.ok) {
-          alert('Note: Showing verified sample record (Backend API: http://localhost:8000)');
+          downgradeToUnverified();
+          alert(`Registry lookup failed (HTTP ${response.status}): Details displayed below are unverified demo data.`);
           return;
         }
         const data = await response.json();
         document.getElementById('passportHash').textContent = `SHA-256: ${data.passport_hash}`;
         document.getElementById('productTitle').textContent = data.product_title;
-        document.getElementById('artisanName').textContent = data.artisan_name;
-        document.getElementById('trifedId').textContent = data.trifed_id || 'Verified Artisan';
-        document.getElementById('pehchanId').textContent = data.pehchan_id || 'PEH-GOV-REG';
+        document.getElementById('artisanName').textContent = data.artisan_name || 'Artisan (Protected)';
+        document.getElementById('trifedId').textContent = maskIdentifier(data.trifed_id);
+        document.getElementById('pehchanId').textContent = maskIdentifier(data.pehchan_id);
         document.getElementById('clusterName').textContent = `${data.cluster_name}, ${data.state}`;
-        document.getElementById('rawMaterialCost').textContent = `₹${data.cost_breakdown.raw_material_cost}`;
-        document.getElementById('fairWage').textContent = `₹${data.cost_breakdown.calculated_fair_wage}`;
-        document.getElementById('netProfit').textContent = `₹${data.cost_breakdown.artisan_net_profit}`;
-        document.getElementById('totalPrice').textContent = `₹${data.cost_breakdown.total_suggested_price}`;
+        if (data.cost_breakdown) {
+          document.getElementById('rawMaterialCost').textContent = `₹${data.cost_breakdown.raw_material_cost}`;
+          document.getElementById('fairWage').textContent = `₹${data.cost_breakdown.calculated_fair_wage}`;
+          document.getElementById('netProfit').textContent = `₹${data.cost_breakdown.artisan_net_profit}`;
+          document.getElementById('totalPrice').textContent = `₹${data.cost_breakdown.total_suggested_price}`;
+        }
+        setVerifiedBadge();
         alert('Authenticity Validated: Cryptographic provenance verified successfully!');
       } catch (err) {
-        alert('Live cryptographic verification confirmed with offline fallback data.');
+        downgradeToUnverified();
+        alert(`Verification service unreachable (${err.message || 'Network error'}): Details displayed below are unverified demo data.`);
       }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setSimScreen('dash');
+    });
   </script>
 </body>
 </html>

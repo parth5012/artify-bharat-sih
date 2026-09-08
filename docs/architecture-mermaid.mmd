@@ -60,7 +60,7 @@ flowchart TD
     subgraph Buyer["🔍 PART B: BUYER VERIFICATION PORTAL"]
         Scan["📷 Scan QR Code<br>(On Product / Listing)"]
         Portal["🌐 Public Verification Page"]
-        Story["👤 Artisan Story<br>(TRIFED ID + Native Audio Clip)"]
+        Story["👤 Provenance & Craft Narrative<br>(Approved Public Story + Native Audio Clip)"]
         Cost["⚖️ Fair Price Breakdown<br>(Materials + Labor + Direct Profit)"]
         
         Scan --> Portal --> Story
@@ -74,7 +74,7 @@ flowchart TD
     Adapter --> Exports
     
     Exports -.->|QR Passport on Listing| Scan
-    Portal -.->|Verification API| Gateway
+    Portal -.->|Public Verification API<br>(Approved Public Fields & Consent Controls)| Gateway
     
     %% ========== STYLING ==========
     classDef mobile fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#9A3412;

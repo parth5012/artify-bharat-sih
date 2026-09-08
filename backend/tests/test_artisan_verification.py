@@ -29,6 +29,19 @@ async def test_verify_trifed_id_valid(client: AsyncClient):
     assert "Madhubani" in data["cluster_name"]
 
 @pytest.mark.asyncio
+async def test_verify_unregistered_prefix_fails(client: AsyncClient):
+    # Tests that prefix shortcuts like PEH-FAKE or TRIFED-UNKNOWN do NOT return True
+    payload = {
+        "identifier_type": "pehchan",
+        "identifier_value": "PEH-FAKE-99999"
+    }
+    res = await client.post("/api/v1/auth/verify-artisan-id", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_valid"] is False
+    assert data["gi_certified"] is False
+
+@pytest.mark.asyncio
 async def test_verify_invalid_artisan_id(client: AsyncClient):
     payload = {
         "identifier_type": "unknown",

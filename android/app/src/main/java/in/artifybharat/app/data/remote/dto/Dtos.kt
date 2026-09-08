@@ -62,3 +62,38 @@ data class ExportResponseDto(
     @SerializedName("product_id") val productId: String,
     val message: String
 )
+
+data class InventoryItemDto(
+    @SerializedName("product_id") val productId: String,
+    val title: String,
+    @SerializedName("craft_category") val craftCategory: String,
+    val status: String,
+    @SerializedName("final_price") val finalPrice: Double? = null,
+    @SerializedName("passport_hash") val passportHash: String? = null,
+    @SerializedName("enhanced_image_url") val enhancedImageUrl: String? = null,
+    @SerializedName("published_channels") val publishedChannels: List<String> = emptyList(),
+    @SerializedName("created_at") val createdAt: String? = null
+)
+
+data class InventoryListResponseDto(
+    @SerializedName("total_items") val totalItems: Int,
+    @SerializedName("active_listings_count") val activeListingsCount: Int,
+    @SerializedName("drafts_count") val draftsCount: Int,
+    val inventory: List<InventoryItemDto>
+)
+
+data class DadiQueryRequestDto(
+    @SerializedName("query_text") val queryText: String,
+    val dialect: String? = "bhojpuri",
+    @SerializedName("product_category") val productCategory: String? = "handloom"
+)
+
+data class DadiQueryResponseDto(
+    @SerializedName("answer_text") val answerText: String,
+    @SerializedName("answer_english") val answerEnglish: String,
+    val dialect: String,
+    @SerializedName("audio_response_url") val audioResponseUrl: String? = null,
+    @SerializedName("suggested_actions") val suggestedActions: List<String> = emptyList(),
+    @SerializedName("dadi_tip") val dadiTip: String
+)
+

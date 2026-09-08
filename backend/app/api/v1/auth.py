@@ -146,22 +146,6 @@ async def verify_artisan_id(payload: ArtisanIdVerificationRequest):
             district=data["district"],
             verification_source="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)"
         )
-    
-    # Generic valid format acceptance for demo / test resilience
-    if id_clean.startswith("PEH-") or id_clean.startswith("TRIFED-") or id_clean.startswith("VISH-"):
-        return ArtisanIdVerificationResponse(
-            is_valid=True,
-            identifier_type=payload.identifier_type,
-            identifier_value=id_clean,
-            artisan_name="Registered Master Artisan",
-            craft_category="Traditional Craft & Handloom",
-            cluster_name="Verified Regional Craft Cluster",
-            gi_certified=True,
-            gi_tag_name="Authentic Indian Handloom (GI Certified)",
-            state="India",
-            district="Regional District",
-            verification_source="Ministry of Textiles & TRIFED Real-time Verification Portal"
-        )
 
     return ArtisanIdVerificationResponse(
         is_valid=False,

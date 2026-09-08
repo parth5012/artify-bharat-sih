@@ -36,9 +36,24 @@ class PassportService:
 
         raw_cost = pricing.raw_material_cost if pricing else 500.0
         labor_days = pricing.labor_days if pricing else 15.0
-        timestamp_now = datetime.now(timezone.utc).isoformat()
+        # Check existing passport to preserve first-issue timestamp and hash
+        existing_passport_res = await db.execute(
+            select(HeritagePassport).where(HeritagePassport.product_id == product_id)
+        )
+        existing_passport = existing_passport_res.scalar_one_or_none()
 
-        # Generate deterministic SHA-256 hash
+        if existing_passport:
+            # Reuse immutable first-issuance timestamp from existing passport record
+            first_issue_time = (
+                existing_passport.payload_snapshot.get("issued_at")
+                if existing_passport.payload_snapshot and "issued_at" in existing_passport.payload_snapshot
+                else existing_passport.created_at.isoformat()
+            )
+            issue_timestamp = first_issue_time
+        else:
+            issue_timestamp = datetime.now(timezone.utc).isoformat()
+
+        # Generate deterministic SHA-256 hash using the immutable issuance timestamp
         passport_hash = generate_passport_hash(
             artisan_id=artisan.id,
             trifed_id=artisan.trifed_id,
@@ -46,7 +61,7 @@ class PassportService:
             geo_lng=artisan.geo_lng,
             product_title=product.title,
             craft_category=product.craft_category,
-            timestamp_iso=timestamp_now,
+            timestamp_iso=issue_timestamp,
             raw_material_cost=raw_cost,
             labor_days=labor_days,
         )
@@ -81,14 +96,8 @@ class PassportService:
                 "final_price": pricing.final_price if pricing else 4500.0,
             },
             "hash": passport_hash,
-            "issued_at": timestamp_now,
+            "issued_at": issue_timestamp,
         }
-
-        # Check existing passport
-        existing_passport_res = await db.execute(
-            select(HeritagePassport).where(HeritagePassport.product_id == product_id)
-        )
-        existing_passport = existing_passport_res.scalar_one_or_none()
 
         if existing_passport:
             existing_passport.passport_hash = passport_hash

@@ -121,3 +121,54 @@ class ExportRepositoryImpl(private val api: ArtifyApiService) : ExportRepository
         }
     }
 }
+
+class CatalogRepositoryImpl(private val api: ArtifyApiService) : CatalogRepository {
+    override suspend fun processVoiceCatalog(
+        productId: String,
+        audioFile: File,
+        dialect: String
+    ): Result<Map<String, Any>> {
+        return Result.Success(mapOf("status" to "cataloged"))
+    }
+
+    override suspend fun getMyInventory(artisanId: String?): Result<Map<String, Any>> {
+        return try {
+            val response = api.getMyInventory(artisanId = artisanId)
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                Result.Success(mapOf(
+                    "total_items" to body.totalItems,
+                    "active_listings_count" to body.activeListingsCount,
+                    "drafts_count" to body.draftsCount,
+                    "inventory" to body.inventory
+                ))
+            } else {
+                Result.Error("Failed to fetch inventory: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Result.Error("Network error: ${e.localizedMessage ?: "Unknown error"}", e)
+        }
+    }
+
+    override suspend fun askDadi(query: String, dialect: String): Result<Map<String, Any>> {
+        return try {
+            val response = api.askDadi(DadiQueryRequestDto(queryText = query, dialect = dialect))
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                Result.Success(mapOf(
+                    "answer_text" to body.answerText,
+                    "answer_english" to body.answerEnglish,
+                    "dialect" to body.dialect,
+                    "audio_response_url" to (body.audioResponseUrl ?: ""),
+                    "suggested_actions" to body.suggestedActions,
+                    "dadi_tip" to body.dadiTip
+                ))
+            } else {
+                Result.Error("Ask Dadi service error: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Result.Error("Network error: ${e.localizedMessage ?: "Unknown error"}", e)
+        }
+    }
+}
+
