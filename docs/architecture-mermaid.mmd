@@ -1,0 +1,91 @@
+flowchart TD
+    %% ==========================================
+    %% OPTIMIZED ARTIFY BHARAT - SIH PS 26090
+    %% ==========================================
+
+    subgraph Client["📱 CLIENT LAYER (Flutter - iOS/Android)"]
+        direction TB
+        UI_Dash["🏠 Dashboard: 'Naya Product' Button<br>+ My Inventory"]
+        UI_Capture["📸 AI Smart Camera<br>(1:1 Crop + Auto-Enhance Preview)"]
+        UI_Voice["🎙️ Voice Cataloging<br>(Speak in Dialect, AI Writes Description)"]
+        UI_Price["💰 Smart Pricing<br>(Enter Cost + Labor, AI suggests Market Range)"]
+        UI_Verify["✅ Verify & Passport<br>(Review AI Output + Generate QR)"]
+        UI_Export["🚀 One-Tap Publish<br>(Select GeM / ONDC / B2B)"]
+        UI_Help["💬 Voice Assistant<br>('Ask Dadi' - Interactive Help)"]
+        
+        OfflineDB[("📂 Local SQLite<br>(Offline Drafts & Cache)")]
+        
+        UI_Dash --> UI_Capture --> UI_Voice --> UI_Price --> UI_Verify --> UI_Export
+        UI_Capture -.-> OfflineDB
+        UI_Voice -.-> OfflineDB
+        UI_Verify -.-> OfflineDB
+        UI_Dash --> UI_Help
+    end
+
+    subgraph Backend["⚡ BACKEND API GATEWAY (FastAPI / Node.js)"]
+        direction TB
+        Gateway["🌐 API Router<br>(Auth, Rate Limiting, File Upload)"]
+        
+        subgraph CoreServices["🧠 AI CORE SERVICES (Microservices)"]
+            AuthService["🪪 Verification Service<br>(Pehchan Card / TRIFED ID Lookup)"]
+            ImageAI["🖼️ AI Image Studio<br>(Background Removal + Lighting Fix)"]
+            LangAI["🗣️ Multilingual NLP<br>(ASR + IndicTrans2 + Title Generation)"]
+            PricingAI["📊 Dynamic Pricing<br>(Market Comparison + Profit Optimizer)"]
+            QRService["🔐 Digital Passport<br>(SHA-256 Hash + QR Code Generator)"]
+        end
+        
+        Gateway --> AuthService
+        Gateway --> ImageAI
+        Gateway --> LangAI
+        Gateway --> PricingAI
+        Gateway --> QRService
+    end
+
+    subgraph Storage["🗄️ DATA & OBJECT STORAGE"]
+        SQL_DB[("🐘 PostgreSQL<br>Artisans, Products, Prices, Hashes")]
+        Media_DB[("☁️ AWS S3 / MinIO<br>Images, Audio Clips, QR Codes")]
+    end
+
+    subgraph Exports["🌐 MULTI-CHANNEL EXPORT ADAPTERS"]
+        Adapter["🔄 Unified Catalog Adapter"]
+        GeM["🏛️ GeM Portal<br>(Government Bulk Procure)"]
+        ONDC["🛍️ ONDC Network<br>(Retail & Resellers)"]
+        B2B["🏢 Direct B2B Buyers<br>(CSV / Email Reports)"]
+        
+        Adapter --> GeM
+        Adapter --> ONDC
+        Adapter --> B2B
+    end
+
+    subgraph Buyer["🔍 PART B: BUYER VERIFICATION PORTAL"]
+        Scan["📷 Scan QR Code<br>(On Product / Listing)"]
+        Portal["🌐 Public Verification Page"]
+        Story["👤 Provenance & Craft Narrative<br>(Approved Public Story + Native Audio Clip)"]
+        Cost["⚖️ Fair Price Breakdown<br>(Materials + Labor + Direct Profit)"]
+        
+        Scan --> Portal --> Story
+        Portal --> Cost
+    end
+
+    %% ========== CONNECTIONS ==========
+    Client <-->|REST APIs| Gateway
+    CoreServices <--> Storage
+    Adapter <--> CoreServices
+    Adapter --> Exports
+    
+    Exports -.->|QR Passport on Listing| Scan
+    Portal -.->|Public Verification API<br>(Approved Public Fields & Consent Controls)| Gateway
+    
+    %% ========== STYLING ==========
+    classDef mobile fill:#FFF7ED,stroke:#EA580C,stroke-width:2px,color:#9A3412;
+    classDef backend fill:#EFF6FF,stroke:#2563EB,stroke-width:2px,color:#1E40AF;
+    classDef ai fill:#FAF5FF,stroke:#9333EA,stroke-width:2px,color:#6B21A8;
+    classDef data fill:#F0FDF4,stroke:#16A34A,stroke-width:2px,color:#166534;
+    classDef export fill:#FEFCE8,stroke:#CA8A04,stroke-width:2px,color:#854D0E;
+    classDef buyer fill:#F8FAFC,stroke:#0F172A,stroke-width:2px,color:#0F172A;
+
+    class UI_Dash,UI_Capture,UI_Voice,UI_Price,UI_Verify,UI_Export,UI_Help,OfflineDB mobile;
+    class Gateway,AuthService,ImageAI,LangAI,PricingAI,QRService backend;
+    class SQL_DB,Media_DB data;
+    class Adapter,GeM,ONDC,B2B export;
+    class Scan,Portal,Story,Cost buyer;

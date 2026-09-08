@@ -17,6 +17,8 @@ interface StudioRepository {
 
 interface CatalogRepository {
     suspend fun processVoiceCatalog(productId: String, audioFile: File, dialect: String): Result<Map<String, Any>>
+    suspend fun getMyInventory(artisanId: String? = null): Result<Map<String, Any>>
+    suspend fun askDadi(query: String, dialect: String): Result<Map<String, Any>>
 }
 
 interface PricingRepository {

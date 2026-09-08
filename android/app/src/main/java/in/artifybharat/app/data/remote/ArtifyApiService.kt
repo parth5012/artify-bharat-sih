@@ -36,4 +36,16 @@ interface ArtifyApiService {
 
     @POST("api/v1/exports/sync")
     suspend fun exportChannels(@Body request: ExportRequestDto): Response<ExportResponseDto>
+
+    @GET("api/v1/catalog/my-inventory")
+    suspend fun getMyInventory(
+        @Header("Authorization") token: String? = null,
+        @Query("artisan_id") artisanId: String? = null
+    ): Response<InventoryListResponseDto>
+
+    @POST("api/v1/assistant/dadi")
+    suspend fun askDadi(
+        @Body request: DadiQueryRequestDto
+    ): Response<DadiQueryResponseDto>
 }
+

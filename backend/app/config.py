@@ -53,6 +53,7 @@ class Settings(BaseSettings):
 
     # Verification & Heritage Passport
     PASSPORT_VERIFICATION_BASE_URL: str = "https://verify.artifybharat.in/passport"
+    ENABLE_DEMO_INVENTORY: bool = False  # Development-only flag to inject sample items if inventory is empty
 
     model_config = SettingsConfigDict(
         env_file=".env",
