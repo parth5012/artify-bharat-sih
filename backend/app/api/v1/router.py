@@ -5,6 +5,7 @@ from app.api.v1.catalog import router as catalog_router
 from app.api.v1.pricing import router as pricing_router
 from app.api.v1.passport import router as passport_router
 from app.api.v1.exports import router as exports_router
+from app.api.v1.assistant import router as assistant_router
 
 api_v1_router = APIRouter()
 
@@ -14,3 +15,4 @@ api_v1_router.include_router(catalog_router)
 api_v1_router.include_router(pricing_router)
 api_v1_router.include_router(passport_router)
 api_v1_router.include_router(exports_router)
+api_v1_router.include_router(assistant_router)

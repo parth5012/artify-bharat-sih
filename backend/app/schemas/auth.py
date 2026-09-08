@@ -27,3 +27,22 @@ class TokenResponse(BaseModel):
     artisan_id: str
     name: str
     phone: str
+
+
+class ArtisanIdVerificationRequest(BaseModel):
+    identifier_type: str = Field(default="pehchan", description="Identifier type: 'pehchan' or 'trifed'")
+    identifier_value: str = Field(..., description="Government artisan registration string (e.g. PEH-IND-88320 or TRIFED-UP-VNS-1049)")
+
+
+class ArtisanIdVerificationResponse(BaseModel):
+    is_valid: bool = Field(..., description="Whether ID is verified in national artisan database")
+    identifier_type: str
+    identifier_value: str
+    artisan_name: Optional[str] = None
+    craft_category: Optional[str] = None
+    cluster_name: Optional[str] = None
+    gi_certified: bool = False
+    gi_tag_name: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+    verification_source: str = Field(default="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)")

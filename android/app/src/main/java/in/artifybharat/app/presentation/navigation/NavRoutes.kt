@@ -8,4 +8,6 @@ sealed class Screen(val route: String) {
     object DynamicPricing : Screen("dynamic_pricing")
     object HeritagePassport : Screen("heritage_passport")
     object ChannelExport : Screen("channel_export")
+    object AskDadi : Screen("ask_dadi")
+    object MyInventory : Screen("my_inventory")
 }

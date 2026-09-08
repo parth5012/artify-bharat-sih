@@ -1,34 +1,36 @@
 # Context Map: ArtifyBharat (SIH PS 26090)
 
-ArtifyBharat is organized as a multi-context system with three distinct bounded contexts:
+ArtifyBharat is structured across distinct bounded contexts:
 
 ## Bounded Contexts
 
 | Context | Path | Core Responsibilities | Details |
 |---|---|---|---|
-| **System Core** | `/` | Ubiquitous language, overall architectural standards, cross-cutting ADRs | [CONTEXT.md](./CONTEXT.md) |
-| **Backend & AI Pipeline** | `backend/` | FastAPI REST gateway, Celery task queue, U²-Net CV, Whisper/IndicTrans2 NLP, XGBoost pricing, GeM/ONDC adapters | [backend/CONTEXT.md](./backend/CONTEXT.md) |
-| **Artisan Mobile Client** | `android/` | Voice-first Android application, Clean Architecture, Jetpack Compose 7-stage workflow, Room offline queue | [android/CONTEXT.md](./android/CONTEXT.md) |
-| **Public Verification Portal** | `web-portal/` | Consumer / procurement officer interface, SHA-256 provenance verification, financial transparency breakdown | [web-portal/CONTEXT.md](./web-portal/CONTEXT.md) |
+| **System Core** | `/` | Ubiquitous language, overall architectural standards, cross-cutting models | [CONTEXT.md](./CONTEXT.md) |
+| **Backend & AI Core Microservices** | `backend/` | FastAPI gateway, AuthService (Pehchan/TRIFED lookup), ImageAI (U²-Net CV studio), LangAI (Whisper, IndicTrans2, Mistral-7B, 'Ask Dadi'), PricingAI, QRService (SHA-256), Unified Export Adapter (GeM, ONDC, B2B) | [backend/CONTEXT.md](./backend/CONTEXT.md) |
+| **Artisan Client Layer** | `android/` | Voice-first mobile application, Dashboard ('Naya Product' & 'My Inventory'), AI Smart Camera (1:1 crop), Voice Cataloging, Smart Pricing, Verify & Passport, One-Tap Export, 'Ask Dadi' voice help, SQLite OfflineDB | [android/CONTEXT.md](./android/CONTEXT.md) |
+| **Buyer Verification Portal** | `web-portal/` | Public provenance verification, SHA-256 cryptographic check, Artisan Story with dialect voice stream, 0% middleman Fair Price Breakdown | [web-portal/CONTEXT.md](./web-portal/CONTEXT.md) |
 
 ## Context Relationships
 
 ```
 +------------------------------------+
-|       Artisan Mobile Client        |
-|            (`android/`)            |
+|       Artisan Client Layer         |
+|   (Dashboard, Camera, Voice,       |
+|    Price, Passport, Ask Dadi)      |
 +-----------------+------------------+
                   |
                   | Upstream REST API Calls
                   v
 +------------------------------------+       Public Hash Lookup       +------------------------------------+
-|       Backend & AI Pipeline        | <----------------------------- |     Public Verification Portal     |
-|            (`backend/`)            |                                |           (`web-portal/`)          |
+|   Backend API Gateway & AI Core    | <----------------------------- |     Buyer Verification Portal      |
+| (Auth, ImageAI, LangAI, PricingAI, |                                | (SHA-256 Check, Artisan Story,     |
+|   QRService, Multi-Channel Export) |                                |  0% Middleman Price Breakdown)     |
 +-----------------+------------------+                                +------------------------------------+
                   |
                   | Multi-Channel Catalog Export
                   v
 +------------------------------------+
-|  External Platforms (GeM / ONDC)   |
+|  Target Channels (GeM, ONDC, B2B)  |
 +------------------------------------+
 ```

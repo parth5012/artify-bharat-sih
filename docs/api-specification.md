@@ -4,7 +4,7 @@ Base URL: `http://localhost:8000/api/v1`
 
 ---
 
-## 1. Authentication (`/auth`)
+## 1. Authentication & Verification Service (`/auth`)
 
 ### `POST /auth/register`
 Registers a rural artisan via voice or manual details.
@@ -48,11 +48,71 @@ Artisan 4-digit security PIN login.
 }
 ```
 
+### `POST /auth/verify-artisan-id` *(AuthService - Microservice Lookup)*
+Validates government Pehchan Card or TRIFED registration ID against national master artisan registry.
+
+**Request Payload:**
+```json
+{
+  "identifier_type": "pehchan", 
+  "identifier_value": "PEH-IND-88320"
+}
+```
+
+**Response (`200 OK`):**
+```json
+{
+  "is_valid": true,
+  "identifier_type": "pehchan",
+  "identifier_value": "PEH-IND-88320",
+  "artisan_name": "Gauri Devi",
+  "craft_category": "Handloom Textile",
+  "cluster_name": "Varanasi Handloom Cluster",
+  "gi_certified": true,
+  "gi_tag_name": "Banarasi Brocade & Saree (GI Reg #39)",
+  "state": "Uttar Pradesh",
+  "district": "Varanasi",
+  "verification_source": "National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)"
+}
+```
+
 ---
 
-## 2. Camera Module & Studio Enhancement (`/studio`)
+## 2. 'Ask Dadi' Multilingual Voice Assistant (`/assistant`)
 
-### `POST /studio/enhance`
+### `POST /assistant/dadi` *(LangAI - Interactive AI Assistant)*
+Processes rural artisan dialect queries regarding cataloging, photography, fair pricing, GI tags, and marketplace policies.
+
+**Request Payload:**
+```json
+{
+  "query_text": "हमार साड़ी के फोटो कैसन खींची जेकरा से GeM पर बढ़िया बिके?",
+  "dialect": "bhojpuri",
+  "product_category": "handloom"
+}
+```
+
+**Response (`200 OK`):**
+```json
+{
+  "answer_text": "बबुआ, साड़ी के हमेशा दिन के प्राकृतिक रोशनी में, साफ समतल जगह पर फैला के फोटो खींचा। कैमरा के 1:1 चौकोर फ्रेम में साड़ी के बीच में राखीं। आर्टिफाई भारत के AI अपने आप बैकग्राउंड हटा के बढ़िया उज्जर बैकग्राउंड बना दी।",
+  "answer_english": "Dear child, always photograph the saree under natural daylight on a clean flat surface. Keep the saree centered inside the 1:1 square camera frame. Artify Bharat AI will automatically remove the background and give it a crisp white studio look.",
+  "dialect": "bhojpuri",
+  "audio_response_url": "media_storage/audio/dadi_advice_4812.mp3",
+  "suggested_actions": [
+    "Open AI Smart Camera (1:1 Crop)",
+    "Check Smart Pricing Calculator",
+    "View GI Tag Guidelines"
+  ],
+  "dadi_tip": "साड़ी के जरी बॉर्डर के पास से क्लोज-अप फोटो जरूर लीजियेगा!"
+}
+```
+
+---
+
+## 3. Camera Module & Studio Enhancement (`/studio`)
+
+### `POST /studio/enhance` *(ImageAI - AI Image Studio)*
 Uploads raw smartphone photo for salient background removal, CLAHE lighting equalization, and 1:1 auto-cropping.
 
 **Request (`multipart/form-data`):**
@@ -76,9 +136,9 @@ Uploads raw smartphone photo for salient background removal, CLAHE lighting equa
 
 ---
 
-## 3. Multilingual Voice Auto-Cataloger (`/catalog`)
+## 4. Multilingual Voice Auto-Cataloger & Inventory (`/catalog`)
 
-### `POST /catalog/voice`
+### `POST /catalog/voice` *(LangAI)*
 Processes voice description recording in regional dialect into structured metadata.
 
 **Request (`multipart/form-data`):**
@@ -110,11 +170,67 @@ Processes voice description recording in regional dialect into structured metada
 }
 ```
 
+### `GET /catalog/my-inventory` *(Client Layer Dashboard)*
+Retrieves artisan's active inventory, listing statuses across GeM/ONDC/B2B, and draft items.
+
+**Query Parameters:**
+- `artisan_id`: `"93691689-dcfb-4a57-b2e1-a20c3a2f3001"`
+
+**Response (`200 OK`):**
+```json
+{
+  "total_items": 3,
+  "active_listings_count": 2,
+  "drafts_count": 1,
+  "inventory": [
+    {
+      "product_id": "f8a70c32-bdfa-493e-8c31-92b67f139801",
+      "title": "Handwoven Banarasi Silk Saree with Pure Zari Work",
+      "craft_category": "Handloom Textile",
+      "status": "published",
+      "final_price": 10421.88,
+      "passport_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "published_channels": ["GeM", "ONDC", "Direct_B2B"],
+      "created_at": "2026-09-07T12:00:00Z"
+    }
+  ]
+}
+```
+
+### `POST /catalog/drafts/sync` *(Offline SQLite Draft Sync)*
+Batch uploads offline drafts created on the mobile client when reconnecting to network.
+
+**Request Payload:**
+```json
+{
+  "artisan_id": "93691689-dcfb-4a57-b2e1-a20c3a2f3001",
+  "drafts": [
+    {
+      "local_draft_id": "draft_local_1001",
+      "product_title": "Chanderi Cotton Saree",
+      "craft_category": "handloom",
+      "raw_cost": 400.0,
+      "labor_days": 8.0,
+      "dialect": "hindi"
+    }
+  ]
+}
+```
+
+**Response (`200 OK`):**
+```json
+{
+  "synced_count": 1,
+  "synced_draft_ids": ["draft_local_1001"],
+  "status": "success"
+}
+```
+
 ---
 
-## 4. Dynamic Pricing Engine (`/pricing`)
+## 5. Dynamic Pricing Engine (`/pricing`)
 
-### `POST /pricing/calculate`
+### `POST /pricing/calculate` *(PricingAI)*
 Calculates fair trade wage, complexity premium, and XGBoost recommended market window.
 
 **Request Payload (`application/json`):**
@@ -149,9 +265,9 @@ Calculates fair trade wage, complexity premium, and XGBoost recommended market w
 
 ---
 
-## 5. Heritage Passport & Verification (`/passport`)
+## 6. Heritage Passport & Public Verification (`/passport`)
 
-### `POST /passport/issue`
+### `POST /passport/issue` *(QRService)*
 Issues deterministic SHA-256 hash and QR code bound to product and artisan identity.
 
 **Request Payload:**
@@ -172,7 +288,7 @@ Issues deterministic SHA-256 hash and QR code bound to product and artisan ident
 }
 ```
 
-### `GET /passport/verify/{passport_hash}`
+### `GET /passport/verify/{passport_hash}` *(Buyer Verification Portal)*
 Public verification endpoint for consumers and procurement officers.
 
 **Response (`200 OK`):**
@@ -209,16 +325,16 @@ Public verification endpoint for consumers and procurement officers.
 
 ---
 
-## 6. One-Tap Multi-Channel Export (`/exports`)
+## 7. Multi-Channel Export Adapters (`/exports`)
 
-### `POST /exports/sync`
-Exports catalog specification to GeM, ONDC, Amazon Karigar, and B2B channels.
+### `POST /exports/sync` *(Unified Catalog Adapter)*
+Exports catalog specification to GeM Portal (XML/CSV), ONDC (Beckn Protocol JSON), and Direct B2B Buyers (CSV/Email).
 
 **Request Payload:**
 ```json
 {
   "product_id": "f8a70c32-bdfa-493e-8c31-92b67f139801",
-  "target_channels": ["GeM", "ONDC", "Direct_B2B", "Amazon_Karigar"],
+  "target_channels": ["GeM", "ONDC", "Direct_B2B"],
   "b2b_bulk_min_quantity": 10,
   "b2b_bulk_discount_percentage": 15.0
 }
@@ -243,8 +359,15 @@ Exports catalog specification to GeM, ONDC, Amazon Karigar, and B2B channels.
       "external_reference_id": "ONDC-12345678",
       "format": "JSON_BECKN",
       "details": { "synced_records": 1, "target": "ONDC" }
+    },
+    {
+      "channel": "Direct_B2B",
+      "status": "synced",
+      "external_reference_id": "B2B-EXP-5521",
+      "format": "CSV_REPORT",
+      "details": { "synced_records": 1, "target": "Direct_B2B" }
     }
   ],
-  "message": "Successfully exported product to 4 external procurement channels."
+  "message": "Successfully exported product to 3 external procurement channels."
 }
 ```

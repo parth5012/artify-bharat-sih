@@ -26,6 +26,12 @@ fun ArtifyNavGraph(navController: NavHostController) {
             Page2ZeroSkillDashboardScreen(
                 onNavigateToCameraStudio = {
                     navController.navigate(Screen.CameraStudio.route)
+                },
+                onNavigateToInventory = {
+                    navController.navigate(Screen.MyInventory.route)
+                },
+                onNavigateToAskDadi = {
+                    navController.navigate(Screen.AskDadi.route)
                 }
             )
         }
@@ -69,6 +75,21 @@ fun ArtifyNavGraph(navController: NavHostController) {
                         popUpTo(Screen.ZeroSkillDashboard.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Screen.AskDadi.route) {
+            Page8AskDadiScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToCamera = { navController.navigate(Screen.CameraStudio.route) },
+                onNavigateToPricing = { navController.navigate(Screen.DynamicPricing.route) }
+            )
+        }
+
+        composable(Screen.MyInventory.route) {
+            Page9MyInventoryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToNewProduct = { navController.navigate(Screen.CameraStudio.route) }
             )
         }
     }

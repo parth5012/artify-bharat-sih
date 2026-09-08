@@ -1,4 +1,4 @@
-# Core Ubiquitous Language & Domain Concepts
+# Core Ubiquitous Language & Domain Concepts (SIH PS 26090)
 
 ## Problem Statement Domain
 - **SIH PS 26090**: Digital Business Manager & Digital Gatekeeper for rural weavers and handicraft artisans.
@@ -7,9 +7,21 @@
 - **TRIFED / Pehchan ID**: Official Indian government artisan identification credentials.
 - **Geographical Indication (GI)**: Government certification of authenticity and geographic origin (e.g., Banarasi Brocade & Saree GI Reg #39).
 
-## Technical Core Concepts
-- **Digital Heritage Passport**: A tamper-evident cryptographic provenance record linking artisan identity, craft metadata, geo-coordinates, timestamp, and product cost into a deterministic SHA-256 digest.
-- **Studio Enhancement**: Automatic salient object segmentation (U²-Net), lighting/gamma equalization (OpenCV CLAHE), and centered 1:1 auto-cropping on a pure white canvas.
-- **Voice Auto-Cataloger**: Pipeline converting regional dialect speech (Bhojpuri, Maithili, Hindi) via Whisper ASR and IndicTrans2 into English, parsed into structured titles and SEO tags via Mistral-7B LLM.
-- **Fair Wage Floor**: Minimum labor compensation calculated as `labor_days * daily_wage_benchmark` that cannot be undercut by algorithmic pricing.
-- **Multi-Channel Adapters**: Transformation engines exporting internal catalog specifications to GeM (XML/CSV) and ONDC (Beckn Protocol JSON).
+## Client Layer Domain Concepts
+- **UI_Dash (Dashboard)**: Zero-skill home screen with primary 'Naya Product' CTA and 'My Inventory' tracking active listings & draft sync.
+- **UI_Capture (AI Smart Camera)**: High-precision camera viewfinder with 1:1 square crop constraint and real-time auto-enhance preview.
+- **UI_Voice (Voice Cataloging)**: Speak in dialect; AI writes structured title and description.
+- **UI_Price (Smart Pricing)**: Enter raw material cost & labor days; AI suggests market range & enforces statutory Fair Wage Floor.
+- **UI_Verify (Verify & Passport)**: Review AI output and generate deterministic SHA-256 Digital Passport & QR code.
+- **UI_Export (One-Tap Publish)**: Select target channels (GeM / ONDC / B2B) and export with one tap.
+- **UI_Help ('Ask Dadi' Assistant)**: Interactive multilingual voice assistant answering rural artisan questions in native dialect.
+- **OfflineDB (Local SQLite)**: Persistent offline draft queue and media cache for intermittent rural connectivity.
+
+## Backend & AI Core Microservices
+- **AuthService (Verification Service)**: Pehchan Card and TRIFED ID database validation against national artisan registries.
+- **ImageAI (AI Image Studio)**: Salient object segmentation (U²-Net), background removal, OpenCV CLAHE lighting/gamma auto-fix, centered 1:1 auto-cropping.
+- **LangAI (Multilingual NLP & Assistant)**: Whisper regional dialect ASR, IndicTrans2 translation, Mistral-7B metadata extraction, and 'Ask Dadi' conversational engine.
+- **PricingAI (Dynamic Pricing & Profit Optimizer)**: XGBoost regression engine calculating recommended market price range and Fair Wage Floor (`labor_days * daily_wage_benchmark`).
+- **QRService (Digital Passport Engine)**: Deterministic SHA-256 hash computation from canonical JSON keys and high-contrast QR code generator.
+- **Unified Catalog Adapter**: Multi-channel transformation for GeM (XML/CSV), ONDC (Beckn Protocol JSON), and B2B (CSV/Email).
+- **Buyer Verification Portal (Part B)**: Public provenance verification (`/verify/{hash}`), verified Artisan Story with native dialect audio player, and 0% Middleman Fair Price Breakdown.
