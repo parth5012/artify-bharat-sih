@@ -1,15 +1,132 @@
 import uuid
+import base64
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
 from app.core.storage import storage_manager
-from app.services.cv_service import cv_service
+from app.services.cv_service import cv_service, PipelineStepResult as CvPipelineStepResult
 from app.models.product import Product
 from app.models.artisan import Artisan
-from app.schemas.studio import StudioEnhanceResponse
+from app.schemas.studio import (
+    StudioEnhanceResponse,
+    AIStudioEnhanceResponse,
+    PipelineStepResult as SchemaPipelineStep,
+)
 
 router = APIRouter(prefix="/studio", tags=["Camera Module & Studio Enhancement"])
+
+
+def _complexity_to_pricing_factor(score: float) -> str:
+    """
+    Translates the visual complexity score into a human-readable description
+    of its pricing multiplier effect in the Fair-Wage Engine.
+    """
+    if score >= 0.85:
+        return (
+            f"HIGH COMPLEXITY ({score:.2f}) — GI-certified intricate weave pattern detected. "
+            "Justifies a +15–25% premium pricing multiplier over the statutory wage floor."
+        )
+    elif score >= 0.65:
+        return (
+            f"MEDIUM COMPLEXITY ({score:.2f}) — Moderate craft intricacy. "
+            "Supports the standard statutory wage-floor price with up to +10% artisan margin."
+        )
+    else:
+        return (
+            f"STANDARD COMPLEXITY ({score:.2f}) — Simpler craft composition. "
+            "Fair retail price calculated at 1.0× statutory minimum wage floor."
+        )
+
+
+def _map_pipeline_step(step: CvPipelineStepResult) -> SchemaPipelineStep:
+    return SchemaPipelineStep(
+        step_name=step.step_name,
+        step_code=step.step_code,
+        applied=step.applied,
+        description=step.description,
+        authenticity_note=step.authenticity_note,
+    )
+
+
+@router.post(
+    "/enhance-studio",
+    response_model=AIStudioEnhanceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="AI Studio Enhancement (Stateless)",
+    description=(
+        "Step 3 of the 7-Step Product Wizard: Non-Generative AI Studio Image Enhancement. "
+        "Applies GrabCut background removal, CLAHE color equalization, and 1:1 square crop. "
+        "Returns enriched pipeline metadata and base64-encoded enhanced PNG for the "
+        "Before/After comparison slider UI. Does NOT write to the database — "
+        "call /studio/enhance after this step to persist the product record."
+    ),
+)
+async def ai_studio_enhance(
+    image: UploadFile = File(..., description="Raw JPEG/PNG from the Camera Studio (Step 1)"),
+    product_id: str = Form(
+        default="",
+        description="Optional product_id to tag the media storage path. If empty, a UUID is auto-generated.",
+    ),
+    remove_bg: bool = Form(
+        default=True,
+        description="Set false to skip GrabCut background removal (CLAHE + crop still applied).",
+    ),
+):
+    """
+    **AI Studio Enhancement Pipeline** (Step 3 / 7 — Non-Generative):
+
+    | Stage | Algorithm | Purpose |
+    |---|---|---|
+    | 1 | Canny Edge Density | Visual complexity scoring for pricing engine |
+    | 2 | OpenCV CLAHE (LAB) | Correct incandescent village lighting → true daylight colors |
+    | 3 | GrabCut / U²-Net | Background isolation & alpha-mask segmentation |
+    | 4 | 1:1 Canvas Composite | Center on #FDFBF7 studio neutral for GeM / ONDC / WhatsApp |
+
+    No generative models (Stable Diffusion, inpainting, hallucination) are used at any stage.
+    """
+    raw_bytes = await image.read()
+    if not raw_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty image uploaded. Please capture a photo via the Camera Studio before proceeding.",
+        )
+
+    # Run the full pipeline
+    pipeline_result = cv_service.enhance_image_with_detail(raw_bytes)
+
+    # Persist both raw and enhanced assets to local storage
+    effective_id = product_id.strip() if product_id.strip() else str(uuid.uuid4())
+    raw_filename = f"raw_{effective_id}_{image.filename or 'capture.jpg'}"
+    enhanced_filename = f"enhanced_studio_{effective_id}.png"
+
+    raw_url = await storage_manager.save_raw_image(raw_bytes, raw_filename)
+    enhanced_url = await storage_manager.save_enhanced_image(
+        pipeline_result.enhanced_bytes, enhanced_filename
+    )
+
+    return AIStudioEnhanceResponse(
+        raw_image_url=raw_url,
+        enhanced_image_url=enhanced_url,
+        visual_complexity_score=pipeline_result.complexity_score,
+        auto_cropped_ratio="1:1",
+        clahe_applied=pipeline_result.clahe_applied,
+        background_removed=pipeline_result.background_removed,
+        crop_applied=pipeline_result.crop_applied,
+        rembg_used=pipeline_result.rembg_used,
+        pipeline_steps=[_map_pipeline_step(step) for step in pipeline_result.pipeline_steps],
+        authenticity_guarantee=pipeline_result.authenticity_guarantee,
+        complexity_pricing_factor=_complexity_to_pricing_factor(pipeline_result.complexity_score),
+        status="enhanced",
+        message=(
+            f"Image successfully enhanced to studio quality. "
+            f"Pipeline: CLAHE={'✓' if pipeline_result.clahe_applied else '✗'} | "
+            f"BG Removal={'✓' if pipeline_result.background_removed else '✗'} "
+            f"({'U²-Net' if pipeline_result.rembg_used else 'GrabCut'}) | "
+            f"1:1 Crop={'✓' if pipeline_result.crop_applied else '✗'}. "
+            f"Complexity score: {pipeline_result.complexity_score}."
+        ),
+    )
 
 
 @router.post("/enhance", response_model=StudioEnhanceResponse)
@@ -21,12 +138,13 @@ async def enhance_product_photo(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Page 3: Camera Module & Studio Enhancement.
+    Page 3: Camera Module & Studio Enhancement (DB-persisting version).
     Receives raw smartphone photograph, applies:
     - Background extraction (Salient object segmentation)
     - Lighting & gamma equalization (CLAHE)
     - Auto-cropping to 1:1 ratio
     - Visual complexity score computation
+    Creates a Product record linked to the artisan.
     """
     artisan_res = await db.execute(select(Artisan).where(Artisan.id == artisan_id))
     artisan = artisan_res.scalar_one_or_none()

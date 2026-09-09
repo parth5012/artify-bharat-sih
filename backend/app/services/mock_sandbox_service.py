@@ -42,6 +42,51 @@ class MockSandboxService:
             "distance_km": 0.5,
             "operating_hours": "09:00 AM - 06:00 PM (Mon-Sat)",
         },
+        "190001": {
+            "center_id": "CSC-JK-SRN-029",
+            "name": "Srinagar Craft & Pashmina CSC Facilitation Centre",
+            "address": "Lal Chowk Complex, Old City, Srinagar, Jammu & Kashmir - 190001",
+            "vle_name": "Farooq Ahmad Dar",
+            "vle_phone": "+919419012345",
+            "distance_km": 1.1,
+            "operating_hours": "09:30 AM - 06:00 PM (Mon-Sat)",
+        },
+        "370001": {
+            "center_id": "CSC-GJ-BHJ-055",
+            "name": "Bhuj Artisan & Embroidery CSC Kendra",
+            "address": "Near Jubilee Ground, Bhuj, Kutch, Gujarat - 370001",
+            "vle_name": "Devjibhai Vankar",
+            "vle_phone": "+919825112233",
+            "distance_km": 0.9,
+            "operating_hours": "09:00 AM - 07:00 PM (Mon-Sat)",
+        },
+        "508284": {
+            "center_id": "CSC-TS-POC-019",
+            "name": "Pochampally Handloom Weavers CSC Service Kendra",
+            "address": "Weavers Colony Road, Bhoodan Pochampally, Yadadri Bhuvanagiri, Telangana - 508284",
+            "vle_name": "K. Srinivasulu",
+            "vle_phone": "+919848011223",
+            "distance_km": 0.6,
+            "operating_hours": "08:30 AM - 07:30 PM (Mon-Sat)",
+        },
+        "631501": {
+            "center_id": "CSC-TN-KNC-033",
+            "name": "Kanchipuram Silk Weavers CSC Center",
+            "address": "Gandhi Road, Near Varadaraja Temple, Kanchipuram, Tamil Nadu - 631501",
+            "vle_name": "M. Subramanian",
+            "vle_phone": "+919444055667",
+            "distance_km": 0.7,
+            "operating_hours": "09:00 AM - 08:00 PM (Mon-Sat)",
+        },
+        "302001": {
+            "center_id": "CSC-RJ-JPR-088",
+            "name": "Jaipur Craft & Heritage CSC Kendra",
+            "address": "Tripolia Bazar, Pink City, Jaipur, Rajasthan - 302001",
+            "vle_name": "Gopal Lal Kumhar",
+            "vle_phone": "+919829012345",
+            "distance_km": 1.0,
+            "operating_hours": "09:00 AM - 07:00 PM (Mon-Sat)",
+        },
         "default": {
             "center_id": "CSC-IND-RURAL-991",
             "name": "Pradhan Mantri Gramin Digital Saksharta CSC Kendra",
@@ -51,6 +96,27 @@ class MockSandboxService:
             "distance_km": 1.2,
             "operating_hours": "09:00 AM - 06:30 PM (Mon-Sat)",
         },
+    }
+
+    STATE_DISTRICT_MAP = {
+        "haryana": "Gurugram",
+        "hr": "Gurugram",
+        "uttar pradesh": "Varanasi",
+        "up": "Varanasi",
+        "bihar": "Madhubani",
+        "br": "Madhubani",
+        "jammu and kashmir": "Srinagar",
+        "jammu & kashmir": "Srinagar",
+        "j&k": "Srinagar",
+        "jk": "Srinagar",
+        "gujarat": "Kutch",
+        "gj": "Kutch",
+        "rajasthan": "Jaipur",
+        "rj": "Jaipur",
+        "telangana": "Yadadri Bhuvanagiri (Pochampally)",
+        "ts": "Yadadri Bhuvanagiri (Pochampally)",
+        "tamil nadu": "Kanchipuram",
+        "tn": "Kanchipuram",
     }
 
     def verify_eshram_kyc(
@@ -107,21 +173,25 @@ class MockSandboxService:
 
         total_benefit = sum(s["annual_benefit_inr"] for s in schemes if s["annual_benefit_inr"])
 
+        chosen_state = state or "Haryana"
+        normalized_state_key = chosen_state.strip().lower()
+        district = self.STATE_DISTRICT_MAP.get(normalized_state_key, "Gurugram" if "haryana" in normalized_state_key or "hr" in normalized_state_key else "Varanasi")
+
         return {
             "is_verified": is_valid,
             "uan_number": uan_number or "1009-8876-5432",
             "artisan_name": artisan_name or "Radha Devi",
             "primary_occupation": "Handloom & Folk Craft Artisan",
             "sub_category": "Traditional Handcrafted Textiles & Handicrafts",
-            "state": state or "Haryana",
-            "district": "Gurugram" if state == "Haryana" else "Varanasi",
+            "state": chosen_state,
+            "district": district,
             "social_category": "OBC / Beneficiary Artisan (MoSJE Target Group)",
             "kyc_status": "AADHAAR_ESHRAM_LINKED_VERIFIED",
             "active_schemes": schemes,
             "total_potential_annual_benefit_inr": total_benefit,
             "direct_payout_escrow_account": {
                 "bank_name": "State Bank of India (Jan Dhan)",
-                "account_mask": "XXXXXX8832",
+                "account_mask": f"XXXXXX{aadhaar_last_four or '8832'}",
                 "ifsc_code": "SBIN0001042",
                 "dbt_linked": "YES",
             },
