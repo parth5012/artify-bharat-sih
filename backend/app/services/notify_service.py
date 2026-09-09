@@ -20,7 +20,7 @@ class NotifyService:
                        amount_inr: float = None, custom_message: str = None) -> Dict[str, Any]:
         notification_id = f"notif_{uuid.uuid4().hex[:8]}"
         
-        # Craft dialect-aware voice message
+        # Craft dialect-aware message
         if event_type == "NEW_ORDER":
             voice_script = f"Namaste! Aapke banaye utpad ka naya order aaya hai (Order #{order_id or '1029'}). Kripya CSC kendra par jaakar packet drop karein."
         elif event_type == "PAYOUT_SETTLED":
@@ -28,6 +28,16 @@ class NotifyService:
         else:
             voice_script = custom_message or "Artify Bharat se mahatvapurna sandesh."
             
+        whatsapp_result = None
+        if channel.upper() == "WHATSAPP":
+            from app.services.whatsapp_service import whatsapp_service
+            whatsapp_result = whatsapp_service.send_text_alert(
+                recipient_phone=phone_number,
+                message_body=voice_script,
+                alert_type=event_type,
+                order_id=order_id,
+            )
+
         record = {
             "notification_id": notification_id,
             "artisan_id": artisan_id,
@@ -38,6 +48,7 @@ class NotifyService:
             "voice_script": voice_script,
             "audio_stream_url": f"https://api.artify.gov.in/audio/ivr/{notification_id}.mp3",
             "status": "DISPATCHED",
+            "whatsapp_meta_response": whatsapp_result,
             "sent_at": datetime.now(timezone.utc).isoformat()
         }
         self._notification_log.append(record)

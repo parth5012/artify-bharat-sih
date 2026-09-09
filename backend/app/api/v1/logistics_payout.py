@@ -35,6 +35,15 @@ async def track_india_post_shipment(tracking_id: str):
     return logistics_service.track_parcel(tracking_id)
 
 
+@router.post("/logistics/csc-dropoff-pin")
+async def generate_csc_dropoff_pin(order_id: str, artisan_id: str, village_pincode: str = "221001"):
+    """
+    First-Mile CSC Drop-off Pin Generator (SIH PS 26090):
+    Enables rural artisans to hand unboxed products to village CSC VLE with a 6-digit PIN.
+    """
+    return logistics_service.generate_csc_dropoff_pin(order_id, artisan_id, village_pincode)
+
+
 @router.post("/payouts/direct-transfer", response_model=DirectPayoutResponse)
 async def direct_jandhan_payout(payload: DirectPayoutRequest):
     """
@@ -50,3 +59,4 @@ async def direct_jandhan_payout(payload: DirectPayoutRequest):
         ifsc_code=payload.ifsc_code or "SBIN0001234"
     )
     return DirectPayoutResponse(**res)
+

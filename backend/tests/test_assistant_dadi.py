@@ -28,3 +28,20 @@ async def test_ask_dadi_pricing_advice(client: AsyncClient):
     data = res.json()
     assert "450" in data["answer_text"] or "वेज" in data["answer_text"] or "wage" in data["answer_english"].lower()
     assert data["dialect"] == "hindi"
+
+
+@pytest.mark.asyncio
+async def test_learn_and_earn_reels(client: AsyncClient):
+    res = await client.get("/api/v1/assistant/learn-and-earn?dialect=bhojpuri")
+    assert res.status_code == 200
+    reels = res.json()
+    assert len(reels) >= 3
+    assert reels[0]["duration_seconds"] == 30
+    
+    # Complete reel
+    res_comp = await client.post("/api/v1/assistant/learn-and-earn/complete?artisan_id=art_991&reel_id=daksh_reel_01")
+    assert res_comp.status_code == 200
+    data_comp = res_comp.json()
+    assert data_comp["certified_seller_badge_awarded"] is True
+    assert data_comp["ondc_search_boost_multiplier"] == 1.25
+

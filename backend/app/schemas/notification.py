@@ -19,4 +19,5 @@ class SendNotificationResponse(BaseModel):
     recipient_phone: str
     dialect_used: str
     audio_stream_url: Optional[str] = None
+    whatsapp_meta_response: Optional[dict] = None
     sent_at: datetime = Field(default_factory=datetime.utcnow)

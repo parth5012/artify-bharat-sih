@@ -204,6 +204,7 @@ npx serve .
 
 ## 📚 Complete Project Documentation
 
+- 📝 [**Complete Master Notion Blueprint (Ready to Copy-Paste)**](file:///e:/artisians/artify-bharat-sih/docs/notion-project-blueprint.md)
 - 📋 [**Complete Task List, Tech Stack Matrix & Zero-Break Roadmap**](file:///e:/artisians/artify-bharat-sih/docs/complete-task-and-tech-roadmap.md)
 - 🔌 [**Complete API Directory & Environment Setup Guide (.env)**](file:///e:/artisians/artify-bharat-sih/docs/api-directory-and-env-guide.md)
 - 🧑‍🎨 [**Artisan & SHG End-to-End Flow & Pitch Defenses**](file:///e:/artisians/artify-bharat-sih/docs/artisan-end-to-end-flow.md)
@@ -211,5 +212,6 @@ npx serve .
 - 🏛️ [**6-Layer System Architecture & DPI Microservices**](file:///e:/artisians/artify-bharat-sih/docs/architecture.md)
 - 🔌 [**OpenAPI / REST API Specification**](file:///e:/artisians/artify-bharat-sih/docs/api-specification.md)
 - 🗺️ [**Interactive Architecture Flowchart (Mermaid)**](file:///e:/artisians/artify-bharat-sih/docs/architecture-mermaid.mmd)
+
 
 
