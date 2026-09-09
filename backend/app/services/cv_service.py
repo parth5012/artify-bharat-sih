@@ -201,6 +201,17 @@ class ComputerVisionService:
 
         Returns: StudioPipelineResult dataclass
         """
+        # ------------------------------------------------------------------ #
+        # Guard 1 — reject oversized raw bytes before any decode work
+        # ------------------------------------------------------------------ #
+        max_bytes = settings.CV_MAX_UPLOAD_BYTES
+        if len(image_bytes) > max_bytes:
+            raise ValueError(
+                f"Upload too large: {len(image_bytes):,} bytes exceeds the "
+                f"{max_bytes // (1024 * 1024)} MB limit. "
+                "Please reduce the image file size before re-uploading."
+            )
+
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
@@ -223,6 +234,17 @@ class ComputerVisionService:
                         authenticity_note="N/A — image decode failed, original bytes returned."
                     )
                 ]
+            )
+
+        # ------------------------------------------------------------------ #
+        # Guard 2 — reject decoded images whose longest side is too large
+        # ------------------------------------------------------------------ #
+        max_side = settings.CV_MAX_IMAGE_SIDE_PX
+        decoded_max_side = max(img.shape[0], img.shape[1])
+        if decoded_max_side > max_side:
+            raise ValueError(
+                f"Image dimensions too large: longest side {decoded_max_side} px exceeds the "
+                f"{max_side} px limit. Please resize the image before re-uploading."
             )
 
         # Step 1: Complexity scoring on raw
@@ -305,6 +327,18 @@ class ComputerVisionService:
         ))
 
         # Step 4: 1:1 square crop
+        # ------------------------------------------------------------------ #
+        # Guard 3 — reject if the square canvas would exceed the output limit
+        # ------------------------------------------------------------------ #
+        max_output = settings.CV_MAX_OUTPUT_SIDE_PX
+        prospective_side = max(rgba.shape[0], rgba.shape[1])
+        if prospective_side > max_output:
+            raise ValueError(
+                f"Processed image too large for square output: "
+                f"{prospective_side} px would exceed the {max_output} px canvas limit. "
+                "Please resize the source image before re-uploading."
+            )
+
         crop_applied = False
         try:
             studio_ready = self.crop_to_square(rgba)

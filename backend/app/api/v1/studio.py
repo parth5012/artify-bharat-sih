@@ -95,10 +95,16 @@ async def ai_studio_enhance(
 
     # Run the CPU-bound pipeline in a worker thread to avoid blocking the event loop
     loop = asyncio.get_event_loop()
-    pipeline_result = await loop.run_in_executor(
-        None,
-        functools.partial(cv_service.enhance_image_with_detail, raw_bytes, remove_bg=remove_bg),
-    )
+    try:
+        pipeline_result = await loop.run_in_executor(
+            None,
+            functools.partial(cv_service.enhance_image_with_detail, raw_bytes, remove_bg=remove_bg),
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=str(exc),
+        ) from exc
 
     # Persist both raw and enhanced assets; use a single server-generated UUID
     # for the filenames so every request gets unique storage paths regardless of
@@ -170,7 +176,13 @@ async def enhance_product_photo(
     raw_path = await storage_manager.save_raw_image(raw_bytes, raw_filename)
 
     # Process via Computer Vision service
-    enhanced_bytes, complexity_score = cv_service.enhance_image(raw_bytes)
+    try:
+        enhanced_bytes, complexity_score = cv_service.enhance_image(raw_bytes)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=str(exc),
+        ) from exc
     enhanced_path = await storage_manager.save_enhanced_image(enhanced_bytes, enhanced_filename)
 
     # Persist Product Record
