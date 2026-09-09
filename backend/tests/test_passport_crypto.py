@@ -90,6 +90,45 @@ async def test_passport_issuance_and_public_verification(client: AsyncClient):
     v_data = verify_res.json()
     assert v_data["is_authentic"] is True
     assert v_data["artisan_name"] == "Ram Prasad"
-    assert v_data["trifed_id"] == "TRIFED-UP-789"
     assert "cost_breakdown" in v_data
     assert v_data["cost_breakdown"]["raw_material_cost"] == 600.0
+
+
+@pytest.mark.asyncio
+async def test_public_passport_allowlist_fields_omits_sensitive_pii(client: AsyncClient):
+    """
+    DPDP Act 2023 Compliance & Privacy Allowlist Enforcement:
+    Asserts that public passport verification payloads only expose strictly allowed public fields,
+    and sensitive internal credentials (trifed_id, pehchan_id, eshram_uan, phone, pin_hash, bank_account)
+    are excluded from public responses.
+    """
+    # Verify using pre-indexed sample shortcode
+    res = await client.get("/api/v1/passport/code/A7X-9B2")
+    assert res.status_code == 200
+    data = res.json()
+
+    approved_public_fields = {
+        "passport_hash",
+        "is_authentic",
+        "product_title",
+        "craft_category",
+        "gi_tag_status",
+        "artisan_name",
+        "cluster_name",
+        "state",
+        "district",
+        "geo_coordinates",
+        "enhanced_image_url",
+        "voice_story_url",
+        "cost_breakdown",
+        "issued_at",
+    }
+
+    # All returned keys must be in the approved allowlist
+    assert set(data.keys()).issubset(approved_public_fields)
+
+    # Sensitive PII must NOT be present
+    forbidden_sensitive_fields = ["trifed_id", "pehchan_id", "eshram_uan", "phone", "aadhaar", "bank_account", "pin_hash"]
+    for field in forbidden_sensitive_fields:
+        assert field not in data, f"Sensitive field '{field}' was leaked in public verification payload!"
+

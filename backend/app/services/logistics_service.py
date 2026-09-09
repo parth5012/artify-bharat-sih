@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from typing import Dict, Any
 from datetime import datetime, timezone
@@ -43,5 +44,31 @@ class LogisticsService:
             ]
         }
 
+    def generate_csc_dropoff_pin(self, order_id: str, artisan_id: str, village_pincode: str) -> Dict[str, Any]:
+        """
+        First-Mile Drop-off Logistics (SIH PS 26090):
+        Generates a formatted XXX-XXX drop-off PIN for the village Common Service Centre (CSC) or Post Office.
+        The rural weaver takes the unboxed product to the village CSC, shares the XXX-XXX drop-off PIN,
+        and the CSC VLE / Postmaster handles professional packaging and barcode labeling.
+        """
+        h1 = int(hashlib.sha256(order_id.encode("utf-8")).hexdigest()[:8], 16)
+        h2 = int(hashlib.sha256(artisan_id.encode("utf-8")).hexdigest()[:8], 16)
+        part1 = f"{h1 % 900 + 100}"
+        part2 = f"{h2 % 900 + 100}"
+        pin_code = f"{part1}-{part2}"
+        
+        return {
+            "order_id": order_id,
+            "artisan_id": artisan_id,
+            "dropoff_pin": pin_code,
+            "village_pincode": village_pincode,
+            "csc_centre_name": f"CSC Gram Kendra (PIN: {village_pincode})",
+            "instructions": "Unboxed craft le jaakar CSC kendra par dikhayein. VLE packing aur barcode karega.",
+            "status": "PIN_ACTIVE_READY_FOR_DROPOFF",
+            "expires_in_hours": 48,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+
 logistics_service = LogisticsService()
+
 

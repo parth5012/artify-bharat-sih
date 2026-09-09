@@ -28,8 +28,6 @@ class PublicPassportVerification(BaseModel):
     cluster_name: str
     state: str
     district: str
-    trifed_id: Optional[str]
-    pehchan_id: Optional[str]
     geo_coordinates: Dict[str, Optional[float]]
     enhanced_image_url: Optional[str]
     voice_story_url: Optional[str]

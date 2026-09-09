@@ -94,4 +94,58 @@ class AskDadiService:
             dadi_tip=dadi_tip
         )
 
+    def get_learn_and_earn_reels(self, dialect: str = "bhojpuri") -> List[Dict[str, Any]]:
+        """
+        Gamified Upskilling / PM-DAKSH Integration (SIH PS 26090):
+        Returns 30-second dialect video reels teaching photography, packaging, and fair pricing.
+        Watching reels unlocks the 'PM-DAKSH Certified Seller' badge and boosts ONDC/GeM search rank.
+        """
+        return [
+            {
+                "reel_id": "daksh_reel_01",
+                "title": "धूप में 1:1 चौकोर फोटो खींचना (Daylight Photography)",
+                "duration_seconds": 30,
+                "dialect": dialect,
+                "video_url": "https://storage.artify.gov.in/reels/daksh_photo_tips.mp4",
+                "thumbnail_url": "https://storage.artify.gov.in/reels/thumb_photo.jpg",
+                "skill_focus": "Studio Quality Camera Alignment & Gyro Leveling",
+                "points_reward": 50,
+                "badge_unlock": "Smart Photographer"
+            },
+            {
+                "reel_id": "daksh_reel_02",
+                "title": "नाज़ुक टेराकोटा और सिल्क की सुरक्षित पैकिंग (Safe Packaging)",
+                "duration_seconds": 30,
+                "dialect": dialect,
+                "video_url": "https://storage.artify.gov.in/reels/daksh_packaging.mp4",
+                "thumbnail_url": "https://storage.artify.gov.in/reels/thumb_pack.jpg",
+                "skill_focus": "Zero-Damage First-Mile Transit & Bubble Wrapping",
+                "points_reward": 50,
+                "badge_unlock": "Master Packer"
+            },
+            {
+                "reel_id": "daksh_reel_03",
+                "title": "₹450/दिन फेयर वेज और सही दाम तय करना (Fair Wage Math)",
+                "duration_seconds": 30,
+                "dialect": dialect,
+                "video_url": "https://storage.artify.gov.in/reels/daksh_pricing_math.mp4",
+                "thumbnail_url": "https://storage.artify.gov.in/reels/thumb_price.jpg",
+                "skill_focus": "Cost Breakdown & Statutory Floor Protection",
+                "points_reward": 100,
+                "badge_unlock": "PM-DAKSH Certified Master Artisan"
+            }
+        ]
+
+    def record_reel_completion(self, artisan_id: str, reel_id: str) -> Dict[str, Any]:
+        return {
+            "artisan_id": artisan_id,
+            "reel_id": reel_id,
+            "status": "COMPLETED",
+            "certified_seller_badge_awarded": True,
+            "ondc_search_boost_multiplier": 1.25,
+            "pmsuraj_credit_preapproval": "ELIGIBLE_FOR_50K_SUBSIDY",
+            "message": "Badhaai ho! PM-DAKSH Certified Seller badge awarded. ONDC ranking boosted by 25%."
+        }
+
 assistant_service = AskDadiService()
+

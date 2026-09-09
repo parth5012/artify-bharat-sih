@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     U2NET_WEIGHTS_PATH: str = "./models/u2net.pth"
     XGBOOST_PRICING_MODEL_PATH: str = "./models/pricing_xgboost.json"
 
+    # WhatsApp Business Cloud API (Meta Graph API v20.0)
+    WHATSAPP_ACCESS_TOKEN: str = "mock_whatsapp_access_token_sih26090"
+    WHATSAPP_PHONE_NUMBER_ID: str = "109876543210987"
+    WHATSAPP_API_VERSION: str = "v20.0"
+    WHATSAPP_API_URL: str = "https://graph.facebook.com/v20.0"
+
     # Verification & Heritage Passport
     PASSPORT_VERIFICATION_BASE_URL: str = "https://verify.artifybharat.in/passport"
     ENABLE_DEMO_INVENTORY: bool = False  # Development-only flag to inject sample items if inventory is empty
