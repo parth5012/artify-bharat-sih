@@ -204,6 +204,7 @@ npx serve .
 
 ## 📚 Complete Project Documentation
 
+- 🎨 [**Frontend Master UI/UX & Feature Specification**](file:///e:/artisians/artify-bharat-sih/docs/frontend-master-ui-spec.md)
 - 📝 [**Complete Master Notion Blueprint (Ready to Copy-Paste)**](file:///e:/artisians/artify-bharat-sih/docs/notion-project-blueprint.md)
 - 📋 [**Complete Task List, Tech Stack Matrix & Zero-Break Roadmap**](file:///e:/artisians/artify-bharat-sih/docs/complete-task-and-tech-roadmap.md)
 - 🔌 [**Complete API Directory & Environment Setup Guide (.env)**](file:///e:/artisians/artify-bharat-sih/docs/api-directory-and-env-guide.md)
