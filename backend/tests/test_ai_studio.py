@@ -341,3 +341,57 @@ async def test_ai_studio_endpoint_rembg_flag():
         assert isinstance(body["rembg_used"], bool), (
             f"rembg_used must be bool in API response, got {type(body['rembg_used'])}"
         )
+
+
+# ---------------------------------------------------------------------------
+# New tests: remove_bg=false path
+# ---------------------------------------------------------------------------
+
+def test_cv_pipeline_remove_bg_false_skips_removal():
+    """
+    When remove_bg=False, enhance_image_with_detail() must return
+    background_removed=False and rembg_used=False without running segmentation.
+    """
+    raw_bytes = make_dummy_jpeg()
+    result = cv_service.enhance_image_with_detail(raw_bytes, remove_bg=False)
+    assert isinstance(result, StudioPipelineResult)
+    assert result.background_removed is False, (
+        "background_removed must be False when remove_bg=False"
+    )
+    assert result.rembg_used is False, (
+        "rembg_used must be False when remove_bg=False"
+    )
+    # Pipeline should still complete CLAHE and crop
+    assert result.clahe_applied is True
+    assert result.crop_applied is True
+    assert len(result.enhanced_bytes) > 0
+
+
+@pytest.mark.asyncio
+async def test_ai_studio_endpoint_remove_bg_false():
+    """
+    POST /api/v1/studio/enhance-studio with remove_bg=false must return 200
+    and report background_removed=false and rembg_used=false in the response.
+    CLAHE and crop should still be applied.
+    """
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        img_bytes = make_dummy_jpeg()
+        files = {"image": ("no_bg_removal.jpg", io.BytesIO(img_bytes), "image/jpeg")}
+        data = {"remove_bg": "false"}
+
+        res = await ac.post("/api/v1/studio/enhance-studio", data=data, files=files)
+        assert res.status_code == 200
+        body = res.json()
+
+        assert body["background_removed"] is False, (
+            "background_removed must be false when remove_bg=false is passed"
+        )
+        assert body["rembg_used"] is False, (
+            "rembg_used must be false when remove_bg=false is passed"
+        )
+        assert body["clahe_applied"] is True, "CLAHE should still run when remove_bg=false"
+        assert body["crop_applied"] is True, "1:1 crop should still run when remove_bg=false"
+        assert body["status"] == "enhanced"
+        assert body["enhanced_image_url"]
+

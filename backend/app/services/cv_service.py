@@ -179,7 +179,9 @@ class ComputerVisionService:
         return square
 
     @non_generative
-    def enhance_image_with_detail(self, image_bytes: bytes) -> StudioPipelineResult:
+    def enhance_image_with_detail(
+        self, image_bytes: bytes, remove_bg: bool = True
+    ) -> StudioPipelineResult:
         """
         Executes the end-to-end AI Studio enhancement pipeline and returns a
         fully structured StudioPipelineResult with per-step metadata.
@@ -188,7 +190,14 @@ class ComputerVisionService:
             1. Visual complexity scoring on raw asset
             2. CLAHE lighting & gamma equalization (LAB color space)
             3. Salient background removal (GrabCut / U²-Net simulation)
+               – skipped when remove_bg=False; opaque BGRA canvas used instead
             4. 1:1 square auto-crop on studio neutral canvas
+
+        Args:
+            image_bytes: Raw image bytes (JPEG/PNG).
+            remove_bg: When False, skip background removal and return a fully
+                opaque (alpha=255) BGRA image; background_removed will be False
+                and rembg_used will be False in the result.
 
         Returns: StudioPipelineResult dataclass
         """
@@ -261,18 +270,33 @@ class ComputerVisionService:
                 authenticity_note="N/A"
             ))
 
-        # Step 3: Background removal
-        rgba, bg_removed, rembg_used = self.remove_background(color_corrected)
-        engine_label = "rembg U²-Net (ONNX)" if rembg_used else "OpenCV GrabCut (CPU fallback)"
+        # Step 3: Background removal (optional)
+        if remove_bg:
+            rgba, bg_removed, rembg_used = self.remove_background(color_corrected)
+            engine_label = "rembg U²-Net (ONNX)" if rembg_used else "OpenCV GrabCut (CPU fallback)"
+            step_description = (
+                f"{engine_label} separates the craft object from the cluttered village room "
+                "background. Strips yellow-lit workshop surroundings and replaces them with a "
+                "clean #FDFBF7 Raw Silk studio neutral canvas. Alpha mask applied."
+            )
+        else:
+            # Build fully opaque BGRA without running any segmentation model
+            h_cc, w_cc = color_corrected.shape[:2]
+            b_ch, g_ch, r_ch = cv2.split(color_corrected)
+            alpha_ch = np.full((h_cc, w_cc), 255, dtype=np.uint8)
+            rgba = cv2.merge([b_ch, g_ch, r_ch, alpha_ch])
+            bg_removed = False
+            rembg_used = False
+            engine_label = "Skipped (remove_bg=false)"
+            step_description = (
+                "Background removal skipped by caller request (remove_bg=false). "
+                "Fully opaque BGRA canvas produced; original background is preserved."
+            )
         pipeline_steps.append(PipelineStepResult(
             step_name="Salient Background Removal",
             step_code="background_removal",
             applied=bg_removed,
-            description=(
-                f"{engine_label} separates the craft object from the cluttered village room "
-                "background. Strips yellow-lit workshop surroundings and replaces them with a "
-                "clean #FDFBF7 Raw Silk studio neutral canvas. Alpha mask applied."
-            ),
+            description=step_description,
             authenticity_note=(
                 "Non-generative segmentation only. No background pixels are invented, diffused, "
                 "or hallucinated. The artisan's authentic weave silhouette and texture are "
@@ -317,7 +341,8 @@ class ComputerVisionService:
                 complexity_score=complexity,
                 clahe_applied=clahe_applied,
                 background_removed=bg_removed,
-                crop_applied=False,
+                crop_applied=crop_applied,
+                rembg_used=rembg_used,
                 pipeline_steps=pipeline_steps,
             )
 

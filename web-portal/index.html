@@ -877,6 +877,8 @@
         </table>
       </div>
 
+    </section>
+
     <!-- ========================================================
          TAB 4: MOCK GOVERNMENT & LOGISTICS SANDBOX VERIFICATION
          ======================================================== -->
@@ -1279,9 +1281,17 @@
       if (asRawObjectUrl) URL.revokeObjectURL(asRawObjectUrl);
       asRawObjectUrl = URL.createObjectURL(file);
       const dz = document.getElementById('aistudio-dropzone');
-      dz.querySelector('div').innerHTML =
-        `<img src="${asRawObjectUrl}" style="max-height:160px;border-radius:10px;object-fit:cover;" alt="Preview">
-         <div style="font-size:0.8rem;color:var(--terracotta);font-weight:600;margin-top:0.4rem;">📎 ${file.name}</div>`;
+      const container = dz.querySelector('div');
+      container.innerHTML = '';
+      const imgEl = document.createElement('img');
+      imgEl.src = asRawObjectUrl;
+      imgEl.style.cssText = 'max-height:160px;border-radius:10px;object-fit:cover;';
+      imgEl.alt = 'Preview';
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'font-size:0.8rem;color:var(--terracotta);font-weight:600;margin-top:0.4rem;';
+      nameEl.textContent = '📎 ' + file.name;
+      container.appendChild(imgEl);
+      container.appendChild(nameEl);
       dz._selectedFile = file;
     }
 

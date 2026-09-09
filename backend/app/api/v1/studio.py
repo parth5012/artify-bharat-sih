@@ -1,5 +1,6 @@
+import asyncio
+import functools
 import uuid
-import base64
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -56,9 +57,9 @@ def _map_pipeline_step(step: CvPipelineStepResult) -> SchemaPipelineStep:
     summary="AI Studio Enhancement (Stateless)",
     description=(
         "Step 3 of the 7-Step Product Wizard: Non-Generative AI Studio Image Enhancement. "
-        "Applies GrabCut background removal, CLAHE color equalization, and 1:1 square crop. "
-        "Returns enriched pipeline metadata and base64-encoded enhanced PNG for the "
-        "Before/After comparison slider UI. Does NOT write to the database — "
+        "Applies rembg U²-Net / GrabCut background removal, CLAHE color equalization, and 1:1 square crop. "
+        "Returns enriched pipeline metadata and URLs pointing to the saved raw and enhanced assets. "
+        "Does NOT write to the database — "
         "call /studio/enhance after this step to persist the product record."
     ),
 )
@@ -92,13 +93,19 @@ async def ai_studio_enhance(
             detail="Empty image uploaded. Please capture a photo via the Camera Studio before proceeding.",
         )
 
-    # Run the full pipeline
-    pipeline_result = cv_service.enhance_image_with_detail(raw_bytes)
+    # Run the CPU-bound pipeline in a worker thread to avoid blocking the event loop
+    loop = asyncio.get_event_loop()
+    pipeline_result = await loop.run_in_executor(
+        None,
+        functools.partial(cv_service.enhance_image_with_detail, raw_bytes, remove_bg=remove_bg),
+    )
 
-    # Persist both raw and enhanced assets to local storage
-    effective_id = product_id.strip() if product_id.strip() else str(uuid.uuid4())
-    raw_filename = f"raw_{effective_id}_{image.filename or 'capture.jpg'}"
-    enhanced_filename = f"enhanced_studio_{effective_id}.png"
+    # Persist both raw and enhanced assets; use a single server-generated UUID
+    # for the filenames so every request gets unique storage paths regardless of
+    # the caller-supplied product_id or the original image filename.
+    file_id = str(uuid.uuid4())
+    raw_filename = f"raw_{file_id}.jpg"
+    enhanced_filename = f"enhanced_studio_{file_id}.png"
 
     raw_url = await storage_manager.save_raw_image(raw_bytes, raw_filename)
     enhanced_url = await storage_manager.save_enhanced_image(

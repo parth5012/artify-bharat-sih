@@ -669,7 +669,7 @@ frontend/
 | **Dialect Onboarding** | `/api/v1/auth/register` | `POST` | `{ phone, pin, dialect, role, pehchan_id }` | `{ token, artisan_id, is_verified }` |
 | **MoSJE DPI Verification** | `/api/v1/auth/mosje-verify` | `POST` | `{ pehchan_id, trifed_id, uan }` | `{ valid, artisan_name, cluster, pmdaksh_level }` |
 | **Ask Dadi Voice Stream** | `/api/v1/assistant/ask-dadi` | `POST` | `FormData(audio_blob, dialect, context)` | `{ text_response, audio_url, intent_action }` |
-| **AI Studio Enhance** | `/api/v1/cv/enhance-studio` | `POST` | `FormData(image_raw, remove_bg=true)` | `{ enhanced_image_url, clahe_applied }` |
+| **AI Studio Enhance** | `/api/v1/studio/enhance-studio` | `POST` | `FormData(image, remove_bg=true)` | `{ enhanced_image_url, raw_image_url, clahe_applied, background_removed, crop_applied, rembg_used, pipeline_steps[], complexity_pricing_factor }` |
 | **Voice Catalog LLM** | `/api/v1/nlp/catalog-voice` | `POST` | `FormData(audio_blob, dialect)` | `{ title, craft, materials, cost, hours, gi_reg }` |
 | **Fair Wage Pricing** | `/api/v1/pricing/calculate` | `POST` | `{ craft, material_cost, hours, state }` | `{ floor_price, retail_price, wholesale_price }` |
 | **Peer Jury Submit** | `/api/v1/jury/assign-quorum` | `POST` | `{ product_id, cluster_name }` | `{ jury_id, jurors_assigned: 3, quorum_needed: 2 }` |
