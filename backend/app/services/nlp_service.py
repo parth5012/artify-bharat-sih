@@ -2,6 +2,7 @@ import re
 import json
 from typing import Dict, Any, Tuple
 from app.config import get_settings
+from app.core.anti_generative import non_generative
 
 settings = get_settings()
 
@@ -14,6 +15,7 @@ class MultilingualNLPService:
     3. Mistral-7B LLM structured extraction (title, description, heritage story, SEO tags)
     """
 
+    @non_generative
     async def transcribe_audio(self, audio_bytes: bytes, language: str = "hi") -> str:
         """
         Transcribes audio stream using Whisper / Google Speech-to-Text.
@@ -28,6 +30,7 @@ class MultilingualNLPService:
         # In production, invokes Whisper pipeline or external STT endpoint
         return "ई हमार हाथ से बुनायल बनारसी सिल्क साड़ी हवे।"
 
+    @non_generative
     async def translate_to_english(self, regional_text: str, source_lang: str = "bhojpuri") -> str:
         """
         Translates regional dialect into English via IndicTrans2.
@@ -41,6 +44,7 @@ class MultilingualNLPService:
         # In production, calls IndicTrans2 model inference server
         return "Handcrafted pure silk saree made on traditional handloom."
 
+    @non_generative
     async def generate_catalog_metadata(self, english_transcript: str) -> Dict[str, Any]:
         """
         Invokes Mistral-7B LLM to parse unstructured English voice transcript
@@ -79,6 +83,7 @@ class MultilingualNLPService:
             "seo_tags": seo_tags
         }
 
+    @non_generative
     async def process_voice_catalog(self, audio_bytes: bytes, dialect: str = "bhojpuri") -> Tuple[str, str, Dict[str, Any]]:
         """
         End-to-end cataloging pipeline: Audio -> Regional -> English -> Structured Catalog.

@@ -51,6 +51,15 @@ class Settings(BaseSettings):
     U2NET_WEIGHTS_PATH: str = "./models/u2net.pth"
     XGBOOST_PRICING_MODEL_PATH: str = "./models/pricing_xgboost.json"
 
+    # CV / AI Studio image-size limits
+    # MAX_UPLOAD_BYTES  — reject raw upload bytes before any decode attempt
+    # MAX_IMAGE_SIDE_PX — reject decoded images whose longest side exceeds this
+    # MAX_OUTPUT_SIDE_PX — reject crop_to_square calls that would produce a canvas
+    #                      larger than this side length (= max(h, w) of decoded img)
+    CV_MAX_UPLOAD_BYTES: int = 20 * 1024 * 1024   # 20 MB
+    CV_MAX_IMAGE_SIDE_PX: int = 8_000             # 8 000 px
+    CV_MAX_OUTPUT_SIDE_PX: int = 4_096            # 4 096 px square canvas cap
+
     # WhatsApp Business Cloud API (Meta Graph API v20.0)
     WHATSAPP_ACCESS_TOKEN: str = "mock_whatsapp_access_token_sih26090"
     WHATSAPP_PHONE_NUMBER_ID: str = "109876543210987"
