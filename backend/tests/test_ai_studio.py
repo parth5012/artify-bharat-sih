@@ -340,11 +340,12 @@ def test_cv_guard_decoded_side_raises_value_error():
 
 def test_cv_guard_output_side_raises_value_error():
     """
-    enhance_image_with_detail() must raise ValueError when the prospective
-    square-output canvas side exceeds CV_MAX_OUTPUT_SIDE_PX.
+    enhance_image_with_detail() must raise ValueError when the decoded image's
+    longest side exceeds CV_MAX_OUTPUT_SIDE_PX.  The check fires at the
+    early decoded-image gate (Guard 2), before complexity scoring or segmentation.
     """
     original = _cv_mod.settings.CV_MAX_OUTPUT_SIDE_PX
-    _cv_mod.settings.CV_MAX_OUTPUT_SIDE_PX = 10  # real canvas >> 10 px
+    _cv_mod.settings.CV_MAX_OUTPUT_SIDE_PX = 10  # real image >> 10 px
     try:
         raw_bytes = make_dummy_jpeg(size=200)
         with pytest.raises(ValueError, match="too large for square output"):
@@ -407,8 +408,9 @@ async def test_ai_studio_endpoint_oversized_decoded_returns_413():
 @pytest.mark.asyncio
 async def test_ai_studio_endpoint_oversized_output_returns_413():
     """
-    POST /api/v1/studio/enhance-studio producing a square canvas that exceeds
-    CV_MAX_OUTPUT_SIDE_PX must return HTTP 413.
+    POST /api/v1/studio/enhance-studio with an image whose decoded longest side
+    exceeds CV_MAX_OUTPUT_SIDE_PX must return HTTP 413.  The rejection happens at
+    the early decoded-image gate before any expensive processing runs.
     """
     original = _cv_mod.settings.CV_MAX_OUTPUT_SIDE_PX
     _cv_mod.settings.CV_MAX_OUTPUT_SIDE_PX = 10

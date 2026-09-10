@@ -237,14 +237,23 @@ class ComputerVisionService:
             )
 
         # ------------------------------------------------------------------ #
-        # Guard 2 — reject decoded images whose longest side is too large
+        # Guard 2 — reject decoded images that breach either the raw-side limit
+        #           or the maximum square-output canvas limit, before any
+        #           expensive processing (complexity scoring, CLAHE, segmentation)
         # ------------------------------------------------------------------ #
-        max_side = settings.CV_MAX_IMAGE_SIDE_PX
         decoded_max_side = max(img.shape[0], img.shape[1])
+        max_side = settings.CV_MAX_IMAGE_SIDE_PX
         if decoded_max_side > max_side:
             raise ValueError(
                 f"Image dimensions too large: longest side {decoded_max_side} px exceeds the "
                 f"{max_side} px limit. Please resize the image before re-uploading."
+            )
+        max_output = settings.CV_MAX_OUTPUT_SIDE_PX
+        if decoded_max_side > max_output:
+            raise ValueError(
+                f"Image too large for square output: longest side {decoded_max_side} px would "
+                f"exceed the {max_output} px canvas limit. "
+                "Please resize the source image before re-uploading."
             )
 
         # Step 1: Complexity scoring on raw
@@ -327,18 +336,6 @@ class ComputerVisionService:
         ))
 
         # Step 4: 1:1 square crop
-        # ------------------------------------------------------------------ #
-        # Guard 3 — reject if the square canvas would exceed the output limit
-        # ------------------------------------------------------------------ #
-        max_output = settings.CV_MAX_OUTPUT_SIDE_PX
-        prospective_side = max(rgba.shape[0], rgba.shape[1])
-        if prospective_side > max_output:
-            raise ValueError(
-                f"Processed image too large for square output: "
-                f"{prospective_side} px would exceed the {max_output} px canvas limit. "
-                "Please resize the source image before re-uploading."
-            )
-
         crop_applied = False
         try:
             studio_ready = self.crop_to_square(rgba)
