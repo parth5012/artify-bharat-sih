@@ -185,7 +185,6 @@ async def verify_mosje_scheme(payload: MoSJEAuthRequest):
     MoSJE DPI Microservice:
     Validates artisan enrollment in PM-DAKSH, PM-SURAJ, or e-KYC registries.
     """
-    scheme = payload.scheme_type.upper()
     is_valid = bool(payload.scheme_registration_number and len(payload.scheme_registration_number) >= 4)
     
     return MoSJEAuthResponse(

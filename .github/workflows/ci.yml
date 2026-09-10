@@ -2,33 +2,89 @@ name: ArtifyBharat CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend-tests:
-    name: Backend Pytest & Linting
+  backend-test:
+    name: Backend Pytest
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v3.5.0
         with:
-          version: "latest"
+          enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
 
       - name: Install Dependencies
         working-directory: ./backend
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
 
       - name: Run Pytest Suite
         working-directory: ./backend
-        run: uv run pytest -v --cov=app
+        run: uv run pytest -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 7
+          if-no-files-found: error
+
+  backend-lint:
+    name: Backend Ruff Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4.2.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3.5.0
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: uv sync --locked --extra dev
+
+      - name: Ruff check
+        working-directory: ./backend
+        run: uv run ruff check app tests
+
+  frontend-smoke:
+    name: Frontend Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Node
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: ./frontend
+        run: npx tsc --noEmit -p tsconfig.json
