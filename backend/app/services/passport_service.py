@@ -8,7 +8,7 @@ from app.models.product import Product
 from app.models.artisan import Artisan
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport
-from app.core.passport import compute_wip_digest, generate_passport_hash, generate_passport_qr_code
+from app.core.passport import compute_wip_digest, generate_passport_hash, generate_passport_qr_code, generate_passport_qr_svg_data_uri
 from app.core.pii_vault import reveal as reveal_pii
 from app.config import get_settings
 
@@ -260,6 +260,7 @@ class PassportService:
             _collision_counter += 1
             shortcode = generate_shortcode(passport_hash, salt=str(_collision_counter))
         qr_data_uri = generate_passport_qr_code(passport_hash)
+        qr_svg_data_uri = generate_passport_qr_svg_data_uri(passport_hash, shortcode)
         verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{shortcode}"
         final_price = pricing.final_price if pricing else 4500.0
         escpos_b64 = generate_escpos_thermal_bytes(shortcode, product.title, artisan.name, final_price)
@@ -294,7 +295,8 @@ class PassportService:
             "hash": passport_hash,
             "shortcode": shortcode,
             "issued_at": issue_timestamp,
-            "thermal_escpos_payload_base64": escpos_b64
+            "thermal_escpos_payload_base64": escpos_b64,
+            "qr_svg_data_uri": qr_svg_data_uri
         }
 
         self._shortcode_index[shortcode] = {
