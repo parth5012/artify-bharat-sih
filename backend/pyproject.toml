@@ -51,6 +51,9 @@ packages = ["app"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = "test_*.py"
+markers = [
+    "slow: CV/rembg inference tests — excluded from the CI fast suite via -m 'not slow', still run locally by default.",
+]
 
 [tool.ruff]
 line-length = 100
