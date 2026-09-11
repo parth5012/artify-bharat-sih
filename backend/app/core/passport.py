@@ -9,6 +9,19 @@ from app.config import get_settings
 settings = get_settings()
 
 
+def compute_wip_digest(wip_ref: Optional[str]) -> str:
+    """
+    Derives a deterministic SHA-256 hex digest for the WIP photo reference
+    (raw smartphone capture path/URL stored on the Product record).
+
+    Empty/None refs yield "" so passports issued before a WIP capture remain
+    stable and hashable. Non-empty refs are hashed as UTF-8 bytes.
+    """
+    if not wip_ref:
+        return ""
+    return hashlib.sha256(str(wip_ref).encode("utf-8")).hexdigest()
+
+
 def generate_passport_hash(
     artisan_id: str,
     trifed_id: Optional[str],
@@ -19,13 +32,15 @@ def generate_passport_hash(
     timestamp_iso: str,
     raw_material_cost: float,
     labor_days: float,
+    wip_sha256: Optional[str] = None,
 ) -> str:
     """
     Computes a deterministic SHA-256 cryptographic hash combining:
     - Artisan identity & Government credentials (TRIFED / Pehchan ID)
-    - Geo-coordinates of workshop/cluster
+    - Geo-coordinates of workshop/cluster (rounded to 6dp for stability)
     - Creation timestamp
     - Product payload (title, category, raw materials, labor investment)
+    - WIP photo digest (SHA-256 of the raw/WIP capture reference)
 
     DPDP note: ``trifed_id`` is consumed in-memory only for hash stability
     (callers pass the detokenized value). It is never persisted in payload
@@ -41,6 +56,7 @@ def generate_passport_hash(
         "timestamp": timestamp_iso,
         "raw_material_cost": round(raw_material_cost, 2),
         "labor_days": round(labor_days, 1),
+        "wip_sha256": str(wip_sha256 or "").strip().lower(),
     }
 
     canonical_json = json.dumps(payload_data, sort_keys=True, separators=(',', ':'))
