@@ -1,77 +1,47 @@
-"""
-Task 1.3 — Pydantic v2 schemas for MoSJE, e-Shram, and Pehchan/TRIFED
-government verification integrations.
-"""
-import re
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, field_validator
+class MoSJEAuthRequest(BaseModel):
+    artisan_id: str = Field(..., description="Artisan identifier or user ID")
+    scheme_type: str = Field(..., description="Scheme name: PM-SURAJ, PM-DAKSH, e-Shram, or Pehchan")
+    scheme_registration_number: str = Field(..., description="Beneficiary registration ID or certificate number")
 
-PEHCHAN_ID_RE = re.compile(r"^[A-Z]{2}-[A-Z]{3}-\d{6}$")  # e.g. UP-VAR-102938
+class MoSJEAuthResponse(BaseModel):
+    verified: bool
+    scheme_type: str
+    scheme_registration_number: str
+    beneficiary_name: str
+    craft_cluster: str
+    state: str
+    skill_certification_level: str
+    stipend_eligible: bool
+    verified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    details: dict = Field(default_factory=dict)
 
+class EShramLookupRequest(BaseModel):
+    uan_number: str = Field(..., description="12-digit Universal Account Number (UAN) for e-Shram")
+    mobile_last_4: Optional[str] = Field(None, description="Last 4 digits of linked mobile number")
 
-# ---- Pehchan / TRIFED artisan-identity verification -------------------------
+class EShramLookupResponse(BaseModel):
+    valid: bool
+    uan_number: str
+    worker_name: str
+    primary_occupation: str
+    sub_category: str
+    state: str
+    district: str
+    social_category: str
+    pension_scheme_enrolled: bool
 
-class ArtisanIdVerifyRequest(BaseModel):
-    pehchan_id: Optional[str] = Field(None, description="DC Handicrafts Pehchan Card Number")
-    trifed_id: Optional[str] = Field(None, description="TRIFED ID")
+class PMSurajLookupRequest(BaseModel):
+    application_id: str = Field(..., description="PM-SURAJ credit/subsidy application ID")
 
-    @field_validator("pehchan_id")
-    @classmethod
-    def validate_pehchan_format(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and not PEHCHAN_ID_RE.match(v):
-            raise ValueError("Pehchan ID must match format XX-XXX-NNNNNN, e.g. UP-VAR-102938")
-        return v
-
-
-class ArtisanIdVerifyResponse(BaseModel):
-    pehchan_valid: bool
-    trifed_valid: bool
-    cluster_name: Optional[str] = None
-    state: Optional[str] = None
-    district: Optional[str] = None
-
-
-# ---- MoSJE / PM-DAKSH / PM-SURAJ --------------------------------------------
-
-class MosjeVerifyRequest(BaseModel):
-    artisan_id: str
-    pehchan_id: Optional[str] = None
-    eshram_uan: Optional[str] = None
-
-
-class MosjeVerifyResponse(BaseModel):
-    pmdaksh_level: Optional[str] = Field(None, description="Skill certification tier, e.g. 'L2'")
-    pmdaksh_certified: bool
-    pmsuraj_eligible: bool
-    pmsuraj_scheme_refs: list[str] = Field(default_factory=list)
-
-
-class PmSurajLookupRequest(BaseModel):
-    eshram_uan: Optional[str] = None
-    pehchan_id: Optional[str] = None
-
-
-class PmSurajLookupResponse(BaseModel):
-    eligible: bool
-    credit_limit: Optional[float] = None
-    loan_status: Optional[str] = None  # e.g. "NONE" | "PENDING" | "DISBURSED"
-
-
-# ---- e-Shram -----------------------------------------------------------------
-
-class EshramLookupRequest(BaseModel):
-    eshram_uan: str = Field(..., min_length=12, max_length=12, description="12-digit e-Shram UAN")
-
-    @field_validator("eshram_uan")
-    @classmethod
-    def validate_uan(cls, v: str) -> str:
-        if not v.isdigit():
-            raise ValueError("e-Shram UAN must be exactly 12 digits")
-        return v
-
-
-class EshramLookupResponse(BaseModel):
-    registered: bool
-    social_security_active: bool
-    beneficiary_name: Optional[str] = None
+class PMSurajLookupResponse(BaseModel):
+    verified: bool
+    application_id: str
+    beneficiary_name: str
+    sanctioned_amount_inr: float
+    subsidy_percentage: float
+    credit_status: str
+    nodal_agency: str
