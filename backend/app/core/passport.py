@@ -26,6 +26,10 @@ def generate_passport_hash(
     - Geo-coordinates of workshop/cluster
     - Creation timestamp
     - Product payload (title, category, raw materials, labor investment)
+
+    DPDP note: ``trifed_id`` is consumed in-memory only for hash stability
+    (callers pass the detokenized value). It is never persisted in payload
+    snapshots or the shortcode index — see passport_service.
     """
     payload_data = {
         "artisan_id": str(artisan_id),

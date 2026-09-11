@@ -9,6 +9,7 @@ from app.models.artisan import Artisan
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport
 from app.core.passport import generate_passport_hash, generate_passport_qr_code
+from app.core.pii_vault import reveal as reveal_pii
 from app.config import get_settings
 
 settings = get_settings()
@@ -173,9 +174,13 @@ class PassportService:
         else:
             issue_timestamp = datetime.now(timezone.utc).isoformat()
 
+        # DPDP Act 2023: detokenize govt IDs in-memory ONLY for the
+        # deterministic hash input. Plaintext is never persisted — the
+        # payload snapshot and shortcode index below carry no govt IDs.
+        trifed_plain = reveal_pii(artisan.trifed_id)
         passport_hash = generate_passport_hash(
             artisan_id=artisan.id,
-            trifed_id=artisan.trifed_id,
+            trifed_id=trifed_plain if isinstance(trifed_plain, str) else None,
             geo_lat=artisan.geo_lat,
             geo_lng=artisan.geo_lng,
             product_title=product.title,
@@ -197,8 +202,7 @@ class PassportService:
                 "cluster": artisan.cluster_name,
                 "district": artisan.district,
                 "state": artisan.state,
-                "trifed_id": artisan.trifed_id,
-                "pehchan_id": artisan.pehchan_id,
+                # DPDP: no trifed_id / pehchan_id persisted in snapshots.
                 "geo_lat": artisan.geo_lat,
                 "geo_lng": artisan.geo_lng,
                 "mosje_status": "MoSJE Verified Artisan",
@@ -236,8 +240,7 @@ class PassportService:
             "cluster_name": artisan.cluster_name,
             "state": artisan.state,
             "district": artisan.district,
-            "trifed_id": artisan.trifed_id,
-            "pehchan_id": artisan.pehchan_id,
+            # DPDP: no trifed_id / pehchan_id in the resolvable index.
             "mosje_status": "MoSJE Verified Artisan",
             "geo_coordinates": {"latitude": artisan.geo_lat, "longitude": artisan.geo_lng},
             "enhanced_image_url": product.enhanced_image_path,

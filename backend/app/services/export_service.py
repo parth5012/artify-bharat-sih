@@ -6,6 +6,7 @@ from app.models.product import Product
 from app.models.artisan import Artisan
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport, ChannelExport
+from app.core.pii_vault import reveal as reveal_pii
 
 
 class ExportAdapterService:
@@ -22,13 +23,16 @@ class ExportAdapterService:
         """
         GeM (Government e-Marketplace) Product Specification.
         Requires TRIFED / Pehchan ID, GI certificate status, and HSN compliance.
+        DPDP: the vault token is detokenized here at the govt-channel display
+        boundary only; the result is never logged.
         """
+        trifed_display = reveal_pii(artisan.trifed_id)
         return {
             "gem_catalog_version": "3.0",
             "category_code": "HANDLOOM_SAREE_7210",
             "seller_details": {
                 "organization_name": f"{artisan.name} Handloom Enterprise",
-                "trifed_artisan_id": artisan.trifed_id,
+                "trifed_artisan_id": trifed_display,
                 "artisan_state": artisan.state,
                 "cluster_location": artisan.cluster_name,
             },

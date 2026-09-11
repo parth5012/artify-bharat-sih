@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.core.database import get_db
+from app.core.pii_vault import protect as protect_pii
 from app.core.security import get_pin_hash, verify_pin, create_access_token
 from app.models.artisan import Artisan
 from app.schemas.auth import (
@@ -96,8 +97,10 @@ async def register_artisan(payload: VoiceRegisterRequest, db: AsyncSession = Dep
         state=payload.state,
         district=payload.district,
         cluster_name=payload.cluster_name,
-        trifed_id=payload.trifed_id,
-        pehchan_id=payload.pehchan_id,
+        # DPDP Act 2023: govt IDs persisted as opaque vault tokens (or
+        # plaintext passthrough when PII_VAULT_KEY is unset in dev/test).
+        trifed_id=protect_pii(payload.trifed_id),
+        pehchan_id=protect_pii(payload.pehchan_id),
         geo_lat=payload.geo_lat,
         geo_lng=payload.geo_lng,
         is_verified=True,
@@ -209,6 +212,8 @@ async def lookup_eshram_worker(payload: EShramLookupRequest):
     """
     e-Shram DPI Microservice:
     Validates 12-digit UAN number for unorganized handicraft workers.
+    DPDP note: the UAN is transient-only (caller-supplied echo) — it is
+    never persisted to the DB or written to logs by this endpoint.
     """
     is_valid = len(payload.uan_number.replace("-", "").replace(" ", "")) == 12
     return EShramLookupResponse(

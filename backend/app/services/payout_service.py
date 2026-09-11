@@ -1,6 +1,9 @@
 import uuid
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
+
+from app.core.pii_vault import mask_pii, protect, reveal
+
 
 class PayoutService:
     """
@@ -8,6 +11,9 @@ class PayoutService:
     - Middleman-free escrow settlement
     - Direct transfer to PM Jan Dhan Yojana bank accounts or direct UPI VPA
     - Guaranteed zero middleman commission (100% fair artisan realization)
+    - DPDP Act 2023: destination account/VPA is stored masked for display plus
+      an opaque vault token; the raw value is only recovered via
+      reveal_destination() at settlement time and must never be logged.
     """
     
     def __init__(self):
@@ -29,13 +35,23 @@ class PayoutService:
             "status": "SETTLED_INSTANT",
             "middleman_commission_inr": 0.0,
             "net_artisan_received_inr": amount_inr,
-            "destination_account": upi_id_or_account,
+            "destination_account": mask_pii(upi_id_or_account),
+            "destination_account_token": protect(upi_id_or_account),
             "ifsc_code": ifsc_code,
             "utr_number": utr,
             "settled_at": datetime.now(timezone.utc).isoformat()
         }
         self._transactions.append(record)
         return record
+
+    def reveal_destination(self, record: Dict[str, Any]) -> Optional[str]:
+        """Recover the raw destination for settlement-time transfer only.
+
+        The result must be used transiently (transfer call) and never logged
+        or persisted.
+        """
+        raw = reveal(record.get("destination_account_token"))
+        return raw if isinstance(raw, str) else None
 
     def get_artisan_payout_history(self, artisan_id: str) -> List[Dict[str, Any]]:
         return [t for t in self._transactions if t["artisan_id"] == artisan_id]
