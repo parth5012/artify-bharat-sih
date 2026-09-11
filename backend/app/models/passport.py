@@ -1,25 +1,47 @@
-from __future__ import annotations
-
+from datetime import datetime, timezone
+import uuid
 from typing import Optional
-
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
-
+from sqlalchemy import String, Text, DateTime, ForeignKey, JSON
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
-from app.models._shared import TimestampMixin, new_id
 
 
-class HeritagePassport(TimestampMixin, Base):
-    """Owned/written by Parth's passport_service.py; Product/Artisan FKs feed it."""
-
+class HeritagePassport(Base):
     __tablename__ = "heritage_passports"
 
-    id: Mapped[str] = mapped_column(
-        String(64), primary_key=True, default=lambda: new_id("passport")
-    )
-    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True, nullable=False)
-    artisan_id: Mapped[str] = mapped_column(ForeignKey("artisans.id"), index=True, nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    product_id: Mapped[str] = mapped_column(String(36), ForeignKey("products.id"), unique=True, index=True, nullable=False)
 
-    sha256_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    shortcode: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
-    qr_ref: Mapped[Optional[str]] = mapped_column(String(255))
+    passport_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)  # SHA-256 hex
+    qr_code_data_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    verification_url: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    # Immutable snapshot payload locked at issue time
+    payload_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+    issued_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+    # Relationship
+    product = relationship("Product", back_populates="passport")
+
+
+class ChannelExport(Base):
+    __tablename__ = "channel_exports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    product_id: Mapped[str] = mapped_column(String(36), ForeignKey("products.id"), index=True, nullable=False)
+
+    channel: Mapped[str] = mapped_column(String(50), nullable=False)  # "GeM", "ONDC", "Amazon_Karigar", "Direct_B2B"
+    external_reference_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    export_payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    sync_status: Mapped[str] = mapped_column(String(50), default="synced")  # "pending", "synced", "failed"
+    exported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+    # Relationship
+    product = relationship("Product", back_populates="exports")

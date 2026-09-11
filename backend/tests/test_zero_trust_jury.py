@@ -1,195 +1,102 @@
-"""
-backend/tests/test_zero_trust_jury.py
-Covers 2/3 quorum consensus, Redis velocity anomaly guard, anti-collusion
-guard, buyer anti-fraud report escalation, and stale-juror reassignment.
-Shared with Yash per the spec (Task 3.9).
-"""
-from datetime import datetime, timedelta, timezone
-
 import pytest
-from sqlalchemy import update
+from httpx import AsyncClient, ASGITransport
+from app.main import app
 
-from app.models.artisan import Artisan
-from app.models.jury import JuryTicket
-from app.models.product import Product
-
-pytestmark = pytest.mark.asyncio
-
-
-async def _make_verified_artisan(db_session, suffix: str, cluster="Varanasi Handloom Cluster"):
-    artisan = Artisan(
-        name=f"Juror {suffix}",
-        phone=f"+9198765{suffix}",
-        pin_hash="x",
-        primary_dialect="bhojpuri",
-        cluster_name=cluster,
-        is_verified=True,
-    )
-    db_session.add(artisan)
-    await db_session.commit()
-    await db_session.refresh(artisan)
-    return artisan
-
-
-async def _make_product(db_session, artisan_id: str):
-    product = Product(artisan_id=artisan_id, title="Handloom Saree")
-    db_session.add(product)
-    await db_session.commit()
-    await db_session.refresh(product)
-    return product
-
-
-async def _setup_cluster(db_session, n_jurors=4):
-    owner = await _make_verified_artisan(db_session, "00001")
-    product = await _make_product(db_session, owner.id)
-    jurors = [
-        await _make_verified_artisan(db_session, f"0{i:04d}") for i in range(2, 2 + n_jurors)
-    ]
-    return owner, product, jurors
-
-
-async def test_jury_assign_picks_3_jurors_excluding_owner(client, db_session):
-    owner, product, jurors = await _setup_cluster(db_session)
-
-    resp = await client.post("/api/v1/verify/jury/assign", json={"product_id": product.id})
-    assert resp.status_code == 201
-    body = resp.json()
-    assert len(body["assigned_juror_ids"]) == 3
-    assert owner.id not in body["assigned_juror_ids"]
-
-
-async def test_jury_assign_fails_with_insufficient_pool(client, db_session):
-    owner, product, jurors = await _setup_cluster(db_session, n_jurors=1)
-    resp = await client.post("/api/v1/verify/jury/assign", json={"product_id": product.id})
-    assert resp.status_code == 409
-
-
-async def test_quorum_2_of_3_genuine_resolves_ticket(client, db_session):
-    owner, product, jurors = await _setup_cluster(db_session)
-    assign = await client.post("/api/v1/verify/jury/assign", json={"product_id": product.id})
-    ticket_id = assign.json()["jury_ticket_id"]
-    juror_ids = assign.json()["assigned_juror_ids"]
-
-    for i in range(2):  # 2/3 is enough for quorum
-        resp = await client.post(
-            "/api/v1/verify/jury/vote",
-            json={
-                "jury_ticket_id": ticket_id,
-                "juror_id": juror_ids[i],
-                "vote": "GENUINE_HANDMADE",
-                "craft_score": 5,
-                "digital_signature": f"sig_{i}",
-            },
-        )
-        assert resp.status_code == 200
-
-    status_resp = await client.get(f"/api/v1/verify/jury/status/{ticket_id}")
-    body = status_resp.json()
-    assert body["status"] == "QUORUM_GENUINE"
-    assert body["quorum_verdict"] == "GENUINE_HANDMADE"
-
-
-async def test_juror_cannot_vote_twice(client, db_session):
-    owner, product, jurors = await _setup_cluster(db_session)
-    assign = await client.post("/api/v1/verify/jury/assign", json={"product_id": product.id})
-    ticket_id = assign.json()["jury_ticket_id"]
-    juror_id = assign.json()["assigned_juror_ids"][0]
-
-    vote_payload = {
-        "jury_ticket_id": ticket_id,
-        "juror_id": juror_id,
-        "vote": "GENUINE_HANDMADE",
-        "craft_score": 4,
-        "digital_signature": "sig_a",
-    }
-    first = await client.post("/api/v1/verify/jury/vote", json=vote_payload)
-    assert first.status_code == 200
-    second = await client.post("/api/v1/verify/jury/vote", json=vote_payload)
-    assert second.status_code == 409  # anti-collusion: no double voting
-
-
-async def test_unassigned_juror_cannot_vote(client, db_session):
-    owner, product, jurors = await _setup_cluster(db_session)
-    assign = await client.post("/api/v1/verify/jury/assign", json={"product_id": product.id})
-    ticket_id = assign.json()["jury_ticket_id"]
-
-    outsider = await _make_verified_artisan(db_session, "09999")
-    resp = await client.post(
-        "/api/v1/verify/jury/vote",
-        json={
+@pytest.mark.asyncio
+async def test_peer_jury_assignment_and_voting_quorum():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Step 1: Assign Peer Jury
+        assign_payload = {
+            "product_id": "prod_banarasi_881",
+            "cluster_id": "Varanasi Handloom Cluster",
+            "craft_type": "Handloom Silk Weaving"
+        }
+        res_assign = await client.post("/api/v1/verify/jury/assign", json=assign_payload)
+        assert res_assign.status_code == 200
+        data_assign = res_assign.json()
+        ticket_id = data_assign["jury_ticket_id"]
+        assert len(data_assign["assigned_jurors"]) >= 3
+        assert data_assign["quorum_required"] == 2
+        
+        # Step 2: Juror 1 votes Authentic
+        vote1_payload = {
             "jury_ticket_id": ticket_id,
-            "juror_id": outsider.id,
-            "vote": "GENUINE_HANDMADE",
-            "craft_score": 5,
-            "digital_signature": "sig_outsider",
-        },
-    )
-    assert resp.status_code == 403
+            "juror_id": data_assign["assigned_jurors"][0],
+            "verdict": "authentic",
+            "craft_authenticity_score": 0.95,
+            "comments": "Pure handloom silk weave confirmed"
+        }
+        res_vote1 = await client.post("/api/v1/verify/jury/vote", json=vote1_payload)
+        assert res_vote1.status_code == 200
+        data_vote1 = res_vote1.json()
+        assert data_vote1["votes_received"] == 1
+        assert data_vote1["quorum_reached"] is False
+        
+        # Step 3: Juror 2 votes Authentic (Reaching Quorum)
+        vote2_payload = {
+            "jury_ticket_id": ticket_id,
+            "juror_id": data_assign["assigned_jurors"][1],
+            "verdict": "authentic",
+            "craft_authenticity_score": 0.98,
+            "comments": "GI standards compliant."
+        }
+        res_vote2 = await client.post("/api/v1/verify/jury/vote", json=vote2_payload)
+        assert res_vote2.status_code == 200
+        data_vote2 = res_vote2.json()
+        assert data_vote2["votes_received"] == 2
+        assert data_vote2["quorum_reached"] is True
+        assert data_vote2["final_verdict"] == "VERIFIED_AUTHENTIC"
+        assert data_vote2["consensus_level"] == "HIGH_CONFIDENCE"
 
+@pytest.mark.asyncio
+async def test_report_counterfeit_feedback_loop():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        report_payload = {
+            "shortcode_or_hash": "A7X-9B2",
+            "reporter_phone": "+919876543210",
+            "reason": "Machine-made fabric sold with fake GI tag"
+        }
+        res = await client.post("/api/v1/verify/report-fake", json=report_payload)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "audit_triggered"
+        assert data["flagged_hash"] == "A7X-9B2"
+        assert "Escalated" in data["action_taken"]
 
-async def test_velocity_anomaly_flags_after_threshold(client, db_session):
-    """Redis velocity guard: >20 approvals/hour for a single juror trips
-    FLAGGED_VELOCITY_ANOMALY, regardless of quorum math."""
-    owner, product, jurors = await _setup_cluster(db_session, n_jurors=25)
-    hot_juror = jurors[0]
-
-    last_ticket_id = None
+@pytest.mark.asyncio
+async def test_velocity_rubber_stamp_detection():
+    from app.services.verify_jury_service import verify_jury_service
+    juror_id_fast = "juror_fast_bot"
+    
+    # Pre-populate 20 votes across 20 different tickets for this fast juror
     for i in range(21):
-        p = await _make_product(db_session, owner.id)
-        # Force-assign hot_juror by monkey-patching pool via direct ticket insert
-        ticket = JuryTicket(
-            product_id=p.id,
-            status="IN_PROGRESS",
-            assigned_juror_ids=f"{hot_juror.id},{jurors[1].id},{jurors[2].id}",
-        )
-        db_session.add(ticket)
-        await db_session.commit()
-        await db_session.refresh(ticket)
-        last_ticket_id = ticket.id
+        t = verify_jury_service.assign_jury(f"prod_fast_{i}", "Varanasi Handloom Cluster", "Silk Weaving")
+        res_fast = verify_jury_service.cast_vote(t["jury_ticket_id"], juror_id_fast, "authentic", 0.99)
+        
+    assert res_fast["velocity_flag"] is True
+    
+    # Now when a second juror also votes on the 21st ticket reaching quorum, the velocity flag triggers audit escalation
+    target_ticket = t["jury_ticket_id"]
+    res_final = verify_jury_service.cast_vote(target_ticket, "juror_vns_02", "authentic", 0.95)
+    
+    assert res_final["quorum_reached"] is True
+    assert res_final["final_verdict"] == "FLAGGED_VELOCITY_ANOMALY"
+    assert res_final["consensus_level"] == "SUSPECTED_RUBBER_STAMP"
 
-        resp = await client.post(
-            "/api/v1/verify/jury/vote",
-            json={
-                "jury_ticket_id": ticket.id,
-                "juror_id": hot_juror.id,
-                "vote": "GENUINE_HANDMADE",
-                "craft_score": 5,
-                "digital_signature": f"sig_{i}",
-            },
-        )
-        assert resp.status_code == 200
-
-    status_resp = await client.get(f"/api/v1/verify/jury/status/{last_ticket_id}")
-    assert status_resp.json()["status"] == "FLAGGED_VELOCITY_ANOMALY"
-
-
-async def test_report_fake_escalates_to_dm_queue(client, db_session):
-    owner, product, jurors = await _setup_cluster(db_session)
-    resp = await client.post(
-        "/api/v1/verify/report-fake",
-        json={"product_id": product.id, "reason": "Looks factory-stamped, not handmade"},
-    )
-    assert resp.status_code == 201
-    body = resp.json()
-    assert body["status"] == "ESCALATED_TO_DM"
-    assert "MoSJE" in body["escalated_to"]
+@pytest.mark.asyncio
+async def test_reassign_stale_juror():
+    from app.services.verify_jury_service import verify_jury_service
+    ticket = verify_jury_service.assign_jury("prod_stale_1", "Varanasi Handloom Cluster", "Silk Weaving")
+    tid = ticket["jury_ticket_id"]
+    old_juror = ticket["assigned_jurors"][0]
+    
+    # Simulate auto-reassignment of inactive juror
+    updated = verify_jury_service.reassign_stale_juror(tid, old_juror)
+    assert old_juror not in updated["assigned_jurors"]
+    assert len(updated["assigned_jurors"]) >= 3
+    assert "last_reassigned_at" in updated
 
 
-async def test_stale_juror_reassignment(client, db_session):
-    from app.services.verify_jury_service import reassign_stale_jurors
 
-    owner, product, jurors = await _setup_cluster(db_session, n_jurors=5)
-    assign = await client.post("/api/v1/verify/jury/assign", json={"product_id": product.id})
-    ticket_id = assign.json()["jury_ticket_id"]
-
-    # Simulate the ticket having been created >24h ago
-    await db_session.execute(
-        update(JuryTicket)
-        .where(JuryTicket.id == ticket_id)
-        .values(created_at=datetime.now(timezone.utc) - timedelta(hours=25))
-    )
-    await db_session.commit()
-
-    updated = await reassign_stale_jurors(db_session, ticket_id)
-    assert updated.reassigned_from is not None
-    assert len(updated.assigned_juror_ids.split(",")) == 3

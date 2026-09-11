@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models._shared import TimestampMixin, new_id
+
+if TYPE_CHECKING:
+    from app.models.product import Product
 
 
 class JuryTicket(TimestampMixin, Base):
