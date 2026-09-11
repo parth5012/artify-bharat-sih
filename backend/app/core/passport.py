@@ -2,6 +2,7 @@ import hashlib
 import json
 import io
 import base64
+import xml.sax.saxutils as saxutils
 from typing import Optional
 import qrcode
 from app.config import get_settings
@@ -84,3 +85,65 @@ def generate_passport_qr_code(passport_hash: str) -> str:
     img_bytes = buffered.getvalue()
     b64_str = base64.b64encode(img_bytes).decode("utf-8")
     return f"data:image/png;base64,{b64_str}"
+
+
+def generate_passport_qr_svg_xml(passport_hash: str, shortcode: Optional[str] = None) -> str:
+    """
+    Generates a vector QR code (SVG) encoding the public verification URL.
+
+    Uses ``qrcode`` with the ``SvgImage`` image factory. When ``shortcode``
+    is provided, a faint micro-watermark (SVG comment + tiny low-opacity
+    ``<text>`` in the quiet-zone margin) is embedded without overlaying
+    QR modules, so scannability is preserved.
+
+    Returns raw SVG XML string (parseable via ``xml.etree.ElementTree``).
+    """
+    from qrcode.image.svg import SvgImage
+
+    verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{passport_hash}"
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(verification_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(image_factory=SvgImage)
+    buffered = io.BytesIO()
+    img.save(buffered)
+    svg_text = buffered.getvalue().decode("utf-8")
+    if shortcode:
+        esc = saxutils.escape(str(shortcode), {'"': '&quot;'})
+        watermark = (
+            f"<!-- micro-watermark:{esc} -->"
+            f'<g id="micro-watermark" opacity="0.35">'
+            f'<text x="99%" y="99%" text-anchor="end" '
+            f'font-family="monospace" font-size="8" fill="#999999" opacity="0.35">'
+            f"{esc}</text></g></svg>"
+        )
+        if "</svg>" in svg_text:
+            svg_text = svg_text.rsplit("</svg>", 1)[0] + watermark
+        else:
+            svg_text = svg_text + watermark
+    return svg_text
+
+
+def generate_passport_qr_svg(passport_hash: str, shortcode: Optional[str] = None) -> str:
+    """
+    Vector QR SVG generator with embedded micro-watermark encoding the shortcode.
+
+    Returns raw SVG XML (see :func:`generate_passport_qr_svg_xml`).
+    Kept as the canonical entry point per Phase 4 Task 4.3 spec.
+    """
+    return generate_passport_qr_svg_xml(passport_hash, shortcode)
+
+
+def generate_passport_qr_svg_data_uri(passport_hash: str, shortcode: Optional[str] = None) -> str:
+    """
+    SVG QR as a base64 data URI (``data:image/svg+xml;base64,...``),
+    symmetric with :func:`generate_passport_qr_code` for frontend embedding.
+    """
+    svg_text = generate_passport_qr_svg_xml(passport_hash, shortcode)
+    b64_str = base64.b64encode(svg_text.encode("utf-8")).decode("utf-8")
+    return f"data:image/svg+xml;base64,{b64_str}"
