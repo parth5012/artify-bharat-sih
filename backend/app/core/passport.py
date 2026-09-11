@@ -91,6 +91,11 @@ def generate_passport_qr_svg_xml(passport_hash: str, shortcode: Optional[str] = 
     """
     Generates a vector QR code (SVG) encoding the public verification URL.
 
+    Canonical verification URL is shortcode-based
+    (``{BASE}/{shortcode}``, see ``PassportService.issue_passport``).
+    When ``shortcode`` is provided it is encoded; otherwise falls back to
+    ``passport_hash`` for backward compatibility (pre-4.2 QRs).
+
     Uses ``qrcode`` with the ``SvgImage`` image factory. When ``shortcode``
     is provided, a faint micro-watermark (SVG comment + tiny low-opacity
     ``<text>`` in the quiet-zone margin) is embedded without overlaying
@@ -100,7 +105,8 @@ def generate_passport_qr_svg_xml(passport_hash: str, shortcode: Optional[str] = 
     """
     from qrcode.image.svg import SvgImage
 
-    verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{passport_hash}"
+    code = (str(shortcode).strip() if shortcode else "") or str(passport_hash)
+    verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{code}"
     qr = qrcode.QRCode(
         version=1,
         box_size=10,
