@@ -368,8 +368,11 @@ class PassportService:
         }
 
         if existing_passport:
+            previous_shortcode = existing_passport.shortcode
             existing_passport.passport_hash = passport_hash
             existing_passport.shortcode = shortcode
+            if previous_shortcode and previous_shortcode != shortcode:
+                self._shortcode_index.pop(previous_shortcode, None)
             existing_passport.qr_code_data_uri = qr_data_uri
             existing_passport.verification_url = verification_url
             existing_passport.payload_snapshot = payload_snapshot
