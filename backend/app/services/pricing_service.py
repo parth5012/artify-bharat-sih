@@ -98,7 +98,7 @@ def calculate_artisan_pricing(
         "status": "success",
         "currency": "INR",
         "parameters_applied": {
-            "state_code": (state_code or "DEFAULT").upper(),
+            "state_code": (state_code or "DEFAULT").strip().upper(),
             "hourly_wage_floor": w_skill,
             "has_gi_tag": has_gi_tag,
             "craft_heritage_multiplier": m_craft,
