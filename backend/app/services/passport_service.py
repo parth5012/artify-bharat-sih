@@ -68,23 +68,60 @@ def _shortcode_variants(code: str) -> list[str]:
         _add(f"{dehy[:3].upper()}-{dehy[3:].upper()}")
     return variants
 
-def generate_escpos_thermal_bytes(shortcode: str, title: str, artisan: str, price: float) -> str:
-    """Generates base64-encoded ESC/POS binary commands for 58mm thermal printers."""
+def _wrap_32(text: str, width: int = 32) -> list[str]:
+    """Wrap a line for 58mm thermal paper (Font A, 32 cols)."""
+    import textwrap
+
+    clean = " ".join(str(text or "").split())
+    if not clean:
+        return [""]
+    # Don't break long URLs/tokens mid-word unless forced (break_long_words
+    # still True so over-long verification URLs wrap instead of overflowing).
+    return textwrap.wrap(
+        clean, width=width, break_long_words=True, break_on_hyphens=False
+    ) or [""]
+
+
+def generate_escpos_thermal_bytes(
+    shortcode: str, title: str, artisan: str, price: float,
+    verification_url: Optional[str] = None,
+) -> str:
+    """Generates base64-encoded ESC/POS binary commands for 58mm thermal printers.
+
+    Layout (32-col, Font A):
+    - ESC @ init, centered bold header
+    - Left-aligned wrapped product/artisan lines + price
+    - Centered bold shortcode + wrapped verification URL (scannable layout)
+    - Feed + GS V A cut. Returns base64 ascii.
+    """
+    code = str(shortcode or "").strip()
+    vurl = verification_url or f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{code}"
     commands = bytearray()
-    commands.extend(b"\x1b\x40") # Init
-    commands.extend(b"\x1b\x61\x01") # Center
-    commands.extend(b"\x1b\x45\x01") # Bold
+    commands.extend(b"\x1b\x40")  # Init (ESC @)
+    commands.extend(b"\x1b\x61\x01")  # Center
+    commands.extend(b"\x1b\x45\x01")  # Bold on
     commands.extend(b"ARTIFY BHARAT (MoSJE)\n")
     commands.extend(b"HERITAGE DIGITAL PASSPORT\n")
-    commands.extend(b"\x1b\x45\x00") # Bold off
-    commands.extend(f"Product: {title[:24]}\n".encode("utf-8"))
-    commands.extend(f"Artisan: {artisan[:24]}\n".encode("utf-8"))
-    commands.extend(f"Price: Rs. {int(price)}\n".encode("utf-8"))
-    commands.extend(b"\x1b\x45\x01")
-    commands.extend(f"CODE: {shortcode}\n".encode("utf-8"))
-    commands.extend(b"\x1b\x45\x00")
-    commands.extend(b"Scan or enter at: artify.gov.in\n")
-    commands.extend(b"\n\n\x1d\x56\x41\x00") # Cut paper
+    commands.extend(b"\x1b\x45\x00")  # Bold off
+    commands.extend(b"\x1b\x61\x00")  # Left for body (readable wrapping)
+    for line in _wrap_32(f"Product: {title.strip()}" if str(title or "").strip() else "Product: -"):
+        commands.extend(f"{line}\n".encode("utf-8"))
+    for line in _wrap_32(f"Artisan: {artisan.strip()}" if str(artisan or "").strip() else "Artisan: -"):
+        commands.extend(f"{line}\n".encode("utf-8"))
+    try:
+        price_val = float(price)
+    except (TypeError, ValueError):
+        price_val = 0.0
+    for line in _wrap_32(f"Price: Rs. {int(price_val)}"):
+        commands.extend(f"{line}\n".encode("utf-8"))
+    commands.extend(b"\x1b\x61\x01")  # Center CODE block
+    commands.extend(b"\x1b\x45\x01")  # Bold on
+    commands.extend(f"CODE: {code}\n".encode("utf-8"))
+    commands.extend(b"\x1b\x45\x00")  # Bold off
+    for line in _wrap_32(vurl):
+        commands.extend(f"{line}\n".encode("utf-8"))
+    commands.extend(b"Verify: enter CODE at counter\n")
+    commands.extend(b"\n\n\x1d\x56\x41\x00")  # Feed + cut paper (GS V A)
     return base64.b64encode(commands).decode("ascii")
 
 
@@ -212,12 +249,12 @@ class PassportService:
         existing_passport = existing_passport_res.scalar_one_or_none()
 
         if existing_passport:
-            first_issue_time = (
-                existing_passport.payload_snapshot.get("issued_at")
-                if existing_passport.payload_snapshot and "issued_at" in existing_passport.payload_snapshot
-                else existing_passport.created_at.isoformat()
-            )
-            issue_timestamp = first_issue_time
+            snap = existing_passport.payload_snapshot or {}
+            first_issue_time = snap.get("issued_at") if isinstance(snap, dict) else None
+            if not first_issue_time:
+                issued = getattr(existing_passport, "issued_at", None)
+                first_issue_time = issued.isoformat() if issued else datetime.now(timezone.utc).isoformat()
+            issue_timestamp = str(first_issue_time)
         else:
             issue_timestamp = datetime.now(timezone.utc).isoformat()
 
