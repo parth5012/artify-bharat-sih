@@ -1,48 +1,51 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 
-class VoiceRegisterRequest(BaseModel):
-    name: str = Field(..., min_length=2)
+class RegisterRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=200)
     phone: str = Field(..., min_length=10, max_length=15)
-    pin: str = Field(..., min_length=4, max_length=6)
-    primary_dialect: str = Field(default="bhojpuri")
-    state: str = Field(default="Uttar Pradesh")
-    district: str = Field(default="Varanasi")
-    cluster_name: str = Field(default="Varanasi Handloom Cluster")
-    trifed_id: Optional[str] = None
+    pin: str = Field(..., min_length=4, max_length=4, description="4-digit PIN")
+    primary_dialect: str
+    role: Literal["artisan", "shg_leader"] = "artisan"
     pehchan_id: Optional[str] = None
-    geo_lat: Optional[float] = 25.3176
-    geo_lng: Optional[float] = 82.9739
+    trifed_id: Optional[str] = None
+    eshram_uan: Optional[str] = None
+    cluster_name: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+
+    @field_validator("pin")
+    @classmethod
+    def pin_must_be_digits(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("PIN must be exactly 4 digits")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def normalize_phone(cls, v: str) -> str:
+        v = v.strip().replace(" ", "")
+        if not v.startswith("+"):
+            v = "+91" + v.lstrip("0") if not v.startswith("91") else "+" + v
+        return v
 
 
-class PinLoginRequest(BaseModel):
-    phone: str = Field(..., min_length=10, max_length=15)
-    pin: str = Field(..., min_length=4, max_length=6)
+class RegisterResponse(BaseModel):
+    artisan_id: str
+    access_token: str
+    token_type: str = "bearer"
 
 
-class TokenResponse(BaseModel):
+class LoginRequest(BaseModel):
+    phone: str
+    pin: str = Field(..., min_length=4, max_length=4)
+
+
+class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     artisan_id: str
     name: str
-    phone: str
-
-
-class ArtisanIdVerificationRequest(BaseModel):
-    identifier_type: str = Field(default="pehchan", description="Identifier type: 'pehchan' or 'trifed'")
-    identifier_value: str = Field(..., description="Government artisan registration string (e.g. PEH-IND-88320 or TRIFED-UP-VNS-1049)")
-
-
-class ArtisanIdVerificationResponse(BaseModel):
-    is_valid: bool = Field(..., description="Whether ID is verified in national artisan database")
-    identifier_type: str
-    identifier_value: str
-    artisan_name: Optional[str] = None
-    craft_category: Optional[str] = None
-    cluster_name: Optional[str] = None
-    gi_certified: bool = False
-    gi_tag_name: Optional[str] = None
-    state: Optional[str] = None
-    district: Optional[str] = None
-    verification_source: str = Field(default="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)")
+    is_verified: bool
