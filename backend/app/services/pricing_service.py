@@ -4,6 +4,85 @@ from app.config import get_settings
 
 settings = get_settings()
 
+STATE_WAGE_FLOOR: Dict[str, float] = {
+    "HR": 85.0,
+    "UP": 56.25,
+    "BIH": 55.0,
+    "RAJ": 60.0,
+    "JK": 70.0,
+    "DEFAULT": 60.0,
+}
+
+
+def get_skilled_wage_floor(state_code: str) -> float:
+    """Returns the statutory hourly skilled wage floor based on state code."""
+    return STATE_WAGE_FLOOR.get((state_code or "DEFAULT").upper(), STATE_WAGE_FLOOR["DEFAULT"])
+
+
+def calculate_artisan_pricing(
+    material_cost: float,
+    labor_hours: float,
+    state_code: str,
+    craft_category: str,
+    has_gi_tag: bool = True,
+    is_festive_season: bool = False,
+) -> Dict[str, Any]:
+    """
+    Calculates bottom-up fair wage pricing, applying heritage coefficients and seasonal multipliers.
+    """
+    w_skill = get_skilled_wage_floor(state_code)
+    c_overhead = 50.0
+
+    labor_cost = float(labor_hours) * w_skill
+    base_cost = float(material_cost) + labor_cost + c_overhead
+
+    m_craft = 1.15 if has_gi_tag else 1.00
+    d_season = 1.10 if is_festive_season else 1.00
+
+    market_adjusted_base = (base_cost * m_craft) * d_season
+
+    floor_price = round(base_cost, -1)
+    suggested_retail_price = round(market_adjusted_base + 320, -1)
+    bulk_purchase_price = round(suggested_retail_price * 0.85, -1)
+
+    total_price = suggested_retail_price
+    breakdown = {
+        "raw_materials": {
+            "amount": float(material_cost),
+            "percentage": round((float(material_cost) / total_price) * 100, 1) if total_price else 0.0,
+        },
+        "direct_paid_labor": {
+            "amount": round(labor_cost, 2),
+            "percentage": round((labor_cost / total_price) * 100, 1) if total_price else 0.0,
+        },
+        "artisan_net_profit": {
+            "amount": 320.0,
+            "percentage": round((320.0 / total_price) * 100, 1) if total_price else 0.0,
+        },
+        "packaging_logistics": {
+            "amount": c_overhead,
+            "percentage": round((c_overhead / total_price) * 100, 1) if total_price else 0.0,
+        },
+    }
+
+    return {
+        "status": "success",
+        "currency": "INR",
+        "parameters_applied": {
+            "state_code": (state_code or "DEFAULT").upper(),
+            "hourly_wage_floor": w_skill,
+            "has_gi_tag": has_gi_tag,
+            "craft_heritage_multiplier": m_craft,
+            "festive_multiplier": d_season,
+        },
+        "pricing_tiers": {
+            "floor_price": floor_price,
+            "suggested_retail_price": suggested_retail_price,
+            "bulk_purchase_price": bulk_purchase_price,
+        },
+        "fair_price_breakdown": breakdown,
+    }
+
 
 class DynamicPricingService:
     """
@@ -44,6 +123,24 @@ class DynamicPricingService:
         return self.STATE_HOURLY_WAGE_FLOORS.get(
             code,
             {"name": f"State ({code})", "rate_per_hour": self.DEFAULT_HOURLY_WAGE_FLOOR},
+        )
+
+    def calculate_artisan_pricing(
+        self,
+        material_cost: float,
+        labor_hours: float,
+        state_code: str,
+        craft_category: str,
+        has_gi_tag: bool = True,
+        is_festive_season: bool = False,
+    ) -> Dict[str, Any]:
+        return calculate_artisan_pricing(
+            material_cost=material_cost,
+            labor_hours=labor_hours,
+            state_code=state_code,
+            craft_category=craft_category,
+            has_gi_tag=has_gi_tag,
+            is_festive_season=is_festive_season,
         )
 
     def calculate_fair_wage_pricing(
