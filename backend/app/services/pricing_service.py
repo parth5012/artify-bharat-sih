@@ -4,19 +4,37 @@ from app.config import get_settings
 
 settings = get_settings()
 
-STATE_WAGE_FLOOR: Dict[str, float] = {
-    "HR": 85.0,
-    "UP": 56.25,
-    "BIH": 55.0,
-    "RAJ": 60.0,
-    "JK": 70.0,
-    "DEFAULT": 60.0,
+DEFAULT_HOURLY_WAGE_FLOOR: float = 75.0  # National Baseline Hourly Wage (INR)
+
+# State-specific statutory skilled minimum wage floors per hour (INR)
+STATE_HOURLY_WAGE_FLOORS: Dict[str, Dict[str, Any]] = {
+    "HR": {"name": "Haryana", "rate_per_hour": 85.0},
+    "DL": {"name": "Delhi", "rate_per_hour": 95.0},
+    "MH": {"name": "Maharashtra", "rate_per_hour": 82.0},
+    "KA": {"name": "Karnataka", "rate_per_hour": 78.0},
+    "TN": {"name": "Tamil Nadu", "rate_per_hour": 76.0},
+    "UP": {"name": "Uttar Pradesh", "rate_per_hour": 68.0},
+    "BR": {"name": "Bihar", "rate_per_hour": 65.0},
+    "RJ": {"name": "Rajasthan", "rate_per_hour": 70.0},
+    "GJ": {"name": "Gujarat", "rate_per_hour": 74.0},
+    "WB": {"name": "West Bengal", "rate_per_hour": 67.0},
+    "JK": {"name": "Jammu & Kashmir", "rate_per_hour": 80.0},
+    "OR": {"name": "Odisha", "rate_per_hour": 66.0},
+    "MP": {"name": "Madhya Pradesh", "rate_per_hour": 68.0},
 }
+
+STATE_WAGE_FLOOR: Dict[str, float] = {
+    code: float(info["rate_per_hour"]) for code, info in STATE_HOURLY_WAGE_FLOORS.items()
+}
+STATE_WAGE_FLOOR["DEFAULT"] = DEFAULT_HOURLY_WAGE_FLOOR
+STATE_WAGE_FLOOR["BIH"] = float(STATE_HOURLY_WAGE_FLOORS["BR"]["rate_per_hour"])
+STATE_WAGE_FLOOR["RAJ"] = float(STATE_HOURLY_WAGE_FLOORS["RJ"]["rate_per_hour"])
 
 
 def get_skilled_wage_floor(state_code: str) -> float:
-    """Returns the statutory hourly skilled wage floor based on state code."""
-    return STATE_WAGE_FLOOR.get((state_code or "DEFAULT").upper(), STATE_WAGE_FLOOR["DEFAULT"])
+    """Returns statutory hourly skilled wage floor based on state code."""
+    code = (state_code or "DEFAULT").strip().upper()
+    return STATE_WAGE_FLOOR.get(code, STATE_WAGE_FLOOR["DEFAULT"])
 
 
 def calculate_artisan_pricing(
@@ -30,22 +48,33 @@ def calculate_artisan_pricing(
     """
     Calculates bottom-up fair wage pricing, applying heritage coefficients and seasonal multipliers.
     """
+    material_cost = float(material_cost)
+    labor_hours = float(labor_hours)
+    if not math.isfinite(material_cost) or material_cost < 0:
+        raise ValueError("material_cost must be a finite non-negative number")
+    if not math.isfinite(labor_hours) or labor_hours < 0:
+        raise ValueError("labor_hours must be a finite non-negative number")
+
     w_skill = get_skilled_wage_floor(state_code)
     c_overhead = 50.0
 
-    labor_cost = float(labor_hours) * w_skill
-    base_cost = float(material_cost) + labor_cost + c_overhead
+    labor_cost = labor_hours * w_skill
+    base_cost = material_cost + labor_cost + c_overhead
 
     m_craft = 1.15 if has_gi_tag else 1.00
     d_season = 1.10 if is_festive_season else 1.00
 
     market_adjusted_base = (base_cost * m_craft) * d_season
 
-    floor_price = round(base_cost, -1)
+    floor_price = math.ceil(base_cost / 10.0) * 10.0
     suggested_retail_price = round(market_adjusted_base + 320, -1)
-    bulk_purchase_price = round(suggested_retail_price * 0.85, -1)
+    bulk_purchase_price = round(
+        max(floor_price, suggested_retail_price * 0.85),
+        -1,
+    )
 
     total_price = suggested_retail_price
+    artisan_net_profit_amount = round(total_price - float(material_cost) - labor_cost - c_overhead, 2)
     breakdown = {
         "raw_materials": {
             "amount": float(material_cost),
@@ -56,8 +85,8 @@ def calculate_artisan_pricing(
             "percentage": round((labor_cost / total_price) * 100, 1) if total_price else 0.0,
         },
         "artisan_net_profit": {
-            "amount": 320.0,
-            "percentage": round((320.0 / total_price) * 100, 1) if total_price else 0.0,
+            "amount": artisan_net_profit_amount,
+            "percentage": round((artisan_net_profit_amount / total_price) * 100, 1) if total_price else 0.0,
         },
         "packaging_logistics": {
             "amount": c_overhead,
@@ -96,24 +125,8 @@ class DynamicPricingService:
     """
 
     STATUTORY_MINIMUM_DAILY_WAGE: float = 450.0  # National Daily Skilled Baseline (INR)
-    DEFAULT_HOURLY_WAGE_FLOOR: float = 75.0      # National Baseline Hourly Wage (INR)
-
-    # State-specific statutory skilled minimum wage floors per hour (INR)
-    STATE_HOURLY_WAGE_FLOORS: Dict[str, Dict[str, Any]] = {
-        "HR": {"name": "Haryana", "rate_per_hour": 85.0},
-        "DL": {"name": "Delhi", "rate_per_hour": 95.0},
-        "MH": {"name": "Maharashtra", "rate_per_hour": 82.0},
-        "KA": {"name": "Karnataka", "rate_per_hour": 78.0},
-        "TN": {"name": "Tamil Nadu", "rate_per_hour": 76.0},
-        "UP": {"name": "Uttar Pradesh", "rate_per_hour": 68.0},
-        "BR": {"name": "Bihar", "rate_per_hour": 65.0},
-        "RJ": {"name": "Rajasthan", "rate_per_hour": 70.0},
-        "GJ": {"name": "Gujarat", "rate_per_hour": 74.0},
-        "WB": {"name": "West Bengal", "rate_per_hour": 67.0},
-        "JK": {"name": "Jammu & Kashmir", "rate_per_hour": 80.0},
-        "OR": {"name": "Odisha", "rate_per_hour": 66.0},
-        "MP": {"name": "Madhya Pradesh", "rate_per_hour": 68.0},
-    }
+    DEFAULT_HOURLY_WAGE_FLOOR: float = DEFAULT_HOURLY_WAGE_FLOOR
+    STATE_HOURLY_WAGE_FLOORS: Dict[str, Dict[str, Any]] = STATE_HOURLY_WAGE_FLOORS
 
     CRAFT_HERITAGE_GI_MULTIPLIER: float = 1.15  # 1.15x for GI-tagged authentic craft
 
