@@ -2,6 +2,10 @@ import pytest
 import io
 from httpx import AsyncClient
 
+# Slow: drives the full CV/rembg enhance pipeline end to end. Excluded from the
+# CI fast suite with `-m "not slow"`; still runs in local full-suite runs.
+pytestmark = pytest.mark.slow
+
 
 @pytest.mark.asyncio
 async def test_multi_channel_export(client: AsyncClient):

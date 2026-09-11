@@ -15,6 +15,10 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 from app.services.cv_service import cv_service, StudioPipelineResult, PipelineStepResult
 
+# Slow: full rembg/CV inference per test (~60-90s on CPU). Excluded from the CI
+# fast suite with `-m "not slow"`; still runs in local full-suite runs.
+pytestmark = pytest.mark.slow
+
 
 # ---------------------------------------------------------------------------
 # Shared test helpers

@@ -5,6 +5,10 @@ import cv2
 from httpx import AsyncClient
 from app.services.cv_service import cv_service
 
+# Slow: full rembg/CV inference per test (~60-90s on CPU). Excluded from the CI
+# fast suite with `-m "not slow"`; still runs in local full-suite runs.
+pytestmark = pytest.mark.slow
+
 
 def create_dummy_image_bytes() -> bytes:
     # Create a 200x200 RGB test image

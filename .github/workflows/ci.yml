@@ -34,7 +34,9 @@ jobs:
 
       - name: Run Pytest Suite
         working-directory: ./backend
-        run: uv run pytest -v --cov=app --cov-report=xml --cov-report=term-missing
+        # Fast suite only: CV/rembg `slow`-marked tests (~60-90s each on CPU)
+        # are excluded here and run in local full-suite runs.
+        run: uv run pytest -v --cov=app --cov-report=xml --cov-report=term-missing -m "not slow"
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4.4.3
