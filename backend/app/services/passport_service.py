@@ -8,7 +8,7 @@ from app.models.product import Product
 from app.models.artisan import Artisan
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport
-from app.core.passport import generate_passport_hash, generate_passport_qr_code
+from app.core.passport import compute_wip_digest, generate_passport_hash, generate_passport_qr_code
 from app.core.pii_vault import reveal as reveal_pii
 from app.config import get_settings
 
@@ -178,6 +178,9 @@ class PassportService:
         # deterministic hash input. Plaintext is never persisted — the
         # payload snapshot and shortcode index below carry no govt IDs.
         trifed_plain = reveal_pii(artisan.trifed_id)
+        # WIP provenance: digest the raw/WIP capture reference so any WIP
+        # photo swap flips the deterministic passport hash.
+        wip_digest = compute_wip_digest(getattr(product, "raw_image_path", None))
         passport_hash = generate_passport_hash(
             artisan_id=artisan.id,
             trifed_id=trifed_plain if isinstance(trifed_plain, str) else None,
@@ -188,6 +191,7 @@ class PassportService:
             timestamp_iso=issue_timestamp,
             raw_material_cost=raw_cost,
             labor_days=labor_days,
+            wip_sha256=wip_digest,
         )
 
         shortcode = generate_shortcode(passport_hash)
