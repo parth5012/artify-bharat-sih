@@ -3,7 +3,7 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.models.product import Product
 from app.models.artisan import Artisan
 from app.models.pricing import ProductPricing
@@ -14,12 +14,59 @@ from app.config import get_settings
 
 settings = get_settings()
 
-def generate_shortcode(hash_str: str) -> str:
-    """Generate deterministic 6-character alphanumeric shortcode (e.g., A7X-9B2) from SHA-256 hash."""
-    clean = "".join(c.upper() for c in hash_str if c.isalnum())
-    if len(clean) < 6:
-        clean = clean.ljust(6, "X")
-    return f"{clean[0:3]}-{clean[3:6]}"
+BASE62_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+
+def _base62_encode(num: int) -> str:
+    """Encode a non-negative int to base62 using BASE62_ALPHABET."""
+    if num == 0:
+        return BASE62_ALPHABET[0]
+    out: list[str] = []
+    while num > 0:
+        num, rem = divmod(num, 62)
+        out.append(BASE62_ALPHABET[rem])
+    return "".join(reversed(out))
+
+
+def generate_shortcode(hash_str: str, salt: str = "") -> str:
+    """Generate deterministic base62 6-char shortcode (XXX-XXX) from SHA-256 hex.
+
+    Maps int(hash, 16) % 62**6 through base62, padded to 6 chars. ``salt``
+    re-hashes with a counter suffix for collision resolution.
+    """
+    if salt:
+        digest = hashlib.sha256(f"{hash_str}{salt}".encode("utf-8")).hexdigest()
+    else:
+        try:
+            int(hash_str, 16)
+            digest = hash_str.strip().lower()
+            if len(digest) < 16:
+                digest = hashlib.sha256(hash_str.encode("utf-8")).hexdigest()
+        except (ValueError, AttributeError):
+            digest = hashlib.sha256(str(hash_str).encode("utf-8")).hexdigest()
+    num = int(digest, 16) % (62 ** 6)
+    encoded = _base62_encode(num).rjust(6, BASE62_ALPHABET[0])[-6:]
+    return f"{encoded[:3]}-{encoded[3:]}"
+
+
+def _shortcode_variants(code: str) -> list[str]:
+    """Ordered lookup variants: exact, upper, hyphen insert/remove."""
+    base = code.strip().replace(" ", "").replace("_", "")
+    variants: list[str] = []
+
+    def _add(v: str) -> None:
+        if v and v not in variants:
+            variants.append(v)
+
+    _add(base)
+    _add(base.upper())
+    dehy = base.replace("-", "")
+    _add(dehy)
+    _add(dehy.upper())
+    if len(dehy) == 6:
+        _add(f"{dehy[:3]}-{dehy[3:]}")
+        _add(f"{dehy[:3].upper()}-{dehy[3:].upper()}")
+    return variants
 
 def generate_escpos_thermal_bytes(shortcode: str, title: str, artisan: str, price: float) -> str:
     """Generates base64-encoded ESC/POS binary commands for 58mm thermal printers."""
@@ -195,6 +242,23 @@ class PassportService:
         )
 
         shortcode = generate_shortcode(passport_hash)
+        # Collision handling: rehash with salt counter while the candidate
+        # shortcode is taken by a different passport hash in the DB (or seed index).
+        _collision_counter = 0
+        while True:
+            clash = await db.execute(
+                select(HeritagePassport).where(HeritagePassport.shortcode == shortcode)
+            )
+            clash_row = clash.scalar_one_or_none()
+            clash_hash = clash_row.passport_hash if clash_row else None
+            clash_product = clash_row.product_id if clash_row else None
+            seed_clash = self._shortcode_index.get(shortcode)
+            seed_clash_hash = seed_clash.get("passport_hash") if seed_clash else None
+            if clash_row is None or clash_hash == passport_hash or clash_product == product_id:
+                if seed_clash is None or seed_clash_hash == passport_hash:
+                    break
+            _collision_counter += 1
+            shortcode = generate_shortcode(passport_hash, salt=str(_collision_counter))
         qr_data_uri = generate_passport_qr_code(passport_hash)
         verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{shortcode}"
         final_price = pricing.final_price if pricing else 4500.0
@@ -266,6 +330,7 @@ class PassportService:
 
         if existing_passport:
             existing_passport.passport_hash = passport_hash
+            existing_passport.shortcode = shortcode
             existing_passport.qr_code_data_uri = qr_data_uri
             existing_passport.verification_url = verification_url
             existing_passport.payload_snapshot = payload_snapshot
@@ -274,6 +339,7 @@ class PassportService:
             passport = HeritagePassport(
                 product_id=product_id,
                 passport_hash=passport_hash,
+                shortcode=shortcode,
                 qr_code_data_uri=qr_data_uri,
                 verification_url=verification_url,
                 payload_snapshot=payload_snapshot,
@@ -332,21 +398,94 @@ class PassportService:
             "issued_at": passport.issued_at,
         }
 
-    def resolve_shortcode(self, shortcode: str) -> Optional[Dict[str, Any]]:
-        raw = shortcode.upper().strip().replace(" ", "").replace("_", "")
-        if raw in self._shortcode_index:
-            return self._shortcode_index[raw]
-        
-        # Try inserting hyphen for 6-char input (e.g. A7X9B2 -> A7X-9B2)
-        if len(raw) == 6 and "-" not in raw:
-            hyphenated = f"{raw[:3]}-{raw[3:]}"
-            if hyphenated in self._shortcode_index:
-                return self._shortcode_index[hyphenated]
-                
-        # Try stripping hyphen if indexed without
-        dehyphenated = raw.replace("-", "")
-        if dehyphenated in self._shortcode_index:
-            return self._shortcode_index[dehyphenated]
+    async def resolve_shortcode(
+        self, shortcode: str, db: Optional[AsyncSession] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Resolve a 6-char shortcode: indexed DB lookup first, then seed index.
+
+        Accepts hyphen-insensitive + case-insensitive input (e.g. ``a7x9b2``,
+        ``A7X-9B2``). Old seed codes remain resolvable via the in-memory index.
+        """
+        variants = _shortcode_variants(shortcode)
+
+        def _row_to_public(row: HeritagePassport, fallback: str) -> Dict[str, Any]:
+            data = row.payload_snapshot or {}
+            product = data.get("product", {}) if isinstance(data, dict) else {}
+            artisan = data.get("artisan", {}) if isinstance(data, dict) else {}
+            pricing = data.get("pricing", {}) if isinstance(data, dict) else {}
+            sc = data.get("shortcode") if isinstance(data, dict) else None
+            return {
+                "passport_hash": row.passport_hash,
+                "shortcode": sc or row.shortcode or fallback,
+                "is_authentic": True,
+                "product_title": product.get("title", ""),
+                "craft_category": product.get("craft_category", ""),
+                "gi_tag_status": product.get("gi_tag_status", ""),
+                "artisan_name": artisan.get("name", ""),
+                "cluster_name": artisan.get("cluster", ""),
+                "state": artisan.get("state", ""),
+                "district": artisan.get("district", ""),
+                "mosje_status": artisan.get("mosje_status", "MoSJE Verified Artisan"),
+                "geo_coordinates": {
+                    "latitude": artisan.get("geo_lat"),
+                    "longitude": artisan.get("geo_lng"),
+                },
+                "enhanced_image_url": product.get("enhanced_image_path"),
+                "voice_story_url": product.get("voice_audio_path"),
+                "cost_breakdown": {
+                    "raw_material_cost": pricing.get("raw_material_cost", 0.0),
+                    "labor_days": pricing.get("labor_days", 0.0),
+                    "daily_wage_rate": 450.0,
+                    "fair_labor_wage": pricing.get("calculated_fair_wage", 0.0),
+                    "calculated_fair_wage": pricing.get("calculated_fair_wage", 0.0),
+                    "artisan_profit": pricing.get("artisan_net_profit", 0.0),
+                    "artisan_net_profit": pricing.get("artisan_net_profit", 0.0),
+                    "packaging": 300.0,
+                    "total_suggested_price": pricing.get("final_price", 0.0),
+                    "final_price": pricing.get("final_price", 0.0),
+                },
+                "issued_at": row.issued_at
+                if not (isinstance(data, dict) and data.get("issued_at"))
+                else data.get("issued_at"),
+            }
+
+        if db is not None:
+            try:
+                for cand in variants:
+                    res = await db.execute(
+                        select(HeritagePassport).where(HeritagePassport.shortcode == cand)
+                    )
+                    row = res.scalar_one_or_none()
+                    if row is not None:
+                        return _row_to_public(row, cand)
+                # Case-insensitive + hyphen-insensitive fallback for mixed-case
+                # base62 codes (e.g. user types lowercase of "AbC-DeF").
+                for cand in variants:
+                    res = await db.execute(
+                        select(HeritagePassport).where(
+                            func.lower(HeritagePassport.shortcode) == cand.lower()
+                        )
+                    )
+                    row = res.scalar_one_or_none()
+                    if row is not None:
+                        return _row_to_public(row, cand)
+                dehy_lower = shortcode.strip().replace(" ", "").replace("_", "").replace("-", "").lower()
+                if dehy_lower:
+                    res = await db.execute(
+                        select(HeritagePassport).where(
+                            func.replace(func.lower(HeritagePassport.shortcode), "-", "")
+                            == dehy_lower
+                        )
+                    )
+                    row = res.scalar_one_or_none()
+                    if row is not None:
+                        return _row_to_public(row, row.shortcode or shortcode)
+            except Exception:
+                pass  # e.g. shortcode column missing pre-migration; fall through to seeds
+
+        for cand in variants:
+            if cand in self._shortcode_index:
+                return self._shortcode_index[cand]
 
         return None
 

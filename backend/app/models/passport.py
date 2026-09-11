@@ -13,6 +13,7 @@ class HeritagePassport(Base):
     product_id: Mapped[str] = mapped_column(String(36), ForeignKey("products.id"), unique=True, index=True, nullable=False)
 
     passport_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)  # SHA-256 hex
+    shortcode: Mapped[Optional[str]] = mapped_column(String(7), unique=True, index=True, nullable=True)  # base62 XXX-XXX
     qr_code_data_uri: Mapped[str] = mapped_column(Text, nullable=False)
     verification_url: Mapped[str] = mapped_column(String(500), nullable=False)
 

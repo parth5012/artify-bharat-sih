@@ -54,7 +54,7 @@ async def resolve_passport_shortcode(shortcode: str, db: AsyncSession = Depends(
     """
     Resolves human-readable 6-character shortcode (e.g., A7X-9B2) to full digital passport.
     """
-    data = passport_service.resolve_shortcode(shortcode)
+    data = await passport_service.resolve_shortcode(shortcode, db)
     if not data:
         # Fallback to general verify
         data = await passport_service.verify_passport(db, shortcode)
