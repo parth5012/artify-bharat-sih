@@ -91,7 +91,6 @@ def test_enforce_detects_sub_module_of_banned():
     A sub-module of a banned package (e.g. 'diffusers.pipelines.stable_diffusion')
     must also trigger a violation even if only the parent name is in the banned set.
     """
-    parent = "diffusers"
     sub = "diffusers.pipelines.stable_diffusion"
     # Ensure diffusers itself is not loaded (it shouldn't be in test env)
     with _inject_banned_module(sub):
