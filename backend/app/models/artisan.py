@@ -21,9 +21,11 @@ class Artisan(Base):
     geo_lat: Mapped[float] = mapped_column(Float, nullable=True, default=25.3176)
     geo_lng: Mapped[float] = mapped_column(Float, nullable=True, default=82.9739)
 
-    # Government Credentials
-    trifed_id: Mapped[str] = mapped_column(String(50), nullable=True, index=True)
-    pehchan_id: Mapped[str] = mapped_column(String(50), nullable=True, index=True)
+    # Government Credentials — stored as opaque PII-vault tokens (see
+    # app.core.pii_vault.protect); widened to hold base64url tokens.
+    # Use reveal() only at display boundaries; never log the result.
+    trifed_id: Mapped[str] = mapped_column(String(512), nullable=True, index=True)
+    pehchan_id: Mapped[str] = mapped_column(String(512), nullable=True, index=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(
