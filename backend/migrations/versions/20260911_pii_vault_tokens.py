@@ -21,6 +21,11 @@ Backfill guidance (DPDP Act 2023) — run offline with PII_VAULT_KEY set::
     await db.commit()
 
 The loop is idempotent (is_vault_token skips already-tokenized rows).
+
+Downgrade is only safe before the backfill. Once tokens are stored, the
+String(512) -> String(50) change fails because token values exceed 50
+characters. Detokenize both columns manually first if a downgrade is
+required; this reintroduces plaintext PII and needs DPDP sign-off.
 """
 
 from typing import Sequence, Union
