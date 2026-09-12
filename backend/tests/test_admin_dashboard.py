@@ -142,3 +142,64 @@ async def test_district_heatmap_fallback_empty_db(client: AsyncClient, db_sessio
     assert data["total_districts_monitored"] == 5
     assert data["total_wages_disbursed_inr"] > 0
     assert data.get("is_fallback") is True
+
+
+@pytest.mark.asyncio
+async def test_admin_audit_logs_db_feed(client: AsyncClient, db_session: AsyncSession):
+    from app.models.jury import JuryTicket, AntiFraudReport
+
+    artisan = Artisan(
+        id="art_audit_01",
+        name="Govind Silk",
+        phone="+919876543201",
+        pin_hash="hash",
+        district="Varanasi",
+        state="Uttar Pradesh",
+        cluster_name="Varanasi Handloom Cluster",
+    )
+    product = Product(
+        id="prod_audit_01",
+        artisan_id=artisan.id,
+        title="Pure Katan Silk",
+        status="published",
+    )
+    db_session.add_all([artisan, product])
+    await db_session.flush()
+
+    jury_ticket = JuryTicket(
+        id="jury_ticket_db_99",
+        product_id=product.id,
+        status="QUORUM_GENUINE",
+        assigned_juror_ids="juror_1,juror_2,juror_3",
+        quorum_verdict="authentic",
+        average_craft_score=0.96,
+        anomaly_score=0.02,
+    )
+    fraud_report = AntiFraudReport(
+        id="rep_fraud_db_99",
+        product_id=product.id,
+        jury_ticket_id=jury_ticket.id,
+        reason="Counterfeit synthetic polyester detected",
+        status="FLAGGED_AUDIT",
+    )
+    db_session.add_all([jury_ticket, fraud_report])
+    await db_session.commit()
+
+    res = await client.get("/api/v1/admin/audit-logs")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_logs"] >= 2
+    log_ids = [entry["log_id"] for entry in data["logs"]]
+    assert "jury_ticket_db_99" in log_ids
+    assert "rep_fraud_db_99" in log_ids
+
+    jury_entry = next(entry for entry in data["logs"] if entry["log_id"] == "jury_ticket_db_99")
+    assert jury_entry["event_type"] == "PEER_JURY_CONSENSUS_VERIFIED"
+    assert jury_entry["product_or_passport_id"] == "prod_audit_01"
+    assert jury_entry["cluster"] == "Varanasi Handloom Cluster"
+    assert jury_entry["status"] in ["APPROVED", "QUORUM_GENUINE"]
+
+    fraud_entry = next(entry for entry in data["logs"] if entry["log_id"] == "rep_fraud_db_99")
+    assert fraud_entry["event_type"] in ["COUNTERFEIT_REPORT_FILED", "COUNTERFEIT_FLAG_TRIGGERED"]
+    assert fraud_entry["status"] == "FLAGGED_AUDIT"
+    assert "synthetic" in fraud_entry["details"]

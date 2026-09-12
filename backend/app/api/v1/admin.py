@@ -23,12 +23,15 @@ async def get_district_heatmap(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/audit-logs", response_model=AuditLogsResponse)
-async def get_anti_corruption_audit_logs():
+async def get_anti_corruption_audit_logs(
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, ge=1, le=200, description="Max audit logs to return (1-200)"),
+):
     """
-    Anti-Corruption & Peer-Review Logs:
-    Immutable verification digests, jury quorum records, and flagged anomaly reports.
+    Anti-Corruption Peer-Review Logs:
+    Immutable verification digests, jury quorum records, flagged anomaly reports.
     """
-    res = admin_service.get_audit_logs()
+    res = await admin_service.get_audit_logs(db, limit=limit)
     return AuditLogsResponse(**res)
 
 

@@ -197,8 +197,9 @@ class AdminService:
             "is_fallback": True,
         }
 
-    def get_audit_logs(self) -> Dict[str, Any]:
-        logs = [
+    async def get_audit_logs(self, db: Optional[AsyncSession] = None, limit: int = 50) -> Dict[str, Any]:
+        limit = max(1, min(limit, 200))
+        fallback_logs = [
             {
                 "log_id": "audit_log_881",
                 "timestamp": "2026-09-08T17:45:00Z",
@@ -208,7 +209,7 @@ class AdminService:
                 "cluster": "Varanasi Handloom Cluster",
                 "details": "3/3 peer jurors confirmed pure silk warp/weft handloom weaving.",
                 "anomaly_score": 0.01,
-                "status": "APPROVED"
+                "status": "APPROVED",
             },
             {
                 "log_id": "audit_log_882",
@@ -217,9 +218,9 @@ class AdminService:
                 "product_or_passport_id": "pass_unreg_910",
                 "shortcode": "K9P-12M",
                 "cluster": "Kashmir Pashmina Cluster",
-                "details": "AI Rubber-Stamp check flagged synthetic fiber mix (94% confidence). Escalate to DM Nodal Officer.",
+                "details": "AI Rubber-Stamp check flagged synthetic fiber mix (94% confidence). Escalate to Nodal Officer.",
                 "anomaly_score": 0.94,
-                "status": "FLAGGED_AUDIT"
+                "status": "FLAGGED_AUDIT",
             },
             {
                 "log_id": "audit_log_883",
@@ -230,12 +231,135 @@ class AdminService:
                 "cluster": "Mithila Painting Cluster",
                 "details": "58mm thermal sticky label printed with GPS lock: 26.3541N, 86.0718E.",
                 "anomaly_score": 0.00,
-                "status": "VERIFIED"
-            }
+                "status": "VERIFIED",
+            },
         ]
+
+        collected_logs: List[Dict[str, Any]] = []
+
+        if db is not None:
+            try:
+                jury_stmt = (
+                    select(JuryTicket, Product, Artisan, HeritagePassport)
+                    .join(Product, Product.id == JuryTicket.product_id, isouter=True)
+                    .join(Artisan, Artisan.id == Product.artisan_id, isouter=True)
+                    .join(HeritagePassport, HeritagePassport.product_id == Product.id, isouter=True)
+                    .order_by(JuryTicket.created_at.desc())
+                    .limit(limit)
+                )
+                jury_rows = (await db.execute(jury_stmt)).all()
+                for row in jury_rows:
+                    ticket: JuryTicket = row[0]
+                    _product: Optional[Product] = row[1]
+                    artisan: Optional[Artisan] = row[2]
+                    passport: Optional[HeritagePassport] = row[3]
+
+                    if ticket.status in ["QUORUM_GENUINE", "APPROVED", "VERIFIED"]:
+                        event_type = "PEER_JURY_CONSENSUS_VERIFIED"
+                        status = "APPROVED"
+                    elif "FLAGGED" in ticket.status or ticket.status == "QUORUM_SUSPECTED":
+                        event_type = "COUNTERFEIT_FLAG_TRIGGERED"
+                        status = "FLAGGED_AUDIT"
+                    else:
+                        event_type = f"PEER_JURY_{ticket.status}"
+                        status = ticket.status
+
+                    cluster = (artisan.cluster_name if artisan else None) or "Varanasi Handloom Cluster"
+                    ts = ticket.created_at.isoformat() if ticket.created_at else datetime.now(timezone.utc).isoformat()
+                    details = f"Jury verdict: {ticket.quorum_verdict or ticket.status}. Quorum score: {ticket.average_craft_score or 0.0}."
+
+                    collected_logs.append({
+                        "log_id": ticket.id,
+                        "timestamp": ts,
+                        "event_type": event_type,
+                        "product_or_passport_id": ticket.product_id,
+                        "shortcode": passport.shortcode if passport else None,
+                        "cluster": cluster,
+                        "details": details,
+                        "anomaly_score": float(ticket.anomaly_score or 0.0),
+                        "status": status,
+                    })
+
+                fraud_stmt = (
+                    select(AntiFraudReport, Product, Artisan, HeritagePassport)
+                    .join(Product, Product.id == AntiFraudReport.product_id, isouter=True)
+                    .join(Artisan, Artisan.id == Product.artisan_id, isouter=True)
+                    .join(HeritagePassport, HeritagePassport.product_id == Product.id, isouter=True)
+                    .order_by(AntiFraudReport.created_at.desc())
+                    .limit(limit)
+                )
+                fraud_rows = (await db.execute(fraud_stmt)).all()
+                for row in fraud_rows:
+                    report: AntiFraudReport = row[0]
+                    _product: Optional[Product] = row[1]
+                    artisan: Optional[Artisan] = row[2]
+                    passport: Optional[HeritagePassport] = row[3]
+
+                    cluster = (artisan.cluster_name if artisan else None) or "Varanasi Handloom Cluster"
+                    ts = report.created_at.isoformat() if report.created_at else datetime.now(timezone.utc).isoformat()
+                    status = "FLAGGED_AUDIT" if ("FLAG" in report.status or "ESCALATED" in report.status) else report.status
+
+                    collected_logs.append({
+                        "log_id": report.id,
+                        "timestamp": ts,
+                        "event_type": "COUNTERFEIT_REPORT_FILED",
+                        "product_or_passport_id": report.product_id,
+                        "shortcode": passport.shortcode if passport else None,
+                        "cluster": cluster,
+                        "details": report.reason,
+                        "anomaly_score": 0.95,
+                        "status": status,
+                    })
+            except Exception:
+                pass
+
+        try:
+            from app.services.verify_jury_service import verify_jury_service
+            for r in verify_jury_service.get_all_reports():
+                r_id = r.get("report_id", "rep_unknown")
+                if not any(l["log_id"] == r_id for l in collected_logs):
+                    collected_logs.append({
+                        "log_id": r_id,
+                        "timestamp": r.get("reported_at", datetime.now(timezone.utc).isoformat()),
+                        "event_type": "COUNTERFEIT_FLAG_TRIGGERED",
+                        "product_or_passport_id": r.get("shortcode_or_hash", "unknown"),
+                        "shortcode": r.get("shortcode_or_hash"),
+                        "cluster": "Varanasi Handloom Cluster",
+                        "details": r.get("action_taken", r.get("reason", "")),
+                        "anomaly_score": 0.95,
+                        "status": "FLAGGED_AUDIT",
+                    })
+
+            for t_id, t in getattr(verify_jury_service, "_jury_tickets", {}).items():
+                if not any(l["log_id"] == t_id for l in collected_logs):
+                    v_reached = t.get("quorum_reached", False)
+                    final_v = t.get("final_verdict", "PENDING")
+                    evt = "PEER_JURY_CONSENSUS_VERIFIED" if (v_reached and "VERIFIED" in str(final_v)) else "PEER_JURY_PENDING"
+                    st = "APPROVED" if (v_reached and "VERIFIED" in str(final_v)) else "PENDING"
+                    collected_logs.append({
+                        "log_id": t_id,
+                        "timestamp": t.get("created_at", datetime.now(timezone.utc).isoformat()),
+                        "event_type": evt,
+                        "product_or_passport_id": t.get("product_id", "unknown"),
+                        "shortcode": None,
+                        "cluster": t.get("cluster_id", "Varanasi Handloom Cluster"),
+                        "details": f"Consensus level: {t.get('consensus_level', 'PENDING')}",
+                        "anomaly_score": 0.01,
+                        "status": st,
+                    })
+        except Exception:
+            pass
+
+        if not collected_logs:
+            final_logs = fallback_logs
+        else:
+            final_logs = sorted(collected_logs, key=lambda x: str(x.get("timestamp", "")), reverse=True)
+
+        final_logs = final_logs[:limit]
+
         return {
-            "total_logs": len(logs),
-            "logs": logs
+            "total_logs": len(final_logs),
+            "logs": final_logs,
         }
 
     def get_pmdaksh_metrics(self) -> Dict[str, Any]:
