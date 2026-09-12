@@ -160,6 +160,35 @@ def test_ondc_beckn_catalog_export():
         export_adapter_service.format_for_ondc(None, artisan, pricing, passport)  # type: ignore
 
 
+def test_whatsapp_catalog_card_export():
+    artisan, product, pricing, passport = _create_mock_entities()
+
+    card = export_adapter_service.format_for_whatsapp(product, artisan, pricing, passport)
+    assert isinstance(card, dict)
+
+    assert card["messaging_product"] == "whatsapp"
+    assert card["type"] == "interactive"
+
+    interactive = card["interactive"]
+    assert interactive["type"] == "cta_url"
+    assert interactive["header"]["type"] == "image"
+    assert interactive["header"]["image"]["link"] == product.enhanced_image_path
+
+    body_text = interactive["body"]["text"]
+    assert product.title in body_text
+    assert "4800" in body_text
+    assert passport.shortcode in body_text
+    assert passport.verification_url in body_text
+
+    meta = card["metadata"]
+    assert meta["digital_passport_hash"] == passport.passport_hash
+    assert meta["shortcode"] == passport.shortcode
+    assert meta["upi_payment_link"].startswith("upi://pay?")
+    assert "9845098450@upi" in meta["upi_payment_link"] or "upi" in meta["upi_payment_link"]
+    assert meta["base_price_inr"] == 4800.0
+
+
+
 
 
 @pytest.mark.asyncio

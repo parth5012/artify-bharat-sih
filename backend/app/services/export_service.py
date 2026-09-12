@@ -2,6 +2,7 @@ import csv
 import io
 import uuid
 import xml.etree.ElementTree as ET
+from urllib.parse import quote
 from typing import Dict, Any, List, Optional, Union, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -297,6 +298,82 @@ class ExportAdapterService:
         self.validate_ondc_beckn_schema(payload)
         return payload
 
+    def format_for_whatsapp(
+        self,
+        product: Product,
+        artisan: Artisan,
+        pricing: ProductPricing,
+        passport: HeritagePassport,
+        upi_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        WhatsApp Cloud API interactive catalog card payload generator.
+        Creates an interactive CTA card with product image, fair price,
+        cryptographic shortcode, verification URL, and direct UPI payment deep-link.
+        """
+        if not product or not artisan or not pricing or not passport:
+            raise ValueError("All entities (product, artisan, pricing, passport) are required for WhatsApp export")
+
+        shortcode = passport.shortcode or passport.passport_hash[:6].upper()
+        verification_url = passport.verification_url or f"https://artifybharat.in/verify/{shortcode}"
+        image_url = product.enhanced_image_path or "https://artifybharat.in/assets/craft-placeholder.png"
+
+        target_upi = upi_id or getattr(artisan, "upi_id", None) or f"{artisan.phone}@upi"
+        artisan_encoded = quote(artisan.name or "Artisan")
+        title_encoded = quote(product.title[:20] if product.title else "Handcrafted")
+        upi_payment_link = (
+            f"upi://pay?pa={target_upi}&pn={artisan_encoded}"
+            f"&am={pricing.recommended_price:.2f}&cu=INR"
+            f"&tn={title_encoded}-{shortcode}"
+        )
+
+        body_text = (
+            f"*{product.title}*\n"
+            f"Crafted by: {artisan.name} ({artisan.cluster_name or artisan.state or 'India'})\n"
+            f"Fair-Wage Price: ₹{pricing.recommended_price:.2f}\n"
+            f"Provenance: {product.gi_tag_status or 'Authentic Artisan Craft'}\n"
+            f"Cryptographic Shortcode: {shortcode}\n"
+            f"Verify authenticity: {verification_url}"
+        )
+
+        return {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "type": "interactive",
+            "interactive": {
+                "type": "cta_url",
+                "header": {
+                    "type": "image",
+                    "image": {
+                        "link": image_url,
+                    },
+                },
+                "body": {
+                    "text": body_text,
+                },
+                "footer": {
+                    "text": f"ArtifyBharat Digital Heritage Passport #{shortcode}",
+                },
+                "action": {
+                    "name": "cta_url",
+                    "parameters": {
+                        "display_text": "Verify & Buy",
+                        "url": verification_url,
+                    },
+                },
+            },
+            "metadata": {
+                "digital_passport_hash": passport.passport_hash,
+                "shortcode": shortcode,
+                "verification_url": verification_url,
+                "upi_payment_link": upi_payment_link,
+                "base_price_inr": pricing.recommended_price,
+                "currency": "INR",
+                "product_id": str(product.id),
+                "artisan_id": str(artisan.id),
+            },
+        }
+
     def format_for_b2b(
         self,
         product: Product,
@@ -353,8 +430,28 @@ class ExportAdapterService:
             external_ref = f"{ch.upper()}-{uuid.uuid4().hex[:8].upper()}"
             if ch.lower() == "gem":
                 payload = self.format_for_gem(product, artisan, pricing, passport)
+            elif ch.lower() in ("gem_xml", "gem-xml"):
+                xml_content = self.format_for_gem_xml(product, artisan, pricing, passport)
+                payload = {
+                    "xml_content": xml_content,
+                    "catalog_format": "XML",
+                    "hsn_code": "50072010",
+                    "passport_hash": passport.passport_hash,
+                    "verification_url": passport.verification_url,
+                }
+            elif ch.lower() in ("gem_csv", "gem-csv"):
+                csv_content = self.to_gem_csv(product, artisan, pricing, passport)
+                payload = {
+                    "csv_content": csv_content,
+                    "catalog_format": "CSV",
+                    "hsn_code": "50072010",
+                    "passport_hash": passport.passport_hash,
+                    "verification_url": passport.verification_url,
+                }
             elif ch.lower() == "ondc":
                 payload = self.format_for_ondc(product, artisan, pricing, passport)
+            elif ch.lower() in ("whatsapp", "whatsapp_card", "whatsapp_cloud"):
+                payload = self.format_for_whatsapp(product, artisan, pricing, passport)
             elif ch.lower() == "direct_b2b":
                 payload = self.format_for_b2b(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
             else:
