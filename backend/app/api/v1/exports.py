@@ -2,13 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.export_service import export_adapter_service
-from app.schemas.export import ExportChannelRequest, ExportChannelResponse, ChannelExportResult
+from app.schemas.export import (
+    ExportChannelRequest,
+    ExportChannelResponse,
+    ChannelExportResult,
+)
 
 router = APIRouter(prefix="/exports", tags=["One-Tap Multi-Channel Government Export"])
 
 
 @router.post("/sync", response_model=ExportChannelResponse)
-async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSession = Depends(get_db)):
+async def export_product_to_channels(
+    payload: ExportChannelRequest, db: AsyncSession = Depends(get_db)
+):
     """
     Page 7: One-Tap Multi-Channel Government Export.
     Adapts internal product specification into compliant schema payloads for:
@@ -41,7 +47,9 @@ async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSes
                 fmt = "REST_API"
 
             p_hash = (
-                exp.export_payload.get("authenticity_verification", {}).get("digital_passport_hash")
+                exp.export_payload.get("authenticity_verification", {}).get(
+                    "digital_passport_hash"
+                )
                 or exp.export_payload.get("metadata", {}).get("digital_passport_hash")
                 or exp.export_payload.get("passport_hash", "")
             )
@@ -62,7 +70,7 @@ async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSes
             product_id=payload.product_id,
             passport_hash=passport_hash,
             results=results,
-            message=f"Successfully exported product to {len(results)} external procurement channels."
+            message=f"Successfully exported product to {len(results)} external procurement channels.",
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
