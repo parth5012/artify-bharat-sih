@@ -22,15 +22,19 @@
 - **SyncEngine (Service Worker Sync)**: Background sync queue with exponential auto-retry batch uploading to the API Gateway.
 
 ## Backend & AI Core Microservices (FastAPI)
-- **AuthService**: MoSJE & e-Shram Auth validating PM-SURAJ, PM-DAKSH, e-Shram, Pehchan ID, and TRIFED credentials.
-- **ImageAI (Image Studio Engine)**: Salient object segmentation via `rembg U-2-Net`, background removal, OpenCV CLAHE contrast enhancement, and 1:1 auto-cropping.
-- **LangAI (Multilingual Voice NLP)**: Whisper ASR for regional dialects, IndicTrans2 neural translation across 22 scheduled Indian languages, and 'Ask Dadi' voice assistant.
-- **PricingAI (Dynamic Pricing Engine)**: Dynamic price optimizer enforcing statutory daily wage floors with XGBoost market regression.
-- **VerifyService (Zero-Trust Verification Engine)**: Random 3-artisan peer jury orchestration, AI rubber-stamp anomaly detection, and anti-fraud counterfeit report resolution.
-- **QRService (Digital Passport Service)**: SHA-256 hash generator, vector QR code engine, and 6-character shortcode resolver (`A7X-9B2`).
-- **LogisticsService (First-Mile Logistics Adapter)**: India Post and CSC drop-off barcode generator and PIN-to-PIN routing engine.
+- **AuthService**: MoSJE e-Shram Auth validating PM-SURAJ, PM-DAKSH, e-Shram, Pehchan ID, TRIFED credentials.
+- **PIIVault**: DPDP Act-compliant AES-256-GCM tokenization vault for protecting sensitive artisan identifiers (Aadhaar, e-Shram UAN, bank accounts).
+- **ImageAI (Image Studio Engine)**: Salient object segmentation (
+embg U-2-Net or OpenCV GrabCut fallback), OpenCV CLAHE contrast enhancement, 1:1 auto-cropping.
+- **LangAI (Multilingual Voice NLP)**: Whisper ASR regional dialects, IndicTrans2 neural translation across 22 scheduled Indian languages, 'Ask Dadi' voice assistant.
+- **PricingAI (Dynamic Pricing Engine)**: Dynamic price optimizer enforcing statutory daily wage floors and XGBoost market regression.
+- **VerifyService (Zero-Trust Verification Engine)**: Random 3-artisan peer jury orchestration, rubber-stamp anomaly detection, anti-fraud counterfeit report resolution.
+- **QRService (Digital Passport Service)**: SHA-256 hash generator, vector code engine, 6-character shortcode resolver (A7X-9B2), ESC/POS 58mm thermal generator.
+- **LogisticsService (First-Mile Logistics Adapter)**: India Post CSC drop-off barcode generator and PIN-to-PIN routing engine.
 - **PayoutService (Direct Jan Dhan / UPI Payout)**: Middleman-free escrow account settlement and direct UPI/Jan Dhan disbursement.
-- **NotifyService (SMS & IVR Engine)**: Automated SMS & IVR voice alerts in native dialect informing offline artisans about new orders and payouts.
+- **NotifyService (SMS & IVR Engine)**: Automated SMS and IVR voice alerts in native dialect informing offline artisans of new orders and payouts.
+- **ExportService (Multi-Channel Export Sync)**: Bi-directional catalog generator and atomic inventory lock for GeM B2G, ONDC Beckn v1.0, WhatsApp Cloud API, and SHG bulk wholesale.
+- **AdminService (MoSJE Monitoring Dashboard)**: Aggregations for District Economic Heatmap, audit trail logs, PM-DAKSH training metrics, and predictive demand forecasts.
 
 ## Multi-Channel Export & Sync Adapters
 - **GeM Portal**: B2G government procurement XML/CSV integration with bi-directional order sync.

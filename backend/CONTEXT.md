@@ -39,8 +39,13 @@ The backend provides the API Gateway, AI Core Microservices, and DPI Adapters fo
     - Anti-Corruption Peer-Review Logs.
     - PM-DAKSH Skill Upskilling Analytics.
     - Predictive Demand AI for festival trend forecasting.
-11. **ExportService (`export_service.py`)**:
-    - Unified Bi-Directional Sync Adapter for GeM, ONDC Beckn, WhatsApp Commerce, and SHG/NGO Bulk Portals.
+11. **ExportService (export_service.py)**:
+    - Unified Bi-Directional Sync Adapter for GeM, ONDC Beckn v1.0, WhatsApp Commerce, and SHG/NGO Bulk Portals.
+    - Multi-Channel Atomic Inventory Lock (lock_inventory_on_sale) with row-level pessimistic locking (with_for_update) preventing overselling of unique handcrafted items.
+12. **PIIVault (pp/core/pii_vault.py)**:
+    - DPDP Act compliant AES-256-GCM authenticated tokenization and reveal service.
+    - Cryptographic tokenization for Aadhaar, Pehchan, TRIFED, e-Shram UAN, and Jan Dhan bank details.
+    - Display masking preserving last 4 digits (or UPI routing domain).
 
 ## Storage & Compliance
 - **PostgreSQL**: Relational storage for artisans, pricing logs, audit hashes, and jury queue.
