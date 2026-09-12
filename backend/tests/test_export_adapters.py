@@ -192,8 +192,11 @@ def test_ondc_beckn_catalog_export():
 def test_whatsapp_catalog_card_export():
     artisan, product, pricing, passport = _create_mock_entities()
 
+    from urllib.parse import urlparse, parse_qs
+
+    # Test with explicit verified UPI ID
     card = export_adapter_service.format_for_whatsapp(
-        product, artisan, pricing, passport
+        product, artisan, pricing, passport, upi_id="sita.devi@sbi"
     )
     assert isinstance(card, dict)
 
@@ -215,11 +218,34 @@ def test_whatsapp_catalog_card_export():
     assert meta["digital_passport_hash"] == passport.passport_hash
     assert meta["shortcode"] == passport.shortcode
     assert meta["upi_payment_link"].startswith("upi://pay?")
-    assert (
-        "9845098450@upi" in meta["upi_payment_link"]
-        or "upi" in meta["upi_payment_link"]
-    )
+    parsed = urlparse(meta["upi_payment_link"])
+    qs = parse_qs(parsed.query)
+    assert qs["pa"] == ["sita.devi@sbi"]
     assert meta["base_price_inr"] == 4800.0
+
+    # Test fallback UPI VPA does not leak phone
+    card_fallback = export_adapter_service.format_for_whatsapp(
+        product, artisan, pricing, passport
+    )
+    parsed_fallback = urlparse(card_fallback["metadata"]["upi_payment_link"])
+    qs_fallback = parse_qs(parsed_fallback.query)
+    assert qs_fallback["pa"] == [f"artisan-{artisan.id[:8]}@upi"]
+    assert artisan.phone not in card_fallback["metadata"]["upi_payment_link"]
+
+    # Test rejection of empty passport_hash
+    bad_pass = HeritagePassport(
+        id="bad",
+        product_id=product.id,
+        passport_hash="",
+        shortcode="M3B-77L",
+        qr_code_data_uri="uri",
+        verification_url="url",
+        payload_snapshot={},
+    )
+    with pytest.raises(ValueError, match="passport_hash"):
+        export_adapter_service.format_for_whatsapp(product, artisan, pricing, bad_pass)
+    with pytest.raises(ValueError, match="passport_hash"):
+        export_adapter_service.format_for_shg_csv(product, artisan, pricing, bad_pass)
 
 
 def test_shg_bulk_wholesale_csv_export():
@@ -366,10 +392,10 @@ async def test_end_to_end_all_channels_export(client: AsyncClient):
 
     res_by_channel = {r["channel"]: r for r in sync_data["results"]}
 
-    # GeM assertions
+    # GeM assertions (plain 'GeM' exports JSON catalog dictionary)
     assert "GeM" in res_by_channel
     assert res_by_channel["GeM"]["status"] == "synced"
-    assert res_by_channel["GeM"]["format"] == "XML"
+    assert res_by_channel["GeM"]["format"] == "JSON"
 
     # ONDC assertions
     assert "ONDC" in res_by_channel
@@ -437,3 +463,9 @@ async def test_multi_channel_inventory_lock_on_sale(client: AsyncClient, db_sess
     assert "gem" in delisted
     assert "whatsapp" in delisted
     assert "ondc" not in delisted
+
+    # Concurrency / double-sale guard: re-attempting lock raises ValueError
+    with pytest.raises(ValueError, match="already sold out"):
+        await export_adapter_service.lock_inventory_on_sale(
+            db=db_session, product_id=product_id, originating_channel="GeM"
+        )

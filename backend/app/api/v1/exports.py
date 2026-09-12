@@ -35,10 +35,12 @@ async def export_product_to_channels(
         passport_hash = ""
         for exp in exports:
             ch_lower = exp.channel.lower()
-            if "xml" in ch_lower or ch_lower == "gem":
+            if "xml" in ch_lower:
                 fmt = "XML"
             elif "csv" in ch_lower or "shg" in ch_lower:
                 fmt = "CSV"
+            elif ch_lower == "gem":
+                fmt = "JSON"
             elif ch_lower == "ondc":
                 fmt = "JSON_BECKN"
             elif "whatsapp" in ch_lower:
@@ -51,8 +53,21 @@ async def export_product_to_channels(
                     "digital_passport_hash"
                 )
                 or exp.export_payload.get("metadata", {}).get("digital_passport_hash")
+                or exp.export_payload.get("digital_passport_hash")
                 or exp.export_payload.get("passport_hash", "")
             )
+            if not p_hash and ch_lower == "ondc":
+                for prov in (
+                    exp.export_payload.get("message", {})
+                    .get("catalog", {})
+                    .get("bpp/providers", [])
+                ):
+                    for item in prov.get("items", []):
+                        for tag in item.get("tags", []):
+                            if tag.get("code") == "heritage_passport":
+                                p_hash = tag.get("value", "")
+                                break
+
             if p_hash:
                 passport_hash = p_hash
 

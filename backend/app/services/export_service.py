@@ -384,6 +384,11 @@ class ExportAdapterService:
                 "All entities (product, artisan, pricing, passport) are required for WhatsApp export"
             )
 
+        if not passport.passport_hash:
+            raise ValueError(
+                "Heritage Passport must have a valid passport_hash for WhatsApp export"
+            )
+
         shortcode = passport.shortcode or passport.passport_hash[:6].upper()
         verification_url = (
             passport.verification_url or f"https://artifybharat.in/verify/{shortcode}"
@@ -394,7 +399,9 @@ class ExportAdapterService:
         )
 
         target_upi = (
-            upi_id or getattr(artisan, "upi_id", None) or f"{artisan.phone}@upi"
+            upi_id
+            or getattr(artisan, "upi_id", None)
+            or f"artisan-{artisan.id[:8]}@upi"
         )
         artisan_encoded = quote(artisan.name or "Artisan")
         title_encoded = quote(product.title[:20] if product.title else "Handcrafted")
@@ -492,6 +499,11 @@ class ExportAdapterService:
         if not product or not artisan or not pricing or not passport:
             raise ValueError(
                 "All entities (product, artisan, pricing, passport) are required for SHG export"
+            )
+
+        if not passport.passport_hash:
+            raise ValueError(
+                "Heritage Passport must have a valid passport_hash for SHG export"
             )
 
         unit_price = pricing.recommended_price
@@ -669,9 +681,7 @@ class ExportAdapterService:
                 payload = self.format_for_shg_csv(
                     product, artisan, pricing, passport, min_b2b_qty, discount_pct
                 )
-                payload["csv_content"] = self.to_shg_csv(
-                    product, artisan, pricing, passport, min_b2b_qty, discount_pct
-                )
+                payload["csv_content"] = self.to_shg_csv([dict(payload)])
             elif ch.lower() == "direct_b2b":
                 payload = self.format_for_b2b(
                     product, artisan, pricing, passport, min_b2b_qty, discount_pct
@@ -709,11 +719,12 @@ class ExportAdapterService:
         When a unique 1-of-1 handcrafted item is purchased on ONDC/GeM/WhatsApp,
         instantly locks inventory and marks listings on all other channels as OUT_OF_STOCK.
         """
-        product = (
-            await db.execute(select(Product).where(Product.id == product_id))
-        ).scalar_one_or_none()
+        stmt = select(Product).where(Product.id == product_id).with_for_update()
+        product = (await db.execute(stmt)).scalar_one_or_none()
         if not product:
             raise ValueError(f"Product {product_id} not found")
+        if product.status == "sold_out":
+            raise ValueError(f"Product {product_id} is already sold out")
 
         product.status = "sold_out"
 
