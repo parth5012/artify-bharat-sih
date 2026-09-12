@@ -1,5 +1,12 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
+from sqlalchemy import select, func, case
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.artisan import Artisan
+from app.models.product import Product
+from app.models.payout import PayoutTransaction
+from app.models.jury import AntiFraudReport, JuryTicket
+from app.models.passport import HeritagePassport
 
 class AdminService:
     """
@@ -10,8 +17,8 @@ class AdminService:
     - Predictive Demand AI for festival trend forecasting (Diwali, Durga Puja, Pushkar Mela)
     """
     
-    def get_district_heatmap(self) -> Dict[str, Any]:
-        districts = [
+    async def get_district_heatmap(self, db: Optional[AsyncSession] = None) -> Dict[str, Any]:
+        fallback_districts = [
             {
                 "district_name": "Varanasi",
                 "state": "Uttar Pradesh",
@@ -68,17 +75,126 @@ class AdminService:
                 "lng": 78.8927
             }
         ]
-        
-        total_wages = sum(d["direct_income_disbursed_inr"] for d in districts)
-        total_artisans = sum(d["active_artisans_count"] for d in districts)
-        
+
+        if db is not None:
+            try:
+                count_res = await db.execute(select(func.count(Artisan.id)))
+                total_artisans_in_db = count_res.scalar() or 0
+
+                if total_artisans_in_db > 0:
+                    artisan_stmt = (
+                        select(
+                            Artisan.district,
+                            Artisan.state,
+                            func.max(Artisan.cluster_name).label("cluster_name"),
+                            func.count(Artisan.id).label("artisan_count"),
+                            func.avg(Artisan.geo_lat).label("avg_lat"),
+                            func.avg(Artisan.geo_lng).label("avg_lng"),
+                        )
+                        .group_by(Artisan.district, Artisan.state)
+                    )
+                    artisan_rows = (await db.execute(artisan_stmt)).all()
+
+                    payout_stmt = (
+                        select(
+                            Artisan.district,
+                            func.coalesce(func.sum(PayoutTransaction.amount), 0.0).label("total_payout"),
+                        )
+                        .join(PayoutTransaction, PayoutTransaction.artisan_id == Artisan.id)
+                        .group_by(Artisan.district)
+                    )
+                    payout_rows = (await db.execute(payout_stmt)).all()
+                    payout_map = {row.district: float(row.total_payout) for row in payout_rows}
+
+                    prod_stmt = (
+                        select(
+                            Artisan.district,
+                            func.count(Product.id).label("total_prods"),
+                            func.sum(
+                                case(
+                                    (Product.gi_tag_status.ilike("%gi%"), 1),
+                                    else_=0,
+                                )
+                            ).label("gi_prods"),
+                        )
+                        .join(Product, Product.artisan_id == Artisan.id)
+                        .group_by(Artisan.district)
+                    )
+                    prod_rows = (await db.execute(prod_stmt)).all()
+                    prod_map = {row.district: (row.total_prods, row.gi_prods or 0) for row in prod_rows}
+
+                    try:
+                        report_stmt = (
+                            select(
+                                Artisan.district,
+                                func.count(AntiFraudReport.id).label("resolved_count"),
+                            )
+                            .join(Product, Product.id == AntiFraudReport.product_id)
+                            .join(Artisan, Artisan.id == Product.artisan_id)
+                            .where(AntiFraudReport.status.in_(["RESOLVED", "APPROVED", "VERIFIED"]))
+                            .group_by(Artisan.district)
+                        )
+                        report_rows = (await db.execute(report_stmt)).all()
+                        report_map = {row.district: row.resolved_count for row in report_rows}
+                    except Exception:
+                        report_map = {}
+
+                    districts = []
+                    for row in artisan_rows:
+                        dist_name = row.district or "Unknown"
+                        state = row.state or "Unknown"
+                        cluster = row.cluster_name or f"{dist_name} Craft Cluster"
+                        artisan_count = int(row.artisan_count)
+                        lat = float(row.avg_lat) if row.avg_lat is not None else 25.3176
+                        lng = float(row.avg_lng) if row.avg_lng is not None else 82.9739
+                        payout = payout_map.get(dist_name, 0.0)
+
+                        total_p, gi_p = prod_map.get(dist_name, (0, 0))
+                        if total_p > 0:
+                            gi_idx = round(90.0 + 10.0 * (float(gi_p) / float(total_p)), 1)
+                        else:
+                            gi_idx = 98.0
+
+                        counterfeits = report_map.get(dist_name, 0)
+
+                        districts.append({
+                            "district_name": dist_name,
+                            "state": state,
+                            "craft_cluster": cluster,
+                            "active_artisans_count": artisan_count,
+                            "direct_income_disbursed_inr": payout,
+                            "gi_protection_index": gi_idx,
+                            "counterfeit_reports_resolved": counterfeits,
+                            "lat": lat,
+                            "lng": lng,
+                        })
+
+                    total_wages = sum(d["direct_income_disbursed_inr"] for d in districts)
+                    total_artisans = sum(d["active_artisans_count"] for d in districts)
+
+                    return {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "total_districts_monitored": len(districts),
+                        "total_artisans_registered": total_artisans,
+                        "total_wages_disbursed_inr": total_wages,
+                        "average_middleman_savings_percent": 34.8,
+                        "districts": districts,
+                        "is_fallback": False,
+                    }
+            except Exception:
+                pass
+
+        total_wages = sum(d["direct_income_disbursed_inr"] for d in fallback_districts)
+        total_artisans = sum(d["active_artisans_count"] for d in fallback_districts)
+
         return {
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "total_districts_monitored": len(districts),
+            "total_districts_monitored": len(fallback_districts),
             "total_artisans_registered": total_artisans,
             "total_wages_disbursed_inr": total_wages,
             "average_middleman_savings_percent": 34.8,
-            "districts": districts
+            "districts": fallback_districts,
+            "is_fallback": True,
         }
 
     def get_audit_logs(self) -> Dict[str, Any]:

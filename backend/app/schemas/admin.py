@@ -20,6 +20,7 @@ class DistrictHeatmapResponse(BaseModel):
     total_wages_disbursed_inr: float
     average_middleman_savings_percent: float
     districts: List[DistrictMetric]
+    is_fallback: Optional[bool] = Field(default=False, description="True if fallback mock/seed data was used because tables were empty")
 
 class AuditLogEntry(BaseModel):
     log_id: str

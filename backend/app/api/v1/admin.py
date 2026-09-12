@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
 from app.schemas.admin import (
     DistrictHeatmapResponse,
     AuditLogsResponse,
@@ -11,12 +13,12 @@ router = APIRouter(prefix="/admin", tags=["Ministry of Social Justice & Empowerm
 
 
 @router.get("/district-heatmap", response_model=DistrictHeatmapResponse)
-async def get_district_heatmap():
+async def get_district_heatmap(db: AsyncSession = Depends(get_db)):
     """
-    MoSJE Nodal Officer / DM Dashboard:
-    Real-time economic heatmap tracking wages disbursed, active artisans, and cluster GI protection.
+    MoSJE Nodal Officer / Dashboard:
+    Real-time economic heatmap tracking wages disbursed, active artisans, cluster protection.
     """
-    res = admin_service.get_district_heatmap()
+    res = await admin_service.get_district_heatmap(db)
     return DistrictHeatmapResponse(**res)
 
 
