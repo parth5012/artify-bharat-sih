@@ -3,6 +3,7 @@ from app.models.artisan import Artisan
 from app.models.product import Product
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport, ChannelExport
+from app.models.pmdaksh import PMDakshEnrollment
 
 __all__ = [
     "Base",
@@ -11,4 +12,5 @@ __all__ = [
     "ProductPricing",
     "HeritagePassport",
     "ChannelExport",
+    "PMDakshEnrollment",
 ]
