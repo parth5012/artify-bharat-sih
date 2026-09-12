@@ -1,10 +1,104 @@
 import pytest
 import io
+import csv
+import xml.etree.ElementTree as ET
+from unittest.mock import patch
 from httpx import AsyncClient
+from app.services.export_service import export_adapter_service
+from app.models.artisan import Artisan
+from app.models.product import Product
+from app.models.pricing import ProductPricing
+from app.models.passport import HeritagePassport
 
-# Slow: drives the full CV/rembg enhance pipeline end to end. Excluded from the
-# CI fast suite with `-m "not slow"`; still runs in local full-suite runs.
-pytestmark = pytest.mark.slow
+# Mock heavy background removal so export adapter tests run fast and deterministically
+@pytest.fixture(autouse=True)
+def mock_cv_enhance():
+    with patch("app.api.v1.studio.cv_service.enhance_image", return_value=(b"\x89PNG\r\n\x1a\nfake", 0.85)):
+        yield
+
+
+def _create_mock_entities():
+    artisan = Artisan(
+        id="artisan-uuid-001",
+        name="Sita Devi",
+        phone="9845098450",
+        pin_hash="hashed_pin",
+        state="Bihar",
+        district="Madhubani",
+        cluster_name="Madhubani Painting Cluster",
+        trifed_id="TRIFED-BH-101",
+        pehchan_id="PEHCHAN-9988",
+        is_verified=True,
+    )
+    product = Product(
+        id="product-uuid-001",
+        artisan_id=artisan.id,
+        title="Madhubani Handpainted Silk Dupatta",
+        description="Authentic handmade Madhubani silk dupatta crafted with natural dyes",
+        craft_category="handloom",
+        gi_tag_status="Madhubani Paintings (GI-38)",
+        enhanced_image_path="https://artifybharat.in/storage/enhanced_product.png",
+        status="passport_issued",
+    )
+    pricing = ProductPricing(
+        id="pricing-uuid-001",
+        product_id=product.id,
+        raw_material_cost=400.0,
+        labor_days=8.0,
+        calculated_fair_wage=3600.0,
+        recommended_price=4800.0,
+        final_price=4800.0,
+    )
+    passport = HeritagePassport(
+        id="passport-uuid-001",
+        product_id=product.id,
+        passport_hash="a"*64,
+        shortcode="M3B-77L",
+        qr_code_data_uri="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+        verification_url="https://artifybharat.in/verify/M3B-77L",
+        payload_snapshot={},
+    )
+    return artisan, product, pricing, passport
+
+
+def test_gem_xml_and_csv_generation():
+    artisan, product, pricing, passport = _create_mock_entities()
+
+    # XML generation test
+    xml_str = export_adapter_service.format_for_gem_xml(product, artisan, pricing, passport)
+    assert isinstance(xml_str, str)
+    root = ET.fromstring(xml_str)
+    assert root.tag == "gem_catalog"
+    assert root.attrib.get("version") == "3.0"
+
+    seller = root.find("seller_details")
+    assert seller is not None
+    assert seller.find("organization_name").text == f"{artisan.name} Handloom Enterprise"
+    assert seller.find("artisan_state").text == "Bihar"
+
+    prod_el = root.find("product_details")
+    assert prod_el is not None
+    assert prod_el.find("hsn_code").text == "50072010"
+    assert prod_el.find("country_of_origin").text == "India"
+    assert float(prod_el.find("base_price_inr").text) == 4800.0
+
+    auth_el = root.find("authenticity_verification")
+    assert auth_el is not None
+    assert auth_el.find("digital_passport_hash").text == "a" * 64
+    assert auth_el.find("verification_url").text == "https://artifybharat.in/verify/M3B-77L"
+
+    # CSV generation test
+    csv_str = export_adapter_service.to_gem_csv(product, artisan, pricing, passport)
+    assert isinstance(csv_str, str)
+    reader = csv.DictReader(io.StringIO(csv_str))
+    rows = list(reader)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["hsn_code"] == "50072010"
+    assert row["digital_passport_hash"] == "a" * 64
+    assert row["verification_url"] == "https://artifybharat.in/verify/M3B-77L"
+    assert float(row["base_price_inr"]) == 4800.0
+
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,8 @@
+import csv
+import io
 import uuid
-from typing import Dict, Any, List
+import xml.etree.ElementTree as ET
+from typing import Dict, Any, List, Optional, Union, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.product import Product
@@ -51,6 +54,120 @@ class ExportAdapterService:
                 "verification_url": passport.verification_url,
             },
         }
+
+    def format_for_gem_xml(
+        self,
+        product: Product,
+        artisan: Artisan,
+        pricing: ProductPricing,
+        passport: HeritagePassport,
+    ) -> str:
+        """
+        GeM (Government e-Marketplace) XML Catalog Specification.
+        Generates well-formed XML with seller_details, product_details (HSN 50072010),
+        and authenticity_verification blocks.
+        """
+        gem_dict = self.format_for_gem(product, artisan, pricing, passport)
+        root = ET.Element("gem_catalog", attrib={"version": str(gem_dict.get("gem_catalog_version", "3.0"))})
+        ET.SubElement(root, "category_code").text = str(gem_dict.get("category_code", "HANDLOOM_SAREE_7210"))
+
+        seller_el = ET.SubElement(root, "seller_details")
+        for k, v in gem_dict.get("seller_details", {}).items():
+            child = ET.SubElement(seller_el, k)
+            child.text = str(v) if v is not None else ""
+
+        prod_el = ET.SubElement(root, "product_details")
+        ET.SubElement(prod_el, "product_id").text = str(product.id)
+        for k, v in gem_dict.get("product_details", {}).items():
+            child = ET.SubElement(prod_el, k)
+            child.text = str(v) if v is not None else ""
+
+        auth_el = ET.SubElement(root, "authenticity_verification")
+        for k, v in gem_dict.get("authenticity_verification", {}).items():
+            child = ET.SubElement(auth_el, k)
+            child.text = str(v) if v is not None else ""
+
+        return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
+
+    def to_gem_csv(
+        self,
+        product: Union[Product, List[Any]],
+        artisan: Optional[Artisan] = None,
+        pricing: Optional[ProductPricing] = None,
+        passport: Optional[HeritagePassport] = None,
+    ) -> str:
+        """
+        GeM (Government e-Marketplace) CSV Bulk Catalog Generator.
+        Generates standard CSV with stable headers and mandatory GeM procurement fields.
+        """
+        headers = [
+            "gem_catalog_version",
+            "category_code",
+            "organization_name",
+            "trifed_artisan_id",
+            "artisan_state",
+            "cluster_location",
+            "product_id",
+            "title",
+            "item_description",
+            "gi_certification_tagged",
+            "gi_tag_number",
+            "country_of_origin",
+            "hsn_code",
+            "unit_of_measurement",
+            "base_price_inr",
+            "digital_passport_hash",
+            "verification_url",
+        ]
+
+        items = []
+        if isinstance(product, list):
+            items = product
+        elif artisan and pricing and passport:
+            items = [(product, artisan, pricing, passport)]
+        else:
+            raise ValueError("Invalid parameters for to_gem_csv: provide product, artisan, pricing, and passport")
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=headers)
+        writer.writeheader()
+
+        for item in items:
+            if isinstance(item, (tuple, list)):
+                p, a, pr, pass_obj = item[0], item[1], item[2], item[3]
+            elif isinstance(item, dict):
+                p, a, pr, pass_obj = item["product"], item["artisan"], item["pricing"], item["passport"]
+            else:
+                continue
+
+            gem_dict = self.format_for_gem(p, a, pr, pass_obj)
+            seller = gem_dict.get("seller_details", {})
+            prod = gem_dict.get("product_details", {})
+            auth = gem_dict.get("authenticity_verification", {})
+
+            row = {
+                "gem_catalog_version": gem_dict.get("gem_catalog_version", "3.0"),
+                "category_code": gem_dict.get("category_code", "HANDLOOM_SAREE_7210"),
+                "organization_name": seller.get("organization_name", ""),
+                "trifed_artisan_id": seller.get("trifed_artisan_id", ""),
+                "artisan_state": seller.get("artisan_state", ""),
+                "cluster_location": seller.get("cluster_location", ""),
+                "product_id": str(p.id),
+                "title": prod.get("title", ""),
+                "item_description": prod.get("item_description", ""),
+                "gi_certification_tagged": str(prod.get("gi_certification_tagged", False)),
+                "gi_tag_number": prod.get("gi_tag_number", ""),
+                "country_of_origin": prod.get("country_of_origin", "India"),
+                "hsn_code": prod.get("hsn_code", "50072010"),
+                "unit_of_measurement": prod.get("unit_of_measurement", "PIECE"),
+                "base_price_inr": prod.get("base_price_inr", 0.0),
+                "digital_passport_hash": auth.get("digital_passport_hash", ""),
+                "verification_url": auth.get("verification_url", ""),
+            }
+            writer.writerow(row)
+
+        return output.getvalue()
+
 
     def format_for_ondc(self, product: Product, artisan: Artisan, pricing: ProductPricing, passport: HeritagePassport) -> Dict[str, Any]:
         """
