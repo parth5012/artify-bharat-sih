@@ -99,6 +99,7 @@ class AdminService:
                     payout_stmt = (
                         select(
                             Artisan.district,
+                            Artisan.state,
                             func.coalesce(
                                 func.sum(PayoutTransaction.amount), 0.0
                             ).label("total_payout"),
@@ -107,16 +108,19 @@ class AdminService:
                             PayoutTransaction,
                             PayoutTransaction.artisan_id == Artisan.id,
                         )
-                        .group_by(Artisan.district)
+                        .where(PayoutTransaction.status == "SETTLED")
+                        .group_by(Artisan.district, Artisan.state)
                     )
                     payout_rows = (await db.execute(payout_stmt)).all()
                     payout_map = {
-                        row.district: float(row.total_payout) for row in payout_rows
+                        (row.district, row.state): float(row.total_payout)
+                        for row in payout_rows
                     }
 
                     prod_stmt = (
                         select(
                             Artisan.district,
+                            Artisan.state,
                             func.count(Product.id).label("total_prods"),
                             func.sum(
                                 case(
@@ -126,11 +130,11 @@ class AdminService:
                             ).label("gi_prods"),
                         )
                         .join(Product, Product.artisan_id == Artisan.id)
-                        .group_by(Artisan.district)
+                        .group_by(Artisan.district, Artisan.state)
                     )
                     prod_rows = (await db.execute(prod_stmt)).all()
                     prod_map = {
-                        row.district: (row.total_prods, row.gi_prods or 0)
+                        (row.district, row.state): (row.total_prods, row.gi_prods or 0)
                         for row in prod_rows
                     }
 
@@ -138,8 +142,10 @@ class AdminService:
                         report_stmt = (
                             select(
                                 Artisan.district,
+                                Artisan.state,
                                 func.count(AntiFraudReport.id).label("resolved_count"),
                             )
+                            .select_from(AntiFraudReport)
                             .join(Product, Product.id == AntiFraudReport.product_id)
                             .join(Artisan, Artisan.id == Product.artisan_id)
                             .where(
@@ -147,11 +153,12 @@ class AdminService:
                                     ["RESOLVED", "APPROVED", "VERIFIED"]
                                 )
                             )
-                            .group_by(Artisan.district)
+                            .group_by(Artisan.district, Artisan.state)
                         )
                         report_rows = (await db.execute(report_stmt)).all()
                         report_map = {
-                            row.district: row.resolved_count for row in report_rows
+                            (row.district, row.state): row.resolved_count
+                            for row in report_rows
                         }
                     except Exception:
                         report_map = {}
@@ -164,9 +171,9 @@ class AdminService:
                         artisan_count = int(row.artisan_count)
                         lat = float(row.avg_lat) if row.avg_lat is not None else 25.3176
                         lng = float(row.avg_lng) if row.avg_lng is not None else 82.9739
-                        payout = payout_map.get(dist_name, 0.0)
+                        payout = payout_map.get((dist_name, state), 0.0)
 
-                        total_p, gi_p = prod_map.get(dist_name, (0, 0))
+                        total_p, gi_p = prod_map.get((dist_name, state), (0, 0))
                         if total_p > 0:
                             gi_idx = round(
                                 90.0 + 10.0 * (float(gi_p) / float(total_p)), 1
@@ -174,7 +181,7 @@ class AdminService:
                         else:
                             gi_idx = 98.0
 
-                        counterfeits = report_map.get(dist_name, 0)
+                        counterfeits = report_map.get((dist_name, state), 0)
 
                         districts.append(
                             {
@@ -434,17 +441,20 @@ class AdminService:
                 collected_logs, key=lambda x: str(x.get("timestamp", "")), reverse=True
             )
 
+        is_fallback = len(collected_logs) == 0
         final_logs = final_logs[:limit]
 
         return {
             "total_logs": len(final_logs),
             "logs": final_logs,
+            "is_fallback": is_fallback,
         }
 
     async def get_pmdaksh_metrics(
         self, db: Optional[AsyncSession] = None
     ) -> Dict[str, Any]:
         fallback_metrics = {
+            "is_fallback": True,
             "total_enrolled": 3420,
             "total_certified": 2890,
             "average_wage_increase_percent": 41.5,
@@ -555,6 +565,7 @@ class AdminService:
                         "average_wage_increase_percent": round(float(avg_wage_inc), 1),
                         "master_artisan_trainers_count": trainers_count,
                         "top_craft_sectors": top_sectors,
+                        "is_fallback": False,
                     }
             except Exception:
                 pass

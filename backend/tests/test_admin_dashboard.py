@@ -114,7 +114,14 @@ async def test_district_heatmap_db_aggregation(
         utr_number="UTR00003",
         status="SETTLED",
     )
-    db_session.add_all([payout1, payout2, payout3])
+    payout_pending = PayoutTransaction(
+        id="pay_pending_01",
+        artisan_id=artisan1.id,
+        amount=99999.0,
+        utr_number="UTR_PENDING",
+        status="INITIATED",
+    )
+    db_session.add_all([payout1, payout2, payout3, payout_pending])
 
     prod1 = Product(
         id="prod_01",
@@ -199,6 +206,7 @@ async def test_admin_audit_logs_db_feed(client: AsyncClient, db_session: AsyncSe
     assert res.status_code == 200
     data = res.json()
     assert data["total_logs"] >= 2
+    assert data.get("is_fallback") is False
     log_ids = [entry["log_id"] for entry in data["logs"]]
     assert "jury_ticket_db_99" in log_ids
     assert "rep_fraud_db_99" in log_ids
@@ -268,6 +276,7 @@ async def test_admin_pmdaksh_metrics_db_aggregation(
     assert res.status_code == 200
     data = res.json()
     assert data["total_enrolled"] == 3
+    assert data.get("is_fallback") is False
     assert data["total_certified"] == 2
     assert data["master_artisan_trainers_count"] == 1
     assert 40.0 <= data["average_wage_increase_percent"] <= 50.0
