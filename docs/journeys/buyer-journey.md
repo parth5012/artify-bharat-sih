@@ -114,8 +114,10 @@ Expected `200 OK`:
 {
   "report_id": "rep_9f8e7d6c",
   "status": "audit_triggered",
-  "flagged_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "action_taken": "Escalated to regional zero-trust artisan peer jury for forensic audit; escrow payouts held.",
+  "flagged_hash": "A7X-9B2",
+  "action_taken": "Escalated to MoSJE Nodal Officer & Peer Review Jury queue; Escrow frozen.",
   "reported_at": "2026-09-12T13:00:00Z"
 }
 ```
+
+> Semantics note: `flagged_hash` echoes the request input unchanged (`verify_jury_service.report_counterfeit`), so a shortcode input returns the shortcode. The service also freezes escrow (`ESCROW_FROZEN_PENDING_INSPECTION`) and the extra `escrow_status` key is dropped by `ReportFakeResponse` serialization.
