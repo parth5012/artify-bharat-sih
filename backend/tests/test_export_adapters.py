@@ -100,6 +100,67 @@ def test_gem_xml_and_csv_generation():
     assert float(row["base_price_inr"]) == 4800.0
 
 
+def test_ondc_beckn_catalog_export():
+    artisan, product, pricing, passport = _create_mock_entities()
+
+    payload = export_adapter_service.format_for_ondc(product, artisan, pricing, passport)
+    assert isinstance(payload, dict)
+
+    # Valid schema check
+    assert export_adapter_service.validate_ondc_beckn_schema(payload) is True
+
+    # Context assertions
+    ctx = payload["context"]
+    assert ctx["country"] == "IND"
+    assert ctx["action"] == "on_search"
+    assert "bpp_id" in ctx
+    assert "domain" in ctx
+
+    # Message / catalog assertions
+    catalog = payload["message"]["catalog"]
+    providers = catalog["bpp/providers"]
+    assert len(providers) >= 1
+    provider = providers[0]
+    assert provider["id"] == artisan.id
+    assert provider["descriptor"]["name"] == artisan.name
+
+    items = provider["items"]
+    assert len(items) >= 1
+    item = items[0]
+    assert item["id"] == product.id
+    assert item["price"]["currency"] == "INR"
+    assert float(item["price"]["value"]) == 4800.0
+
+    tags = item["tags"]
+    tag_map = {t["code"]: t["value"] for t in tags}
+    assert "heritage_passport" in tag_map
+    assert tag_map["heritage_passport"] == "a" * 64
+    assert tag_map["cluster"] == "Madhubani Painting Cluster"
+
+    # Schema validation rejection tests
+    # 1. Missing context
+    with pytest.raises(ValueError, match="ONDC Beckn schema validation failed"):
+        export_adapter_service.validate_ondc_beckn_schema({"message": {}})
+
+    # 2. Wrong currency
+    import copy
+    bad_currency = copy.deepcopy(payload)
+    bad_currency["message"]["catalog"]["bpp/providers"][0]["items"][0]["price"]["currency"] = "USD"
+    with pytest.raises(ValueError, match="ONDC Beckn schema validation failed: price currency must be INR"):
+        export_adapter_service.validate_ondc_beckn_schema(bad_currency)
+
+    # 3. Missing passport tag
+    bad_tags = copy.deepcopy(payload)
+    bad_tags["message"]["catalog"]["bpp/providers"][0]["items"][0]["tags"] = [{"code": "other", "value": "x"}]
+    with pytest.raises(ValueError, match="heritage_passport"):
+        export_adapter_service.validate_ondc_beckn_schema(bad_tags)
+
+    # 4. format_for_ondc rejecting None/missing
+    with pytest.raises(ValueError):
+        export_adapter_service.format_for_ondc(None, artisan, pricing, passport)  # type: ignore
+
+
+
 
 @pytest.mark.asyncio
 async def test_multi_channel_export(client: AsyncClient):
