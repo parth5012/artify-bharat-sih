@@ -16,6 +16,7 @@ Each entry:
 
 | Date | Status | What | Verified | Notes |
 |------|--------|------|----------|-------|
+| 2026-09-12 | Done | Babysit PR #48: address CodeRabbit review feedback on payout filters, composite keys, fallback flags | All checks green (pytest 6m35s, ruff 14s, typecheck 29s, CodeRabbit clean) | Ready for merge-pr |
 | 2026-09-12 | Done | Wayfinder Map #22: Phase 8 Admin Backend APIs (DB district heatmap aggregation, audit feed API, PM-DAKSH metrics API) | pytest 12/12 green, ruff clean, black formatted | Map #22 completed, child tickets #36, #37, #38 resolved and closed |
 | 2026-09-12 | Done | Babysit PR #47: address CodeRabbit review feedback on export formats, validation, and UPI privacy | All CI checks green (pytest 5m31s, ruff 21s, typecheck 29s, CodeRabbit clean) | Ready for merge-pr |
 | 2026-09-12 | Done | Wayfinder Map #21: Phase 5 Multi-Channel Exports (GeM XML/CSV, ONDC Beckn v1.0, WhatsApp interactive card, SHG wholesale CSV, test suite) | pytest 7/7 green, fast suite green, ruff clean, black clean | PR #47 created, child issues #31, #32, #33, #34, #35 resolved & closed |
