@@ -203,3 +203,56 @@ async def test_admin_audit_logs_db_feed(client: AsyncClient, db_session: AsyncSe
     assert fraud_entry["event_type"] in ["COUNTERFEIT_REPORT_FILED", "COUNTERFEIT_FLAG_TRIGGERED"]
     assert fraud_entry["status"] == "FLAGGED_AUDIT"
     assert "synthetic" in fraud_entry["details"]
+
+
+@pytest.mark.asyncio
+async def test_admin_pmdaksh_metrics_db_aggregation(client: AsyncClient, db_session: AsyncSession):
+    from app.models.pmdaksh import PMDakshEnrollment
+
+    enr1 = PMDakshEnrollment(
+        id="enr_01",
+        artisan_name="Kashi Weaver",
+        sector="Handloom Weaving & Brocade",
+        status="CERTIFIED",
+        is_certified=True,
+        is_trainer=True,
+        wage_before_inr=15000.0,
+        wage_after_inr=25000.0,
+        wage_increase_percent=66.7,
+    )
+    enr2 = PMDakshEnrollment(
+        id="enr_02",
+        artisan_name="Anita Devi",
+        sector="Handloom Weaving & Brocade",
+        status="CERTIFIED",
+        is_certified=True,
+        is_trainer=False,
+        wage_before_inr=16000.0,
+        wage_after_inr=24000.0,
+        wage_increase_percent=50.0,
+    )
+    enr3 = PMDakshEnrollment(
+        id="enr_03",
+        artisan_name="Ramesh Clay",
+        sector="Terracotta & Clay Art",
+        status="ENROLLED",
+        is_certified=False,
+        is_trainer=False,
+        wage_before_inr=12000.0,
+        wage_after_inr=14000.0,
+        wage_increase_percent=16.7,
+    )
+    db_session.add_all([enr1, enr2, enr3])
+    await db_session.commit()
+
+    res = await client.get("/api/v1/admin/pmdaksh-metrics")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_enrolled"] == 3
+    assert data["total_certified"] == 2
+    assert data["master_artisan_trainers_count"] == 1
+    assert 40.0 <= data["average_wage_increase_percent"] <= 50.0
+    sectors = {s["sector"]: s for s in data["top_craft_sectors"]}
+    assert "Handloom Weaving & Brocade" in sectors
+    assert sectors["Handloom Weaving & Brocade"]["certified_count"] == 2
+    assert sectors["Handloom Weaving & Brocade"]["avg_monthly_income_inr"] == 24500

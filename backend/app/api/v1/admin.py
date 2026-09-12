@@ -36,12 +36,12 @@ async def get_anti_corruption_audit_logs(
 
 
 @router.get("/pmdaksh-metrics", response_model=PMDakshMetricsResponse)
-async def get_pmdaksh_upskilling_metrics():
+async def get_pmdaksh_upskilling_metrics(db: AsyncSession = Depends(get_db)):
     """
     PM-DAKSH Skill Upskilling Analytics:
-    Measures training certifications and artisan wage increase correlations.
+    Measures training certifications artisan wage increase correlations.
     """
-    res = admin_service.get_pmdaksh_metrics()
+    res = await admin_service.get_pmdaksh_metrics(db)
     return PMDakshMetricsResponse(**res)
 
 
