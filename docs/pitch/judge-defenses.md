@@ -76,9 +76,9 @@
 
 ## 10. How do we know the whole system actually works (not slides)?
 
-**Claim:** 146 tests collected; fast suite 114 passed; full suite 145→146 passed after anti-collusion test; `ruff check` clean.
+**Claim:** 146 tests collected across 21 `test_*.py` files; fast suite (`-m "not slow"`) 114 passed; full suite 146 passed; `ruff check` clean.
 **Evidence:**
-- `backend/tests/` (22 files; run `uv run pytest -q` → 146 passed)
+- `backend/tests/` (21 files; from `backend/` run `uv run pytest -q` → 146 passed; fast gate `uv run pytest -q -m "not slow"` → 114 passed)
 - `backend/tests/test_ai_studio.py` (30 tests), `test_cv_enhancement.py` (2 tests) marked `slow`
 - Upload guards: 20MB / 8000px / 4096px (`backend/app/config.py`, `backend/app/services/cv_service.py`)
 - Journeys: `docs/journeys/artisan-journey.md`, `docs/journeys/buyer-journey.md` (10/10 paths MATCH via `app.openapi()`)

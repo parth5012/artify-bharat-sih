@@ -122,25 +122,25 @@ curl -X POST http://localhost:8000/api/v1/pricing/calculate \
   }'
 ```
 
-Expected `200 OK` (`PricingCalculateResponse`):
+Expected `200 OK` (`PricingCalculateResponse` — values below are the real engine output for these inputs, verified via `pricing_service.calculate_pricing`):
 
 ```json
 {
   "product_id": "prod_1a2b3c4d",
-  "recommended_price": 9800.0,
-  "benchmark_min_price": 8500.0,
-  "benchmark_max_price": 12000.0,
+  "recommended_price": 16911.9,
+  "benchmark_min_price": 13970.7,
+  "benchmark_max_price": 19853.1,
   "cost_breakdown": {
     "raw_material_cost": 3200.0,
     "labor_days": 10.0,
     "daily_wage_rate": 480.0,
     "calculated_fair_wage": 4800.0,
-    "packaging_overhead": 150.0,
-    "artisan_net_profit": 1500.0,
-    "total_suggested_price": 9800.0
+    "packaging_overhead": 256.0,
+    "artisan_net_profit": 8655.9,
+    "total_suggested_price": 16911.9
   },
   "visual_complexity_factor": 0.85,
-  "market_benchmark_source": "GeM + ONDC benchmark scrape"
+  "market_benchmark_source": "ArtifyBharat XGBoost Regression & Live GeM/ONDC Scraped Benchmarks"
 }
 ```
 
@@ -176,7 +176,7 @@ Shortcode `A7X-9B2` = last path segment of `verification_url`.
 
 ## Step 5: Physical 58mm Thermal Tag Printing (ESC/POS)
 
-There is **no** `POST /api/v1/passport/thermal-tag` endpoint. Thermal bytes are generated server-side by `generate_escpos_thermal_bytes()` (`backend/app/services/passport_service.py:85`) during issuance and stored in the passport row `payload_snapshot.thermal_escpos_payload_base64` (+ `qr_svg_data_uri`). Decode and stream over Web Bluetooth to a 58mm POS printer:
+There is **no** `POST /api/v1/passport/thermal-tag` endpoint, and the public `HeritagePassportResponse` does not expose thermal bytes. Thermal bytes are generated server-side by `generate_escpos_thermal_bytes()` (`backend/app/services/passport_service.py:85`) during issuance and stored in the passport row `payload_snapshot.thermal_escpos_payload_base64` (+ `qr_svg_data_uri`). Printing is therefore performed by a trusted backend/operator process with DB access — the artisan's device never reads the internal snapshot directly. The operator decodes and streams the bytes over Web Bluetooth to a 58mm POS printer:
 
 ```python
 import base64

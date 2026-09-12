@@ -24,8 +24,7 @@
 ## Backend & AI Core Microservices (FastAPI)
 - **AuthService**: MoSJE e-Shram Auth validating PM-SURAJ, PM-DAKSH, e-Shram, Pehchan ID, TRIFED credentials.
 - **PIIVault**: DPDP Act-compliant AES-256-GCM tokenization vault for protecting sensitive artisan identifiers (Aadhaar, e-Shram UAN, bank accounts).
-- **ImageAI (Image Studio Engine)**: Salient object segmentation (
-embg U-2-Net or OpenCV GrabCut fallback), OpenCV CLAHE contrast enhancement, 1:1 auto-cropping.
+- **ImageAI (Image Studio Engine)**: Salient object segmentation (rembg U-2-Net or OpenCV GrabCut fallback), OpenCV CLAHE contrast enhancement, 1:1 auto-cropping.
 - **LangAI (Multilingual Voice NLP)**: Whisper ASR regional dialects, IndicTrans2 neural translation across 22 scheduled Indian languages, 'Ask Dadi' voice assistant.
 - **PricingAI (Dynamic Pricing Engine)**: Dynamic price optimizer enforcing statutory daily wage floors and XGBoost market regression.
 - **VerifyService (Zero-Trust Verification Engine)**: Random 3-artisan peer jury orchestration, rubber-stamp anomaly detection, anti-fraud counterfeit report resolution.
