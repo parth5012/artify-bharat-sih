@@ -16,6 +16,7 @@ Each entry:
 
 | Date | Status | What | Verified | Notes |
 |------|--------|------|----------|-------|
+| 2026-09-12 | Done | Babysit PR #47: address CodeRabbit review feedback on export formats, validation, and UPI privacy | All CI checks green (pytest 5m31s, ruff 21s, typecheck 29s, CodeRabbit clean) | Ready for merge-pr |
 | 2026-09-12 | Done | Wayfinder Map #21: Phase 5 Multi-Channel Exports (GeM XML/CSV, ONDC Beckn v1.0, WhatsApp interactive card, SHG wholesale CSV, test suite) | pytest 7/7 green, fast suite green, ruff clean, black clean | PR #47 created, child issues #31, #32, #33, #34, #35 resolved & closed |
 | 2026-09-12 | Done | Harness reset: backed up AGENTS/LOG/LEARNINGS/architecture to `.tmp/harness-backup-2026-09-12/`, wiped + recreated 9 files per harness-setup skill | `git status`, backup listing verified | Prior history archived, fresh harness live |
 | 2026-09-12 | Done | Restored canonical docs/architecture.md from backup; renamed harness version to docs/structure.md | Head checks on both files, `Get-ChildItem docs/*.md` | architecture.md = MoSJE spec (14108B), structure.md = harness overview |
