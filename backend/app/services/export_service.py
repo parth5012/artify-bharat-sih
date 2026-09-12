@@ -169,11 +169,89 @@ class ExportAdapterService:
         return output.getvalue()
 
 
-    def format_for_ondc(self, product: Product, artisan: Artisan, pricing: ProductPricing, passport: HeritagePassport) -> Dict[str, Any]:
+    def validate_ondc_beckn_schema(self, payload: Dict[str, Any]) -> bool:
+        """
+        Validates ONDC Beckn Protocol v1.0 on_search catalog response shape.
+        Rejects missing context, wrong currency, missing providers/items, or missing passport tag.
+        """
+        if not isinstance(payload, dict):
+            raise ValueError("ONDC Beckn schema validation failed: payload must be a JSON object")
+
+        context = payload.get("context")
+        if not isinstance(context, dict):
+            raise ValueError("ONDC Beckn schema validation failed: missing 'context' block")
+
+        for req_field in ("domain", "country", "city", "action", "bpp_id"):
+            if not context.get(req_field):
+                raise ValueError(f"ONDC Beckn schema validation failed: context missing '{req_field}'")
+
+        if context.get("country") != "IND":
+            raise ValueError("ONDC Beckn schema validation failed: country must be 'IND'")
+
+        if context.get("action") != "on_search":
+            raise ValueError("ONDC Beckn schema validation failed: action must be 'on_search'")
+
+        message = payload.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("ONDC Beckn schema validation failed: missing 'message' block")
+
+        catalog = message.get("catalog")
+        if not isinstance(catalog, dict):
+            raise ValueError("ONDC Beckn schema validation failed: missing 'catalog' block")
+
+        providers = catalog.get("bpp/providers")
+        if not isinstance(providers, list) or len(providers) == 0:
+            raise ValueError("ONDC Beckn schema validation failed: catalog must have non-empty 'bpp/providers'")
+
+        for prov in providers:
+            if not prov.get("id"):
+                raise ValueError("ONDC Beckn schema validation failed: provider missing 'id'")
+            items = prov.get("items")
+            if not isinstance(items, list) or len(items) == 0:
+                raise ValueError("ONDC Beckn schema validation failed: provider must have non-empty 'items'")
+
+            for item in items:
+                if not item.get("id"):
+                    raise ValueError("ONDC Beckn schema validation failed: item missing 'id'")
+                price = item.get("price")
+                if not isinstance(price, dict):
+                    raise ValueError("ONDC Beckn schema validation failed: item missing 'price'")
+                if price.get("currency") != "INR":
+                    raise ValueError("ONDC Beckn schema validation failed: price currency must be INR")
+                if not price.get("value"):
+                    raise ValueError("ONDC Beckn schema validation failed: price missing 'value'")
+
+                tags = item.get("tags")
+                if not isinstance(tags, list):
+                    raise ValueError("ONDC Beckn schema validation failed: item missing 'tags'")
+
+                tag_map = {t.get("code"): t.get("value") for t in tags if isinstance(t, dict)}
+                if "heritage_passport" not in tag_map or not tag_map.get("heritage_passport"):
+                    raise ValueError("ONDC Beckn schema validation failed: item missing 'heritage_passport' tag")
+
+        return True
+
+    def format_for_ondc(
+        self,
+        product: Product,
+        artisan: Artisan,
+        pricing: ProductPricing,
+        passport: HeritagePassport,
+    ) -> Dict[str, Any]:
         """
         ONDC (Open Network for Digital Commerce) Beckn Protocol JSON Schema.
+        Validates input entities and returns verified Beckn v1.0 catalog payload.
         """
-        return {
+        if not product or not artisan or not pricing or not passport:
+            raise ValueError("All entities (product, artisan, pricing, passport) are required for ONDC export")
+
+        if not passport.passport_hash:
+            raise ValueError("Heritage Passport must have a valid passport_hash for ONDC export")
+
+        if pricing.recommended_price is None:
+            raise ValueError("Pricing must have recommended_price for ONDC export")
+
+        payload = {
             "context": {
                 "domain": "nic2004:52110",
                 "country": "IND",
@@ -189,14 +267,14 @@ class ExportAdapterService:
                     },
                     "bpp/providers": [
                         {
-                            "id": artisan.id,
+                            "id": str(artisan.id),
                             "descriptor": {"name": artisan.name},
                             "items": [
                                 {
-                                    "id": product.id,
+                                    "id": str(product.id),
                                     "descriptor": {
                                         "name": product.title,
-                                        "long_desc": product.description,
+                                        "long_desc": product.description or "",
                                         "images": [product.enhanced_image_path or ""],
                                     },
                                     "price": {
@@ -205,8 +283,8 @@ class ExportAdapterService:
                                     },
                                     "tags": [
                                         {"code": "heritage_passport", "value": passport.passport_hash},
-                                        {"code": "gi_status", "value": product.gi_tag_status},
-                                        {"code": "cluster", "value": artisan.cluster_name},
+                                        {"code": "gi_status", "value": product.gi_tag_status or ""},
+                                        {"code": "cluster", "value": artisan.cluster_name or ""},
                                     ],
                                 }
                             ],
@@ -215,6 +293,9 @@ class ExportAdapterService:
                 }
             },
         }
+
+        self.validate_ondc_beckn_schema(payload)
+        return payload
 
     def format_for_b2b(
         self,
