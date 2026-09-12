@@ -6,6 +6,7 @@ from app.models.artisan import Artisan
 from app.models.product import Product
 from app.models.payout import PayoutTransaction
 
+
 @pytest.mark.asyncio
 async def test_district_heatmap():
     transport = ASGITransport(app=app)
@@ -17,6 +18,7 @@ async def test_district_heatmap():
         assert data["total_wages_disbursed_inr"] > 0
         assert data["average_middleman_savings_percent"] > 30.0
 
+
 @pytest.mark.asyncio
 async def test_admin_audit_logs():
     transport = ASGITransport(app=app)
@@ -25,6 +27,7 @@ async def test_admin_audit_logs():
         assert res.status_code == 200
         data = res.json()
         assert data["total_logs"] >= 3
+
 
 @pytest.mark.asyncio
 async def test_admin_pmdaksh_metrics():
@@ -36,11 +39,14 @@ async def test_admin_pmdaksh_metrics():
         assert data["total_enrolled"] > 0
         assert data["average_wage_increase_percent"] > 40.0
 
+
 @pytest.mark.asyncio
 async def test_admin_demand_forecast():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        res = await client.get("/api/v1/admin/demand-forecast?cluster=Varanasi%20Handloom%20Cluster")
+        res = await client.get(
+            "/api/v1/admin/demand-forecast?cluster=Varanasi%20Handloom%20Cluster"
+        )
         assert res.status_code == 200
         data = res.json()
         assert len(data["forecast_items"]) >= 3
@@ -48,7 +54,9 @@ async def test_admin_demand_forecast():
 
 
 @pytest.mark.asyncio
-async def test_district_heatmap_db_aggregation(client: AsyncClient, db_session: AsyncSession):
+async def test_district_heatmap_db_aggregation(
+    client: AsyncClient, db_session: AsyncSession
+):
     artisan1 = Artisan(
         id="art_vns_01",
         name="Kabir Weaver",
@@ -135,7 +143,9 @@ async def test_district_heatmap_db_aggregation(client: AsyncClient, db_session: 
 
 
 @pytest.mark.asyncio
-async def test_district_heatmap_fallback_empty_db(client: AsyncClient, db_session: AsyncSession):
+async def test_district_heatmap_fallback_empty_db(
+    client: AsyncClient, db_session: AsyncSession
+):
     res = await client.get("/api/v1/admin/district-heatmap")
     assert res.status_code == 200
     data = res.json()
@@ -193,20 +203,29 @@ async def test_admin_audit_logs_db_feed(client: AsyncClient, db_session: AsyncSe
     assert "jury_ticket_db_99" in log_ids
     assert "rep_fraud_db_99" in log_ids
 
-    jury_entry = next(entry for entry in data["logs"] if entry["log_id"] == "jury_ticket_db_99")
+    jury_entry = next(
+        entry for entry in data["logs"] if entry["log_id"] == "jury_ticket_db_99"
+    )
     assert jury_entry["event_type"] == "PEER_JURY_CONSENSUS_VERIFIED"
     assert jury_entry["product_or_passport_id"] == "prod_audit_01"
     assert jury_entry["cluster"] == "Varanasi Handloom Cluster"
     assert jury_entry["status"] in ["APPROVED", "QUORUM_GENUINE"]
 
-    fraud_entry = next(entry for entry in data["logs"] if entry["log_id"] == "rep_fraud_db_99")
-    assert fraud_entry["event_type"] in ["COUNTERFEIT_REPORT_FILED", "COUNTERFEIT_FLAG_TRIGGERED"]
+    fraud_entry = next(
+        entry for entry in data["logs"] if entry["log_id"] == "rep_fraud_db_99"
+    )
+    assert fraud_entry["event_type"] in [
+        "COUNTERFEIT_REPORT_FILED",
+        "COUNTERFEIT_FLAG_TRIGGERED",
+    ]
     assert fraud_entry["status"] == "FLAGGED_AUDIT"
     assert "synthetic" in fraud_entry["details"]
 
 
 @pytest.mark.asyncio
-async def test_admin_pmdaksh_metrics_db_aggregation(client: AsyncClient, db_session: AsyncSession):
+async def test_admin_pmdaksh_metrics_db_aggregation(
+    client: AsyncClient, db_session: AsyncSession
+):
     from app.models.pmdaksh import PMDakshEnrollment
 
     enr1 = PMDakshEnrollment(
