@@ -22,7 +22,11 @@ class PMDakshEnrollment(Base):
     is_trainer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     wage_before_inr: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     wage_after_inr: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    wage_increase_percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    wage_increase_percent: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
