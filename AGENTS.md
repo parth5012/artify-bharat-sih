@@ -8,7 +8,7 @@ ArtifyBharat is AI-powered Digital Business Manager & Digital Gatekeeper for rur
 - **Frontend (`frontend/`):** Next.js 14.2, React 18.3, TypeScript 5.5, Tailwind 3.4, PostCSS. Scripts: `dev/build/start/lint`.
 - **Web Portal (`web-portal/`):** Vite 5.4 vanilla (public Heritage Passport verification portal + artisan web hub in `index.html`).
 - **Infra:** Docker Compose, GitHub Actions (`.github/workflows/ci.yml`), PostgreSQL + S3/MinIO + PII Vault (DPDP-compliant).
-- **AI/Services:** AuthService (MoSJE/e-Shram/Pehchan/TRIFED/PM-SURAJ/PM-DAKSH), ImageAI (rembg U-2-Net + CLAHE), LangAI (Whisper + IndicTrans2 + Bhashini + 'Ask Dadi'), PricingAI (fair-wage floor + XGBoost), VerifyService (3-artisan peer jury), QRService (SHA-256 + shortcode), Logistics (India Post), Payout (Jan Dhan/UPI), Notify (SMS/IVR).
+- **AI/Services:** AuthService (MoSJE/e-Shram/Pehchan/TRIFED/PM-SURAJ/PM-DAKSH), PIIVault (AES-256-GCM tokenization), ImageAI (rembg U-2-Net + CLAHE), LangAI (Whisper + IndicTrans2 + Bhashini + 'Ask Dadi'), PricingAI (fair-wage floor + XGBoost), VerifyService (3-artisan zero-trust peer jury), QRService (SHA-256 + 6-char shortcode + ESC/POS 58mm), Logistics (India Post), Payout (Jan Dhan/UPI direct), Notify (SMS/IVR), ExportAdapters (GeM B2G XML/CSV, ONDC Beckn v1.0, WhatsApp Cloud API, SHG Bulk CSV, Atomic Inventory Lock), AdminService (District Heatmap, Audit Logs, PM-DAKSH metrics, Demand Forecast).
 
 ## Code & File Operations
 - **Understand First:** Check graphify (`graphify-out/graph.json` if present, else `graphify query`) before reading files. Then read `CONTEXT.md` + `CONTEXT-MAP.md` + relevant `backend/CONTEXT.md` / `web-portal/CONTEXT.md` + `docs/adr/`. Never use `grep`; use `rg` (ripgrep). Use `Read`/`Glob` for files.
