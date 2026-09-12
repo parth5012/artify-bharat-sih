@@ -1,0 +1,59 @@
+package com.artifybharat.android.navigation
+
+sealed class Screen(
+    val route: String,
+    val hindiTitle: String,
+    val englishTitle: String
+) {
+    object VoiceCatalog : Screen(
+        route = "voice_catalog",
+        hindiTitle = "आवाज़ से कैटलॉग",
+        englishTitle = "Voice Cataloging"
+    )
+
+    object AuthenticityStudio : Screen(
+        route = "authenticity_studio",
+        hindiTitle = "क्राफ्ट स्टूडियो",
+        englishTitle = "Authenticity Studio"
+    )
+
+    object FairWagePricing : Screen(
+        route = "fair_wage_pricing",
+        hindiTitle = "उचित पारिश्रमिक मूल्य",
+        englishTitle = "Fair Wage Pricing"
+    )
+
+    object DigitalPassport : Screen(
+        route = "digital_passport?productId={productId}",
+        hindiTitle = "डिजिटल विरासत पासपोर्ट",
+        englishTitle = "Digital Craft Passport"
+    ) {
+        fun createRoute(productId: String) = "digital_passport?productId=$productId"
+    }
+
+    object ThermalPrint : Screen(
+        route = "thermal_print?shortcode={shortcode}",
+        hindiTitle = "थर्मल टैग प्रिंटर",
+        englishTitle = "Thermal Label Printer"
+    ) {
+        fun createRoute(shortcode: String) = "thermal_print?shortcode=$shortcode"
+    }
+
+    object OfflineSyncQueue : Screen(
+        route = "offline_sync_queue",
+        hindiTitle = "ऑफ़लाइन सिंक कतार",
+        englishTitle = "Offline Sync Queue"
+    )
+
+    object ShgCoordinatorHub : Screen(
+        route = "shg_coordinator_hub",
+        hindiTitle = "एसएचजी समन्वयक केंद्र",
+        englishTitle = "SHG Coordinator Hub"
+    )
+
+    object DirectMarketplace : Screen(
+        route = "direct_marketplace",
+        hindiTitle = "हथकरघा हाट",
+        englishTitle = "Direct Craft Marketplace"
+    )
+}
