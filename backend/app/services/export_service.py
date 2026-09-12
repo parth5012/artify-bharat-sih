@@ -23,7 +23,13 @@ class ExportAdapterService:
     - Direct B2B institutional procurement catalogs
     """
 
-    def format_for_gem(self, product: Product, artisan: Artisan, pricing: ProductPricing, passport: HeritagePassport) -> Dict[str, Any]:
+    def format_for_gem(
+        self,
+        product: Product,
+        artisan: Artisan,
+        pricing: ProductPricing,
+        passport: HeritagePassport,
+    ) -> Dict[str, Any]:
         """
         GeM (Government e-Marketplace) Product Specification.
         Requires TRIFED / Pehchan ID, GI certificate status, and HSN compliance.
@@ -69,8 +75,13 @@ class ExportAdapterService:
         and authenticity_verification blocks.
         """
         gem_dict = self.format_for_gem(product, artisan, pricing, passport)
-        root = ET.Element("gem_catalog", attrib={"version": str(gem_dict.get("gem_catalog_version", "3.0"))})
-        ET.SubElement(root, "category_code").text = str(gem_dict.get("category_code", "HANDLOOM_SAREE_7210"))
+        root = ET.Element(
+            "gem_catalog",
+            attrib={"version": str(gem_dict.get("gem_catalog_version", "3.0"))},
+        )
+        ET.SubElement(root, "category_code").text = str(
+            gem_dict.get("category_code", "HANDLOOM_SAREE_7210")
+        )
 
         seller_el = ET.SubElement(root, "seller_details")
         for k, v in gem_dict.get("seller_details", {}).items():
@@ -127,7 +138,9 @@ class ExportAdapterService:
         elif artisan and pricing and passport:
             items = [(product, artisan, pricing, passport)]
         else:
-            raise ValueError("Invalid parameters for to_gem_csv: provide product, artisan, pricing, and passport")
+            raise ValueError(
+                "Invalid parameters for to_gem_csv: provide product, artisan, pricing, and passport"
+            )
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=headers)
@@ -137,7 +150,12 @@ class ExportAdapterService:
             if isinstance(item, (tuple, list)):
                 p, a, pr, pass_obj = item[0], item[1], item[2], item[3]
             elif isinstance(item, dict):
-                p, a, pr, pass_obj = item["product"], item["artisan"], item["pricing"], item["passport"]
+                p, a, pr, pass_obj = (
+                    item["product"],
+                    item["artisan"],
+                    item["pricing"],
+                    item["passport"],
+                )
             else:
                 continue
 
@@ -156,7 +174,9 @@ class ExportAdapterService:
                 "product_id": str(p.id),
                 "title": prod.get("title", ""),
                 "item_description": prod.get("item_description", ""),
-                "gi_certification_tagged": str(prod.get("gi_certification_tagged", False)),
+                "gi_certification_tagged": str(
+                    prod.get("gi_certification_tagged", False)
+                ),
                 "gi_tag_number": prod.get("gi_tag_number", ""),
                 "country_of_origin": prod.get("country_of_origin", "India"),
                 "hsn_code": prod.get("hsn_code", "50072010"),
@@ -169,66 +189,101 @@ class ExportAdapterService:
 
         return output.getvalue()
 
-
     def validate_ondc_beckn_schema(self, payload: Dict[str, Any]) -> bool:
         """
         Validates ONDC Beckn Protocol v1.0 on_search catalog response shape.
         Rejects missing context, wrong currency, missing providers/items, or missing passport tag.
         """
         if not isinstance(payload, dict):
-            raise ValueError("ONDC Beckn schema validation failed: payload must be a JSON object")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: payload must be a JSON object"
+            )
 
         context = payload.get("context")
         if not isinstance(context, dict):
-            raise ValueError("ONDC Beckn schema validation failed: missing 'context' block")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: missing 'context' block"
+            )
 
         for req_field in ("domain", "country", "city", "action", "bpp_id"):
             if not context.get(req_field):
-                raise ValueError(f"ONDC Beckn schema validation failed: context missing '{req_field}'")
+                raise ValueError(
+                    f"ONDC Beckn schema validation failed: context missing '{req_field}'"
+                )
 
         if context.get("country") != "IND":
-            raise ValueError("ONDC Beckn schema validation failed: country must be 'IND'")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: country must be 'IND'"
+            )
 
         if context.get("action") != "on_search":
-            raise ValueError("ONDC Beckn schema validation failed: action must be 'on_search'")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: action must be 'on_search'"
+            )
 
         message = payload.get("message")
         if not isinstance(message, dict):
-            raise ValueError("ONDC Beckn schema validation failed: missing 'message' block")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: missing 'message' block"
+            )
 
         catalog = message.get("catalog")
         if not isinstance(catalog, dict):
-            raise ValueError("ONDC Beckn schema validation failed: missing 'catalog' block")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: missing 'catalog' block"
+            )
 
         providers = catalog.get("bpp/providers")
         if not isinstance(providers, list) or len(providers) == 0:
-            raise ValueError("ONDC Beckn schema validation failed: catalog must have non-empty 'bpp/providers'")
+            raise ValueError(
+                "ONDC Beckn schema validation failed: catalog must have non-empty 'bpp/providers'"
+            )
 
         for prov in providers:
             if not prov.get("id"):
-                raise ValueError("ONDC Beckn schema validation failed: provider missing 'id'")
+                raise ValueError(
+                    "ONDC Beckn schema validation failed: provider missing 'id'"
+                )
             items = prov.get("items")
             if not isinstance(items, list) or len(items) == 0:
-                raise ValueError("ONDC Beckn schema validation failed: provider must have non-empty 'items'")
+                raise ValueError(
+                    "ONDC Beckn schema validation failed: provider must have non-empty 'items'"
+                )
 
             for item in items:
                 if not item.get("id"):
-                    raise ValueError("ONDC Beckn schema validation failed: item missing 'id'")
+                    raise ValueError(
+                        "ONDC Beckn schema validation failed: item missing 'id'"
+                    )
                 price = item.get("price")
                 if not isinstance(price, dict):
-                    raise ValueError("ONDC Beckn schema validation failed: item missing 'price'")
+                    raise ValueError(
+                        "ONDC Beckn schema validation failed: item missing 'price'"
+                    )
                 if price.get("currency") != "INR":
-                    raise ValueError("ONDC Beckn schema validation failed: price currency must be INR")
+                    raise ValueError(
+                        "ONDC Beckn schema validation failed: price currency must be INR"
+                    )
                 if not price.get("value"):
-                    raise ValueError("ONDC Beckn schema validation failed: price missing 'value'")
+                    raise ValueError(
+                        "ONDC Beckn schema validation failed: price missing 'value'"
+                    )
 
                 tags = item.get("tags")
                 if not isinstance(tags, list):
-                    raise ValueError("ONDC Beckn schema validation failed: item missing 'tags'")
+                    raise ValueError(
+                        "ONDC Beckn schema validation failed: item missing 'tags'"
+                    )
 
-                tag_map = {t.get("code"): t.get("value") for t in tags if isinstance(t, dict)}
-                if "heritage_passport" not in tag_map or not tag_map.get("heritage_passport"):
-                    raise ValueError("ONDC Beckn schema validation failed: item missing 'heritage_passport' tag")
+                tag_map = {
+                    t.get("code"): t.get("value") for t in tags if isinstance(t, dict)
+                }
+                if "heritage_passport" not in tag_map or not tag_map.get(
+                    "heritage_passport"
+                ):
+                    raise ValueError(
+                        "ONDC Beckn schema validation failed: item missing 'heritage_passport' tag"
+                    )
 
         return True
 
@@ -244,10 +299,14 @@ class ExportAdapterService:
         Validates input entities and returns verified Beckn v1.0 catalog payload.
         """
         if not product or not artisan or not pricing or not passport:
-            raise ValueError("All entities (product, artisan, pricing, passport) are required for ONDC export")
+            raise ValueError(
+                "All entities (product, artisan, pricing, passport) are required for ONDC export"
+            )
 
         if not passport.passport_hash:
-            raise ValueError("Heritage Passport must have a valid passport_hash for ONDC export")
+            raise ValueError(
+                "Heritage Passport must have a valid passport_hash for ONDC export"
+            )
 
         if pricing.recommended_price is None:
             raise ValueError("Pricing must have recommended_price for ONDC export")
@@ -283,9 +342,18 @@ class ExportAdapterService:
                                         "value": str(pricing.recommended_price),
                                     },
                                     "tags": [
-                                        {"code": "heritage_passport", "value": passport.passport_hash},
-                                        {"code": "gi_status", "value": product.gi_tag_status or ""},
-                                        {"code": "cluster", "value": artisan.cluster_name or ""},
+                                        {
+                                            "code": "heritage_passport",
+                                            "value": passport.passport_hash,
+                                        },
+                                        {
+                                            "code": "gi_status",
+                                            "value": product.gi_tag_status or "",
+                                        },
+                                        {
+                                            "code": "cluster",
+                                            "value": artisan.cluster_name or "",
+                                        },
                                     ],
                                 }
                             ],
@@ -312,13 +380,22 @@ class ExportAdapterService:
         cryptographic shortcode, verification URL, and direct UPI payment deep-link.
         """
         if not product or not artisan or not pricing or not passport:
-            raise ValueError("All entities (product, artisan, pricing, passport) are required for WhatsApp export")
+            raise ValueError(
+                "All entities (product, artisan, pricing, passport) are required for WhatsApp export"
+            )
 
         shortcode = passport.shortcode or passport.passport_hash[:6].upper()
-        verification_url = passport.verification_url or f"https://artifybharat.in/verify/{shortcode}"
-        image_url = product.enhanced_image_path or "https://artifybharat.in/assets/craft-placeholder.png"
+        verification_url = (
+            passport.verification_url or f"https://artifybharat.in/verify/{shortcode}"
+        )
+        image_url = (
+            product.enhanced_image_path
+            or "https://artifybharat.in/assets/craft-placeholder.png"
+        )
 
-        target_upi = upi_id or getattr(artisan, "upi_id", None) or f"{artisan.phone}@upi"
+        target_upi = (
+            upi_id or getattr(artisan, "upi_id", None) or f"{artisan.phone}@upi"
+        )
         artisan_encoded = quote(artisan.name or "Artisan")
         title_encoded = quote(product.title[:20] if product.title else "Handcrafted")
         upi_payment_link = (
@@ -381,7 +458,7 @@ class ExportAdapterService:
         pricing: ProductPricing,
         passport: HeritagePassport,
         min_quantity: int = 10,
-        discount_pct: float = 15.0
+        discount_pct: float = 15.0,
     ) -> Dict[str, Any]:
         unit_price = pricing.recommended_price
         bulk_price = round(unit_price * (1.0 - (discount_pct / 100.0)), 2)
@@ -413,7 +490,9 @@ class ExportAdapterService:
         Calculates tiered volume pricing, lot price, lead time, and cryptographic authenticity fields.
         """
         if not product or not artisan or not pricing or not passport:
-            raise ValueError("All entities (product, artisan, pricing, passport) are required for SHG export")
+            raise ValueError(
+                "All entities (product, artisan, pricing, passport) are required for SHG export"
+            )
 
         unit_price = pricing.recommended_price
         bulk_unit_price = round(unit_price * (1.0 - (discount_pct / 100.0)), 2)
@@ -479,7 +558,9 @@ class ExportAdapterService:
         elif artisan and pricing and passport:
             items = [(product, artisan, pricing, passport, min_quantity, discount_pct)]
         else:
-            raise ValueError("Invalid parameters for to_shg_csv: provide product, artisan, pricing, and passport")
+            raise ValueError(
+                "Invalid parameters for to_shg_csv: provide product, artisan, pricing, and passport"
+            )
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=headers)
@@ -493,7 +574,9 @@ class ExportAdapterService:
                 pass_obj = item[3]
                 mq = item[4] if len(item) > 4 else min_quantity
                 dp = item[5] if len(item) > 5 else discount_pct
-                row = self.format_for_shg_csv(p, a, pr, pass_obj, min_quantity=mq, discount_pct=dp)
+                row = self.format_for_shg_csv(
+                    p, a, pr, pass_obj, min_quantity=mq, discount_pct=dp
+                )
             elif isinstance(item, dict):
                 if "shg_catalog_code" in item:
                     row = item
@@ -513,7 +596,6 @@ class ExportAdapterService:
 
         return output.getvalue()
 
-
     async def export_product(
         self,
         db: AsyncSession,
@@ -528,17 +610,31 @@ class ExportAdapterService:
         if not product:
             raise ValueError("Product not found")
 
-        artisan = (await db.execute(select(Artisan).where(Artisan.id == product.artisan_id))).scalar_one_or_none()
+        artisan = (
+            await db.execute(select(Artisan).where(Artisan.id == product.artisan_id))
+        ).scalar_one_or_none()
         if not artisan:
             raise ValueError("Artisan not found")
 
-        pricing = (await db.execute(select(ProductPricing).where(ProductPricing.product_id == product_id))).scalar_one_or_none()
+        pricing = (
+            await db.execute(
+                select(ProductPricing).where(ProductPricing.product_id == product_id)
+            )
+        ).scalar_one_or_none()
         if not pricing:
             raise ValueError("Pricing not configured for product")
 
-        passport = (await db.execute(select(HeritagePassport).where(HeritagePassport.product_id == product_id))).scalar_one_or_none()
+        passport = (
+            await db.execute(
+                select(HeritagePassport).where(
+                    HeritagePassport.product_id == product_id
+                )
+            )
+        ).scalar_one_or_none()
         if not passport:
-            raise ValueError("Heritage Passport must be issued before exporting to external channels.")
+            raise ValueError(
+                "Heritage Passport must be issued before exporting to external channels."
+            )
 
         exports = []
         for ch in target_channels:
@@ -546,7 +642,9 @@ class ExportAdapterService:
             if ch.lower() == "gem":
                 payload = self.format_for_gem(product, artisan, pricing, passport)
             elif ch.lower() in ("gem_xml", "gem-xml"):
-                xml_content = self.format_for_gem_xml(product, artisan, pricing, passport)
+                xml_content = self.format_for_gem_xml(
+                    product, artisan, pricing, passport
+                )
                 payload = {
                     "xml_content": xml_content,
                     "catalog_format": "XML",
@@ -568,10 +666,16 @@ class ExportAdapterService:
             elif ch.lower() in ("whatsapp", "whatsapp_card", "whatsapp_cloud"):
                 payload = self.format_for_whatsapp(product, artisan, pricing, passport)
             elif ch.lower() in ("shg_bulk", "shg", "shg_wholesale"):
-                payload = self.format_for_shg_csv(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
-                payload["csv_content"] = self.to_shg_csv(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
+                payload = self.format_for_shg_csv(
+                    product, artisan, pricing, passport, min_b2b_qty, discount_pct
+                )
+                payload["csv_content"] = self.to_shg_csv(
+                    product, artisan, pricing, passport, min_b2b_qty, discount_pct
+                )
             elif ch.lower() == "direct_b2b":
-                payload = self.format_for_b2b(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
+                payload = self.format_for_b2b(
+                    product, artisan, pricing, passport, min_b2b_qty, discount_pct
+                )
             else:
                 payload = {
                     "channel": ch,
@@ -605,13 +709,23 @@ class ExportAdapterService:
         When a unique 1-of-1 handcrafted item is purchased on ONDC/GeM/WhatsApp,
         instantly locks inventory and marks listings on all other channels as OUT_OF_STOCK.
         """
-        product = (await db.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
+        product = (
+            await db.execute(select(Product).where(Product.id == product_id))
+        ).scalar_one_or_none()
         if not product:
             raise ValueError(f"Product {product_id} not found")
 
         product.status = "sold_out"
 
-        exports = (await db.execute(select(ChannelExport).where(ChannelExport.product_id == product_id))).scalars().all()
+        exports = (
+            (
+                await db.execute(
+                    select(ChannelExport).where(ChannelExport.product_id == product_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
         broadcasted_channels = []
         for exp in exports:
             if exp.channel.lower() != originating_channel.lower():
@@ -630,4 +744,3 @@ class ExportAdapterService:
 
 
 export_adapter_service = ExportAdapterService()
-

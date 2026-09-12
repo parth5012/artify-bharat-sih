@@ -10,10 +10,14 @@ from app.models.product import Product
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport
 
+
 # Mock heavy background removal so export adapter tests run fast and deterministically
 @pytest.fixture(autouse=True)
 def mock_cv_enhance():
-    with patch("app.api.v1.studio.cv_service.enhance_image", return_value=(b"\x89PNG\r\n\x1a\nfake", 0.85)):
+    with patch(
+        "app.api.v1.studio.cv_service.enhance_image",
+        return_value=(b"\x89PNG\r\n\x1a\nfake", 0.85),
+    ):
         yield
 
 
@@ -52,7 +56,7 @@ def _create_mock_entities():
     passport = HeritagePassport(
         id="passport-uuid-001",
         product_id=product.id,
-        passport_hash="a"*64,
+        passport_hash="a" * 64,
         shortcode="M3B-77L",
         qr_code_data_uri="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
         verification_url="https://artifybharat.in/verify/M3B-77L",
@@ -65,7 +69,9 @@ def test_gem_xml_and_csv_generation():
     artisan, product, pricing, passport = _create_mock_entities()
 
     # XML generation test
-    xml_str = export_adapter_service.format_for_gem_xml(product, artisan, pricing, passport)
+    xml_str = export_adapter_service.format_for_gem_xml(
+        product, artisan, pricing, passport
+    )
     assert isinstance(xml_str, str)
     root = ET.fromstring(xml_str)
     assert root.tag == "gem_catalog"
@@ -73,19 +79,32 @@ def test_gem_xml_and_csv_generation():
 
     seller = root.find("seller_details")
     assert seller is not None
-    assert seller.find("organization_name").text == f"{artisan.name} Handloom Enterprise"
-    assert seller.find("artisan_state").text == "Bihar"
+    org_name = seller.find("organization_name")
+    assert (
+        org_name is not None and org_name.text == f"{artisan.name} Handloom Enterprise"
+    )
+    art_state = seller.find("artisan_state")
+    assert art_state is not None and art_state.text == "Bihar"
 
     prod_el = root.find("product_details")
     assert prod_el is not None
-    assert prod_el.find("hsn_code").text == "50072010"
-    assert prod_el.find("country_of_origin").text == "India"
-    assert float(prod_el.find("base_price_inr").text) == 4800.0
+    hsn = prod_el.find("hsn_code")
+    assert hsn is not None and hsn.text == "50072010"
+    country = prod_el.find("country_of_origin")
+    assert country is not None and country.text == "India"
+    base_price = prod_el.find("base_price_inr")
+    assert (
+        base_price is not None
+        and base_price.text is not None
+        and float(base_price.text) == 4800.0
+    )
 
     auth_el = root.find("authenticity_verification")
     assert auth_el is not None
-    assert auth_el.find("digital_passport_hash").text == "a" * 64
-    assert auth_el.find("verification_url").text == "https://artifybharat.in/verify/M3B-77L"
+    p_hash = auth_el.find("digital_passport_hash")
+    assert p_hash is not None and p_hash.text == "a" * 64
+    v_url = auth_el.find("verification_url")
+    assert v_url is not None and v_url.text == "https://artifybharat.in/verify/M3B-77L"
 
     # CSV generation test
     csv_str = export_adapter_service.to_gem_csv(product, artisan, pricing, passport)
@@ -103,7 +122,9 @@ def test_gem_xml_and_csv_generation():
 def test_ondc_beckn_catalog_export():
     artisan, product, pricing, passport = _create_mock_entities()
 
-    payload = export_adapter_service.format_for_ondc(product, artisan, pricing, passport)
+    payload = export_adapter_service.format_for_ondc(
+        product, artisan, pricing, passport
+    )
     assert isinstance(payload, dict)
 
     # Valid schema check
@@ -144,14 +165,22 @@ def test_ondc_beckn_catalog_export():
 
     # 2. Wrong currency
     import copy
+
     bad_currency = copy.deepcopy(payload)
-    bad_currency["message"]["catalog"]["bpp/providers"][0]["items"][0]["price"]["currency"] = "USD"
-    with pytest.raises(ValueError, match="ONDC Beckn schema validation failed: price currency must be INR"):
+    bad_currency["message"]["catalog"]["bpp/providers"][0]["items"][0]["price"][
+        "currency"
+    ] = "USD"
+    with pytest.raises(
+        ValueError,
+        match="ONDC Beckn schema validation failed: price currency must be INR",
+    ):
         export_adapter_service.validate_ondc_beckn_schema(bad_currency)
 
     # 3. Missing passport tag
     bad_tags = copy.deepcopy(payload)
-    bad_tags["message"]["catalog"]["bpp/providers"][0]["items"][0]["tags"] = [{"code": "other", "value": "x"}]
+    bad_tags["message"]["catalog"]["bpp/providers"][0]["items"][0]["tags"] = [
+        {"code": "other", "value": "x"}
+    ]
     with pytest.raises(ValueError, match="heritage_passport"):
         export_adapter_service.validate_ondc_beckn_schema(bad_tags)
 
@@ -163,7 +192,9 @@ def test_ondc_beckn_catalog_export():
 def test_whatsapp_catalog_card_export():
     artisan, product, pricing, passport = _create_mock_entities()
 
-    card = export_adapter_service.format_for_whatsapp(product, artisan, pricing, passport)
+    card = export_adapter_service.format_for_whatsapp(
+        product, artisan, pricing, passport
+    )
     assert isinstance(card, dict)
 
     assert card["messaging_product"] == "whatsapp"
@@ -184,7 +215,10 @@ def test_whatsapp_catalog_card_export():
     assert meta["digital_passport_hash"] == passport.passport_hash
     assert meta["shortcode"] == passport.shortcode
     assert meta["upi_payment_link"].startswith("upi://pay?")
-    assert "9845098450@upi" in meta["upi_payment_link"] or "upi" in meta["upi_payment_link"]
+    assert (
+        "9845098450@upi" in meta["upi_payment_link"]
+        or "upi" in meta["upi_payment_link"]
+    )
     assert meta["base_price_inr"] == 4800.0
 
 
@@ -226,21 +260,25 @@ def test_shg_bulk_wholesale_csv_export():
     assert row["verification_url"] == "https://artifybharat.in/verify/M3B-77L"
 
 
-
-
-
-
 @pytest.mark.asyncio
 async def test_multi_channel_export(client: AsyncClient):
     # Setup complete pipeline
     reg = await client.post(
         "/api/v1/auth/register",
-        json={"name": "Sita Devi", "phone": "9845098450", "pin": "9900", "trifed_id": "TRIFED-BH-101"},
+        json={
+            "name": "Sita Devi",
+            "phone": "9845098450",
+            "pin": "9900",
+            "trifed_id": "TRIFED-BH-101",
+        },
     )
     artisan_id = reg.json()["artisan_id"]
 
     from tests.test_cv_enhancement import create_dummy_image_bytes
-    files = {"image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")}
+
+    files = {
+        "image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")
+    }
     data = {"artisan_id": artisan_id, "product_title": "Madhubani Silk Dupatta"}
     enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
     product_id = enhance_res.json()["product_id"]
@@ -269,3 +307,133 @@ async def test_multi_channel_export(client: AsyncClient):
     assert "GeM" in channels
     assert "ONDC" in channels
     assert "Direct_B2B" in channels
+
+
+@pytest.mark.asyncio
+async def test_end_to_end_all_channels_export(client: AsyncClient):
+    # Register artisan
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Radha Devi",
+            "phone": "9876543210",
+            "pin": "1234",
+            "trifed_id": "TRIFED-UP-555",
+        },
+    )
+    assert reg.status_code == 201
+    artisan_id = reg.json()["artisan_id"]
+
+    # Studio enhance
+    files = {"image": ("saree.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")}
+    data = {"artisan_id": artisan_id, "product_title": "Banarasi Brocade Saree"}
+    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    assert enhance_res.status_code == 200
+    product_id = enhance_res.json()["product_id"]
+
+    # Calculate fair pricing
+    price_res = await client.post(
+        "/api/v1/pricing/calculate",
+        json={
+            "product_id": product_id,
+            "raw_material_cost": 3200.0,
+            "labor_days": 12.0,
+        },
+    )
+    assert price_res.status_code == 200
+
+    # Issue passport
+    pass_res = await client.post(
+        "/api/v1/passport/issue", json={"product_id": product_id}
+    )
+    assert pass_res.status_code == 200
+    issued_passport_hash = pass_res.json()["passport_hash"]
+
+    # Export to all 5 channels: GeM, ONDC, WhatsApp, SHG_Bulk, Direct_B2B
+    all_channels_payload = {
+        "product_id": product_id,
+        "target_channels": ["GeM", "ONDC", "WhatsApp", "SHG_Bulk", "Direct_B2B"],
+        "b2b_bulk_min_quantity": 20,
+        "b2b_bulk_discount_percentage": 25.0,
+    }
+    sync_res = await client.post("/api/v1/exports/sync", json=all_channels_payload)
+    assert sync_res.status_code == 200
+    sync_data = sync_res.json()
+
+    assert sync_data["product_id"] == product_id
+    assert sync_data["passport_hash"] == issued_passport_hash
+    assert len(sync_data["results"]) == 5
+
+    res_by_channel = {r["channel"]: r for r in sync_data["results"]}
+
+    # GeM assertions
+    assert "GeM" in res_by_channel
+    assert res_by_channel["GeM"]["status"] == "synced"
+    assert res_by_channel["GeM"]["format"] == "XML"
+
+    # ONDC assertions
+    assert "ONDC" in res_by_channel
+    assert res_by_channel["ONDC"]["status"] == "synced"
+    assert res_by_channel["ONDC"]["format"] == "JSON_BECKN"
+
+    # WhatsApp assertions
+    assert "WhatsApp" in res_by_channel
+    assert res_by_channel["WhatsApp"]["status"] == "synced"
+    assert res_by_channel["WhatsApp"]["format"] == "WHATSAPP_INTERACTIVE"
+
+    # SHG_Bulk assertions
+    assert "SHG_Bulk" in res_by_channel
+    assert res_by_channel["SHG_Bulk"]["status"] == "synced"
+    assert res_by_channel["SHG_Bulk"]["format"] == "CSV"
+
+    # Direct_B2B assertions
+    assert "Direct_B2B" in res_by_channel
+    assert res_by_channel["Direct_B2B"]["status"] == "synced"
+    assert res_by_channel["Direct_B2B"]["format"] == "REST_API"
+
+
+@pytest.mark.asyncio
+async def test_multi_channel_inventory_lock_on_sale(client: AsyncClient, db_session):
+    # Setup product with passport and 3 channels
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Govind Ji",
+            "phone": "9123456780",
+            "pin": "4321",
+            "trifed_id": "TRIFED-RJ-909",
+        },
+    )
+    artisan_id = reg.json()["artisan_id"]
+
+    files = {"image": ("craft.jpg", io.BytesIO(b"dummy"), "image/jpeg")}
+    data = {"artisan_id": artisan_id, "product_title": "Blue Pottery Vase"}
+    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    product_id = enhance_res.json()["product_id"]
+
+    await client.post(
+        "/api/v1/pricing/calculate",
+        json={"product_id": product_id, "raw_material_cost": 500.0, "labor_days": 4.0},
+    )
+    await client.post("/api/v1/passport/issue", json={"product_id": product_id})
+
+    # Export to GeM, ONDC, and WhatsApp
+    export_payload = {
+        "product_id": product_id,
+        "target_channels": ["GeM", "ONDC", "WhatsApp"],
+    }
+    await client.post("/api/v1/exports/sync", json=export_payload)
+
+    # Now unique 1-of-1 handcrafted item purchased on ONDC
+    lock_result = await export_adapter_service.lock_inventory_on_sale(
+        db=db_session, product_id=product_id, originating_channel="ONDC"
+    )
+
+    assert lock_result["inventory_locked"] is True
+    assert lock_result["status"] == "sold_out"
+    assert lock_result["purchased_on"] == "ONDC"
+    # GeM and WhatsApp should be delisted
+    delisted = [c.lower() for c in lock_result["delisted_from_channels"]]
+    assert "gem" in delisted
+    assert "whatsapp" in delisted
+    assert "ondc" not in delisted
