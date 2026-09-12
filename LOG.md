@@ -1,3 +1,29 @@
+# Log
+
+> Every iteration logged with status, what changed, and verification result.
+
+## Format
+
+Each entry:
+
+- **Date**: YYYY-MM-DD HH:MM
+- **Status**: Done | Blocked | Budget | Compacted | Stuck | Outage | Review
+- **What**: Brief description of the task/change
+- **Verified**: What was run to verify (tests, typecheck, etc.)
+- **Notes**: Any decisions or learnings
+
+## Entries
+
+| Date | Status | What | Verified | Notes |
+|------|--------|------|----------|-------|
+| 2026-09-12 | Done | Harness reset: backed up AGENTS/LOG/LEARNINGS/architecture to `.tmp/harness-backup-2026-09-12/`, wiped + recreated 9 files per harness-setup skill | `git status`, backup listing verified | Prior history archived, fresh harness live |
+| 2026-09-12 | Done | Restored canonical docs/architecture.md from backup; renamed harness version to docs/structure.md | Head checks on both files, `Get-ChildItem docs/*.md` | architecture.md = MoSJE spec (14108B), structure.md = harness overview |
+| 2026-09-12 | Done | Restored old log history from `.tmp/harness-backup-2026-09-12/LOG.md.bak` below | Read backup (49 lines) + current LOG verified | Old sessions preserved verbatim under Archived History |
+
+---
+
+## Archived History — restored 2026-09-12 from `.tmp/harness-backup-2026-09-12/LOG.md.bak`
+
 # Project Iteration Log
 
 ## Session: 2026-09-08 - Final Enhanced Web Architecture Transition & MoSJE Alignment (SIH PS 26090)

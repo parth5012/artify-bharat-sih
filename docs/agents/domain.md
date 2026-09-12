@@ -31,3 +31,5 @@ Always use the terms defined in `CONTEXT.md`:
 - `Zero-Trust Peer Jury`: Randomized 3-artisan craft cluster quorum verification with anomaly detection.
 - `Studio Enhancement`: The U²-Net background extraction, CLAHE lighting equalization, and 1:1 auto-crop.
 - `Zero-Skill Interface`: The simplified, high-contrast UI designed for non-English, low-literacy artisans.
+
+If a needed concept isn't in the glossary, note it for `/domain-modeling` instead of inventing synonyms. If output contradicts an ADR, surface it explicitly.
