@@ -104,12 +104,13 @@ dependencies {
     // WorkManager & Background Sync
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // CameraX
+    // CameraX & Exif
     val cameraVersion = "1.3.4"
     implementation("androidx.camera:camera-core:$cameraVersion")
     implementation("androidx.camera:camera-camera2:$cameraVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraVersion")
     implementation("androidx.camera:camera-view:$cameraVersion")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // Location
     implementation("com.google.android.gms:play-services-location:21.3.0")
