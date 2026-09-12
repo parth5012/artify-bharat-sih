@@ -188,6 +188,45 @@ def test_whatsapp_catalog_card_export():
     assert meta["base_price_inr"] == 4800.0
 
 
+def test_shg_bulk_wholesale_csv_export():
+    artisan, product, pricing, passport = _create_mock_entities()
+
+    # Test format_for_shg_csv math (15 qty at 20 pct off)
+    shg_data = export_adapter_service.format_for_shg_csv(
+        product, artisan, pricing, passport, min_quantity=15, discount_pct=20.0
+    )
+    assert isinstance(shg_data, dict)
+    assert shg_data["standard_retail_price_inr"] == 4800.0
+    assert shg_data["minimum_wholesale_quantity"] == 15
+    assert shg_data["wholesale_discount_percentage"] == 20.0
+    # 4800 * (1 - 0.20) = 3840.0
+    assert shg_data["wholesale_unit_price_inr"] == 3840.0
+    # 3840 * 15 = 57600.0
+    assert shg_data["total_lot_price_inr"] == 57600.0
+    assert shg_data["digital_passport_hash"] == passport.passport_hash
+    assert shg_data["shortcode"] == "M3B-77L"
+    assert shg_data["production_lead_time_days"] == int(8.0 * (15 / 2))
+
+    # Test to_shg_csv serialization
+    csv_str = export_adapter_service.to_shg_csv(
+        product, artisan, pricing, passport, min_quantity=15, discount_pct=20.0
+    )
+    assert isinstance(csv_str, str)
+    reader = csv.DictReader(io.StringIO(csv_str))
+    rows = list(reader)
+    assert len(rows) == 1
+    row = rows[0]
+    assert float(row["standard_retail_price_inr"]) == 4800.0
+    assert int(row["minimum_wholesale_quantity"]) == 15
+    assert float(row["wholesale_discount_percentage"]) == 20.0
+    assert float(row["wholesale_unit_price_inr"]) == 3840.0
+    assert float(row["total_lot_price_inr"]) == 57600.0
+    assert row["digital_passport_hash"] == "a" * 64
+    assert row["shortcode"] == "M3B-77L"
+    assert row["verification_url"] == "https://artifybharat.in/verify/M3B-77L"
+
+
+
 
 
 

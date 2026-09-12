@@ -396,8 +396,123 @@ class ExportAdapterService:
             "bulk_institutional_price": bulk_price,
             "lead_time_days": int(pricing.labor_days * (min_quantity / 2)),
             "passport_hash": passport.passport_hash,
-            "quality_assurance": "100% Handcrafted Authenticity Guaranteed with Cryptographic Passport",
+            "quality_assurance": "100% Handcrafted Authenticity Guaranteed Cryptographic Passport",
         }
+
+    def format_for_shg_csv(
+        self,
+        product: Product,
+        artisan: Artisan,
+        pricing: ProductPricing,
+        passport: HeritagePassport,
+        min_quantity: int = 10,
+        discount_pct: float = 15.0,
+    ) -> Dict[str, Any]:
+        """
+        Self Help Group (SHG) bulk wholesale pricing format.
+        Calculates tiered volume pricing, lot price, lead time, and cryptographic authenticity fields.
+        """
+        if not product or not artisan or not pricing or not passport:
+            raise ValueError("All entities (product, artisan, pricing, passport) are required for SHG export")
+
+        unit_price = pricing.recommended_price
+        bulk_unit_price = round(unit_price * (1.0 - (discount_pct / 100.0)), 2)
+        total_lot_price = round(bulk_unit_price * min_quantity, 2)
+        lead_time_days = int(pricing.labor_days * max(1.0, min_quantity / 2.0))
+        shortcode = passport.shortcode or passport.passport_hash[:6].upper()
+        state_code = artisan.state[:2].upper() if artisan.state else "IN"
+        shg_catalog_code = f"SHG-{state_code}-{uuid.uuid4().hex[:6].upper()}"
+
+        return {
+            "shg_catalog_code": shg_catalog_code,
+            "artisan_id": str(artisan.id),
+            "artisan_name": artisan.name,
+            "cluster_name": artisan.cluster_name or "",
+            "product_id": str(product.id),
+            "title": product.title,
+            "craft_category": product.craft_category or "handloom",
+            "standard_retail_price_inr": unit_price,
+            "minimum_wholesale_quantity": min_quantity,
+            "wholesale_discount_percentage": discount_pct,
+            "wholesale_unit_price_inr": bulk_unit_price,
+            "total_lot_price_inr": total_lot_price,
+            "production_lead_time_days": lead_time_days,
+            "digital_passport_hash": passport.passport_hash,
+            "verification_url": passport.verification_url,
+            "shortcode": shortcode,
+        }
+
+    def to_shg_csv(
+        self,
+        product: Union[Product, List[Any]],
+        artisan: Optional[Artisan] = None,
+        pricing: Optional[ProductPricing] = None,
+        passport: Optional[HeritagePassport] = None,
+        min_quantity: int = 10,
+        discount_pct: float = 15.0,
+    ) -> str:
+        """
+        Generates RFC-4180 compliant CSV string for SHG bulk wholesale catalog.
+        """
+        headers = [
+            "shg_catalog_code",
+            "artisan_id",
+            "artisan_name",
+            "cluster_name",
+            "product_id",
+            "title",
+            "craft_category",
+            "standard_retail_price_inr",
+            "minimum_wholesale_quantity",
+            "wholesale_discount_percentage",
+            "wholesale_unit_price_inr",
+            "total_lot_price_inr",
+            "production_lead_time_days",
+            "digital_passport_hash",
+            "verification_url",
+            "shortcode",
+        ]
+
+        items = []
+        if isinstance(product, list):
+            items = product
+        elif artisan and pricing and passport:
+            items = [(product, artisan, pricing, passport, min_quantity, discount_pct)]
+        else:
+            raise ValueError("Invalid parameters for to_shg_csv: provide product, artisan, pricing, and passport")
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=headers)
+        writer.writeheader()
+
+        for item in items:
+            if isinstance(item, (tuple, list)):
+                p = item[0]
+                a = item[1]
+                pr = item[2]
+                pass_obj = item[3]
+                mq = item[4] if len(item) > 4 else min_quantity
+                dp = item[5] if len(item) > 5 else discount_pct
+                row = self.format_for_shg_csv(p, a, pr, pass_obj, min_quantity=mq, discount_pct=dp)
+            elif isinstance(item, dict):
+                if "shg_catalog_code" in item:
+                    row = item
+                else:
+                    row = self.format_for_shg_csv(
+                        item["product"],
+                        item["artisan"],
+                        item["pricing"],
+                        item["passport"],
+                        min_quantity=item.get("min_quantity", min_quantity),
+                        discount_pct=item.get("discount_pct", discount_pct),
+                    )
+            else:
+                continue
+
+            writer.writerow(row)
+
+        return output.getvalue()
+
 
     async def export_product(
         self,
@@ -452,6 +567,9 @@ class ExportAdapterService:
                 payload = self.format_for_ondc(product, artisan, pricing, passport)
             elif ch.lower() in ("whatsapp", "whatsapp_card", "whatsapp_cloud"):
                 payload = self.format_for_whatsapp(product, artisan, pricing, passport)
+            elif ch.lower() in ("shg_bulk", "shg", "shg_wholesale"):
+                payload = self.format_for_shg_csv(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
+                payload["csv_content"] = self.to_shg_csv(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
             elif ch.lower() == "direct_b2b":
                 payload = self.format_for_b2b(product, artisan, pricing, passport, min_b2b_qty, discount_pct)
             else:
