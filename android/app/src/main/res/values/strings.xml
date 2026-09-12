@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">ArtifyBharat</string>
+    <string name="app_tagline">Ministry of Social Justice &amp; Empowerment (SIH 26090)</string>
+    <string name="permission_camera_rationale">Camera access is required to photograph authentic handloom artifacts and WIP craft milestones.</string>
+    <string name="permission_audio_rationale">Audio recording is required for voice cataloging in rural dialects and consulting Ask Dadi.</string>
+    <string name="permission_location_rationale">GPS location verification is required to anchor cryptographic provenance to your artisan cluster.</string>
+    <string name="permission_bluetooth_rationale">Bluetooth access is required to connect to 58mm ESC/POS thermal tag printers.</string>
+</resources>
