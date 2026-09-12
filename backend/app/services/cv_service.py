@@ -131,7 +131,7 @@ class ComputerVisionService:
             bg_removed  – True when segmentation succeeded
             rembg_used  – True when rembg U²-Net was the active engine
         """
-        if _REMBG_AVAILABLE and rembg_remove is not None:
+        if not settings.USE_MOCK_AI and _REMBG_AVAILABLE and rembg_remove is not None:
             try:
                 # rembg accepts PIL or raw bytes; convert BGR→RGB PIL image
                 rgb_pil = Image.fromarray(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB))
