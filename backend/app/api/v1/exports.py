@@ -28,9 +28,26 @@ async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSes
         results = []
         passport_hash = ""
         for exp in exports:
-            fmt = "XML" if exp.channel == "GeM" else ("JSON_BECKN" if exp.channel == "ONDC" else "REST_API")
-            passport_hash = exp.export_payload.get("authenticity_verification", {}).get("digital_passport_hash") or \
-                            exp.export_payload.get("passport_hash", "")
+            ch_lower = exp.channel.lower()
+            if "xml" in ch_lower or ch_lower == "gem":
+                fmt = "XML"
+            elif "csv" in ch_lower or "shg" in ch_lower:
+                fmt = "CSV"
+            elif ch_lower == "ondc":
+                fmt = "JSON_BECKN"
+            elif "whatsapp" in ch_lower:
+                fmt = "WHATSAPP_INTERACTIVE"
+            else:
+                fmt = "REST_API"
+
+            p_hash = (
+                exp.export_payload.get("authenticity_verification", {}).get("digital_passport_hash")
+                or exp.export_payload.get("metadata", {}).get("digital_passport_hash")
+                or exp.export_payload.get("passport_hash", "")
+            )
+            if p_hash:
+                passport_hash = p_hash
+
             results.append(
                 ChannelExportResult(
                     channel=exp.channel,
