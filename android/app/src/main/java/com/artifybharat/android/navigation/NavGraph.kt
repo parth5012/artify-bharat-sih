@@ -137,8 +137,8 @@ fun ArtifyBharatNavHost(
                     navDeepLink { uriPattern = "https://artifybharat.gov.in/verify/{productId}" }
                 )
             ) { backStackEntry ->
-                val productId = backStackEntry.arguments?.getString("productId") ?: "sample"
-                DigitalPassportScreen(navController = navController, productId = productId)
+                val idOrCode = backStackEntry.arguments?.getString("productId") ?: "sample"
+                DigitalPassportScreen(navController = navController, productId = idOrCode)
             }
             composable(
                 route = Screen.ThermalPrint.route,

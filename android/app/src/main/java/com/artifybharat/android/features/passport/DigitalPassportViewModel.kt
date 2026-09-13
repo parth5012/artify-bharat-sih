@@ -71,6 +71,33 @@ class DigitalPassportViewModel(application: Application) : AndroidViewModel(appl
         _uiState.value = _uiState.value.copy(productId = productId)
 
         viewModelScope.launch {
+            // Check if input is a shortcode (e.g. A7X-9B2) from a deep link or qr scan
+            val isShortcode = productId.contains("-") || (productId.length in 6..7 && !productId.startsWith("draft"))
+            if (isShortcode) {
+                val verifyResult = passportRepository.resolvePassportByShortcode(productId)
+                if (verifyResult.isSuccess) {
+                    val verification = verifyResult.getOrNull()!!
+                    val url = "https://artifybharat.gov.in/verify/$productId"
+                    val qr = withContext(Dispatchers.Default) {
+                        generateQrBitmap(url)
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        isIssued = true,
+                        isAuthentic = verification.isAuthentic,
+                        productTitle = verification.productTitle,
+                        craftCategory = verification.craftCategory,
+                        artisanName = verification.artisanName,
+                        clusterName = verification.clusterName,
+                        passportHash = verification.passportHash,
+                        shortcode = productId,
+                        verificationUrl = url,
+                        qrBitmap = qr
+                    )
+                    return@launch
+                }
+            }
+
+            // Otherwise issue/mint passport for draft ID
             val result = passportRepository.issuePassport(productId)
             if (result.isSuccess) {
                 val resp = result.getOrNull()!!

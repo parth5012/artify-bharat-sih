@@ -35,7 +35,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context, passphrase: ByteArray? = null): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = buildDatabase(context.applicationContext, passphrase)
+                // Automatically fetch the hardware KeyStore MasterKey-backed passphrase if none is passed explicitly
+                val key = passphrase ?: DatabasePassphraseProvider.getOrCreatePassphrase(context.applicationContext)
+                val instance = buildDatabase(context.applicationContext, key)
                 INSTANCE = instance
                 instance
             }
