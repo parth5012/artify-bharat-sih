@@ -62,6 +62,7 @@ fun rememberPermissionLauncherFlow(
     var showRationale by remember { mutableStateOf(false) }
     var isPermanentlyDenied by remember { mutableStateOf(false) }
 
+    val activity = context as? android.app.Activity
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -69,7 +70,10 @@ fun rememberPermissionLauncherFlow(
         if (granted) {
             onPermissionGranted()
         } else {
-            isPermanentlyDenied = true
+            val canShowRationale = activity?.let {
+                androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(it, permission)
+            } ?: false
+            isPermanentlyDenied = !canShowRationale
             onPermissionDenied?.invoke()
         }
     }

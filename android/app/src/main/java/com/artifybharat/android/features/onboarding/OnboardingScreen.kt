@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.artifybharat.android.data.network.NetworkClient
 import com.artifybharat.android.hardware.location.LocationProvider
 import com.artifybharat.android.navigation.Screen
 import com.artifybharat.android.ui.components.BilingualText
@@ -180,7 +181,7 @@ fun OnboardingScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "सर्वर (http://10.0.2.2:8000) से संपर्क नहीं हो पा रहा है। क्या आप ऑफ़लाइन डेमो मोड में आगे बढ़ना चाहते हैं?",
+                        text = "सर्वर (${NetworkClient.getEffectiveBaseUrl()}) से संपर्क नहीं हो पा रहा है। क्या आप ऑफ़लाइन डेमो मोड में आगे बढ़ना चाहते हैं?",
                         color = Color(0xFF854D0E),
                         fontSize = 12.sp
                     )

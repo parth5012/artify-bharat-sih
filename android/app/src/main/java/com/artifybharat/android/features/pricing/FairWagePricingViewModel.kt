@@ -93,9 +93,11 @@ class FairWagePricingViewModel(application: Application) : AndroidViewModel(appl
         } else {
             // Honest offline calculation fallback with disclaimer
             val err = result.exceptionOrNull()?.localizedMessage ?: "Backend unreachable"
-            val offlineFairWage = (hours / 8.0) * 580.0
+            val offlineHourlyWageRate = 580.0 / 8.0 // 72.5
+            val offlineFairWage = hours * offlineHourlyWageRate
             val offlineFloor = rawMaterial + offlineFairWage + (rawMaterial * 0.05)
             _uiState.value = _uiState.value.copy(
+                hourlyWageRate = offlineHourlyWageRate,
                 statutoryFloorPrice = offlineFloor,
                 selectedPrice = offlineFloor + 600.0,
                 artisanNetProfit = 600.0,

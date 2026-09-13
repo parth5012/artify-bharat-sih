@@ -120,21 +120,17 @@ class DigitalPassportViewModel(application: Application) : AndroidViewModel(appl
                 errorMessage = null
             )
         } else {
-            // Honest offline fallback with disclaimer
+            // Honest offline fallback with disclaimer: do not generate valid public verification credentials
             val err = result.exceptionOrNull()?.localizedMessage ?: "Backend unreachable"
-            val fallbackUrl = "https://artifybharat.gov.in/verify/A7X-9B2"
-            val qr = withContext(Dispatchers.Default) {
-                generateQrBitmap(fallbackUrl)
-            }
             _uiState.value = _uiState.value.copy(
                 isIssued = false,
                 isOffline = true,
-                shortcode = "A7X-9B2",
-                verificationUrl = fallbackUrl,
-                qrBitmap = qr,
-                errorMessage = "सर्वर उपलब्ध नहीं है ($err) • ऑफ़लाइन पूर्वावलोकन कोड दिखाया जा रहा है।"
+                shortcode = "",
+                verificationUrl = "",
+                qrBitmap = null,
+                errorMessage = "सर्वर उपलब्ध नहीं है ($err) • पासपोर्ट अभी जारी नहीं हुआ है।"
             )
-            }
+        }
         }
     }
 }
