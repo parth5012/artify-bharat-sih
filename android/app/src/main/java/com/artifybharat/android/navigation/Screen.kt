@@ -28,7 +28,10 @@ sealed class Screen(
         hindiTitle = "डिजिटल विरासत पासपोर्ट",
         englishTitle = "Digital Craft Passport"
     ) {
-        fun createRoute(productId: String) = "digital_passport?productId=$productId"
+        fun createRoute(productId: String): String {
+            val encoded = java.net.URLEncoder.encode(productId, "UTF-8")
+            return "digital_passport?productId=$encoded"
+        }
     }
 
     object ThermalPrint : Screen(
@@ -36,7 +39,10 @@ sealed class Screen(
         hindiTitle = "थर्मल टैग प्रिंटर",
         englishTitle = "Thermal Label Printer"
     ) {
-        fun createRoute(shortcode: String) = "thermal_print?shortcode=$shortcode"
+        fun createRoute(shortcode: String): String {
+            val encoded = java.net.URLEncoder.encode(shortcode, "UTF-8")
+            return "thermal_print?shortcode=$encoded"
+        }
     }
 
     object OfflineSyncQueue : Screen(

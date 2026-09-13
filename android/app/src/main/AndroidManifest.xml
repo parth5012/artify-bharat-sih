@@ -52,7 +52,7 @@
                 <data
                     android:scheme="https"
                     android:host="artifybharat.gov.in"
-                    android:pathPrefix="/verify" />
+                    android:pathPrefix="/verify/" />
             </intent-filter>
         </activity>
     </application>
