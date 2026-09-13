@@ -32,9 +32,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.artifybharat.android.features.market.DirectMarketplaceScreen
 import com.artifybharat.android.features.passport.DigitalPassportScreen
 import com.artifybharat.android.features.pricing.FairWagePricingScreen
 import com.artifybharat.android.features.print.ThermalPrintScreen
+import com.artifybharat.android.features.queue.OfflineSyncQueueScreen
+import com.artifybharat.android.features.shg.ShgCoordinatorHubScreen
 import com.artifybharat.android.features.studio.AuthenticityStudioScreen
 import com.artifybharat.android.features.voice.VoiceCatalogScreen
 import com.artifybharat.android.ui.components.HeaderBar
@@ -148,22 +151,13 @@ fun ArtifyBharatNavHost(
                 ThermalPrintScreen(navController = navController, shortcode = shortcode)
             }
             composable(Screen.OfflineSyncQueue.route) {
-                ScreenPlaceholder(
-                    screen = Screen.OfflineSyncQueue,
-                    navController = navController
-                )
+                OfflineSyncQueueScreen(navController = navController)
             }
             composable(Screen.ShgCoordinatorHub.route) {
-                ScreenPlaceholder(
-                    screen = Screen.ShgCoordinatorHub,
-                    navController = navController
-                )
+                ShgCoordinatorHubScreen(navController = navController)
             }
             composable(Screen.DirectMarketplace.route) {
-                ScreenPlaceholder(
-                    screen = Screen.DirectMarketplace,
-                    navController = navController
-                )
+                DirectMarketplaceScreen(navController = navController)
             }
         }
     }
