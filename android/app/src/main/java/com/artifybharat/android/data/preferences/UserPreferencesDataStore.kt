@@ -126,7 +126,11 @@ class UserPreferencesDataStore(private val context: Context) {
     suspend fun clearSession() {
         secureTokenStorage.clearToken()
         context.userDataStore.edit { prefs ->
+            val customUrl = prefs[KEY_CUSTOM_BASE_URL]
             prefs.clear()
+            if (!customUrl.isNullOrBlank()) {
+                prefs[KEY_CUSTOM_BASE_URL] = customUrl
+            }
         }
     }
 }

@@ -10,13 +10,13 @@ data class VoiceRegisterRequestDto(
     @Json(name = "pin") val pin: String,
     @Json(name = "primary_dialect") val primaryDialect: String = "bhojpuri",
     @Json(name = "state") val state: String = "Uttar Pradesh",
-    @Json(name = "district") val district: String = "Varanasi",
+    @Json(name = "district") val district: String? = null,
     @Json(name = "cluster_name") val clusterName: String = "Varanasi Handloom Cluster",
     @Json(name = "craft_category") val craftCategory: String = "handloom",
     @Json(name = "trifed_id") val trifedId: String? = null,
     @Json(name = "pehchan_id") val pehchanId: String? = null,
-    @Json(name = "geo_lat") val geoLat: Double? = 25.3176,
-    @Json(name = "geo_lng") val geoLng: Double? = 82.9739
+    @Json(name = "geo_lat") val geoLat: Double? = null,
+    @Json(name = "geo_lng") val geoLng: Double? = null
 )
 
 @JsonClass(generateAdapter = true)

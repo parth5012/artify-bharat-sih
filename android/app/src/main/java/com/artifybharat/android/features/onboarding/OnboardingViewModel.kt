@@ -25,15 +25,15 @@ enum class OnboardingStep {
 data class OnboardingUiState(
     val currentStep: OnboardingStep = OnboardingStep.WELCOME_LANGUAGE,
     val selectedDialect: String = "bhojpuri",
-    val phone: String = "9876543210",
-    val pin: String = "1234",
-    val pehchanId: String = "PEH-IND-88320",
-    val artisanName: String = "गौरी देवी (Gauri Devi)",
+    val phone: String = "",
+    val pin: String = "",
+    val pehchanId: String = "",
+    val artisanName: String = "",
     val craftCategory: String = "handloom",
     val clusterName: String = "Varanasi Handloom Cluster",
     val stateCode: String = "UP",
-    val isGiCertified: Boolean = true,
-    val giTagName: String? = "Banarasi Brocade Saree (GI Reg #39)",
+    val isGiCertified: Boolean = false,
+    val giTagName: String? = null,
     val isLoading: Boolean = false,
     val isVerified: Boolean = false,
     val isOfflineMode: Boolean = false,
@@ -176,41 +176,61 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                     currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
                 )
             } else {
-                // If login fails (not registered), attempt register
-                val registerReq = VoiceRegisterRequestDto(
-                    name = _uiState.value.artisanName,
-                    phone = phone,
-                    pin = pin,
-                    primaryDialect = _uiState.value.selectedDialect,
-                    state = _uiState.value.stateCode,
-                    clusterName = _uiState.value.clusterName,
-                    craftCategory = _uiState.value.craftCategory,
-                    pehchanId = _uiState.value.pehchanId
-                )
-                val regResult = authRepository.register(registerReq)
-                if (regResult.isSuccess) {
-                    val tokenResp = regResult.getOrNull()!!
-                    authRepository.saveSession(
-                        token = tokenResp.accessToken,
-                        artisanId = tokenResp.artisanId,
-                        maskedPehchan = "PEH-***-" + phone.takeLast(4),
-                        artisanName = tokenResp.name,
-                        clusterName = _uiState.value.clusterName,
-                        craftCategory = _uiState.value.craftCategory,
-                        stateCode = _uiState.value.stateCode
-                    )
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isVerified = true,
-                        artisanName = tokenResp.name,
-                        currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
-                    )
-                } else {
-                    val err = regResult.exceptionOrNull()?.message ?: "Authentication failed"
+                val loginErr = loginResult.exceptionOrNull()?.message ?: ""
+                val isNetworkError = loginResult.exceptionOrNull() is java.io.IOException ||
+                        loginErr.contains("ConnectException") ||
+                        loginErr.contains("Failed to connect") ||
+                        loginErr.contains("Unable to resolve host")
+
+                if (isNetworkError) {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isServerUnreachable = true,
-                        errorMessage = "सर्वर कनेक्शन त्रुटि: $err"
+                        errorMessage = "सर्वर से संपर्क नहीं हो पाया: $loginErr"
+                    )
+                } else if (_uiState.value.artisanName.isNotBlank()) {
+                    // User provided a name, attempt registration
+                    val registerReq = VoiceRegisterRequestDto(
+                        name = _uiState.value.artisanName,
+                        phone = phone,
+                        pin = pin,
+                        primaryDialect = _uiState.value.selectedDialect,
+                        state = _uiState.value.stateCode,
+                        clusterName = _uiState.value.clusterName,
+                        craftCategory = _uiState.value.craftCategory,
+                        pehchanId = _uiState.value.pehchanId.ifBlank { null }
+                    )
+                    val regResult = authRepository.register(registerReq)
+                    if (regResult.isSuccess) {
+                        val tokenResp = regResult.getOrNull()!!
+                        authRepository.saveSession(
+                            token = tokenResp.accessToken,
+                            artisanId = tokenResp.artisanId,
+                            maskedPehchan = "PEH-***-" + phone.takeLast(4),
+                            artisanName = tokenResp.name,
+                            clusterName = _uiState.value.clusterName,
+                            craftCategory = _uiState.value.craftCategory,
+                            stateCode = _uiState.value.stateCode
+                        )
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isVerified = true,
+                            artisanName = tokenResp.name,
+                            currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+                        )
+                    } else {
+                        val regErr = regResult.exceptionOrNull()?.message ?: "Registration failed"
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isServerUnreachable = regResult.exceptionOrNull() is java.io.IOException,
+                            errorMessage = "पंजीकरण विफल: $regErr"
+                        )
+                    }
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isServerUnreachable = false,
+                        errorMessage = "गलत फ़ोन नंबर या पिन। नए खाते हेतु नाम दर्ज करें। (Incorrect phone/PIN. Enter name to register.)"
                     )
                 }
             }

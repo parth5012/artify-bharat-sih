@@ -260,10 +260,36 @@ class OnboardingAndConnectivityE2ETest {
         val offlineState = DigitalPassportUiState(
             isIssued = false,
             isOffline = true,
-            errorMessage = "सर्वर उपलब्ध नहीं है - ऑफ़लाइन पूर्वावलोकन कोड"
+            shortcode = "",
+            verificationUrl = "",
+            qrBitmap = null,
+            errorMessage = "सर्वर उपलब्ध नहीं है • पासपोर्ट अभी जारी नहीं हुआ है।"
         )
         assertFalse("Unsynced passport must not claim to be issued", offlineState.isIssued)
         assertTrue("Offline flag must be true", offlineState.isOffline)
+        assertEquals("", offlineState.shortcode)
+        assertEquals("", offlineState.verificationUrl)
+        assertNull(offlineState.qrBitmap)
         assertNotNull(offlineState.errorMessage)
+    }
+
+    @Test
+    fun testVoiceRegisterRequestDto_nullableLocationDefaults() {
+        val req = VoiceRegisterRequestDto(
+            name = "Test Artisan",
+            phone = "9876543210",
+            pin = "1234"
+        )
+        assertNull("District must default to null", req.district)
+        assertNull("GeoLat must default to null", req.geoLat)
+        assertNull("GeoLng must default to null", req.geoLng)
+    }
+
+    @Test
+    fun testClearSessionPreservesCustomBaseUrl() {
+        val customUrl = "http://192.168.1.100:8000/api/v1/"
+        NetworkClient.setCustomBaseUrl(customUrl)
+        assertEquals(customUrl, NetworkClient.getEffectiveBaseUrl())
+        NetworkClient.setCustomBaseUrl(null)
     }
 }
