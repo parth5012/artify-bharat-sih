@@ -32,6 +32,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.artifybharat.android.features.passport.DigitalPassportScreen
+import com.artifybharat.android.features.pricing.FairWagePricingScreen
+import com.artifybharat.android.features.print.ThermalPrintScreen
 import com.artifybharat.android.features.studio.AuthenticityStudioScreen
 import com.artifybharat.android.features.voice.VoiceCatalogScreen
 import com.artifybharat.android.ui.components.HeaderBar
@@ -119,10 +122,7 @@ fun ArtifyBharatNavHost(
                 AuthenticityStudioScreen(navController = navController, draftId = draftId)
             }
             composable(Screen.FairWagePricing.route) {
-                ScreenPlaceholder(
-                    screen = Screen.FairWagePricing,
-                    navController = navController
-                )
+                FairWagePricingScreen(navController = navController)
             }
             composable(
                 route = Screen.DigitalPassport.route,
@@ -133,11 +133,9 @@ fun ArtifyBharatNavHost(
                 deepLinks = listOf(
                     navDeepLink { uriPattern = "https://artifybharat.gov.in/verify/{productId}" }
                 )
-            ) {
-                ScreenPlaceholder(
-                    screen = Screen.DigitalPassport,
-                    navController = navController
-                )
+            ) { backStackEntry ->
+                val productId = backStackEntry.arguments?.getString("productId") ?: "sample"
+                DigitalPassportScreen(navController = navController, productId = productId)
             }
             composable(
                 route = Screen.ThermalPrint.route,
@@ -145,11 +143,9 @@ fun ArtifyBharatNavHost(
                     type = NavType.StringType
                     defaultValue = "A7X-9B2"
                 })
-            ) {
-                ScreenPlaceholder(
-                    screen = Screen.ThermalPrint,
-                    navController = navController
-                )
+            ) { backStackEntry ->
+                val shortcode = backStackEntry.arguments?.getString("shortcode") ?: "A7X-9B2"
+                ThermalPrintScreen(navController = navController, shortcode = shortcode)
             }
             composable(Screen.OfflineSyncQueue.route) {
                 ScreenPlaceholder(
