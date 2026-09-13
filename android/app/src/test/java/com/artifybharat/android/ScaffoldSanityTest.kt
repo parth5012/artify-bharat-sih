@@ -12,7 +12,7 @@ class ScaffoldSanityTest {
     @Test
     fun verifyNavigationRoutesDefined() {
         assertEquals("voice_catalog", Screen.VoiceCatalog.route)
-        assertEquals("authenticity_studio", Screen.AuthenticityStudio.route)
+        assertTrue(Screen.AuthenticityStudio.route.startsWith("authenticity_studio"))
         assertEquals("fair_wage_pricing", Screen.FairWagePricing.route)
         assertTrue(Screen.DigitalPassport.route.startsWith("digital_passport"))
         assertTrue(Screen.ThermalPrint.route.startsWith("thermal_print"))

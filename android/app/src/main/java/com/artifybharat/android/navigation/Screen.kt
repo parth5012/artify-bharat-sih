@@ -12,10 +12,12 @@ sealed class Screen(
     )
 
     object AuthenticityStudio : Screen(
-        route = "authenticity_studio",
+        route = "authenticity_studio?draftId={draftId}",
         hindiTitle = "क्राफ्ट स्टूडियो",
         englishTitle = "Authenticity Studio"
-    )
+    ) {
+        fun createRoute(draftId: String) = "authenticity_studio?draftId=$draftId"
+    }
 
     object FairWagePricing : Screen(
         route = "fair_wage_pricing",

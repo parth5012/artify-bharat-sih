@@ -159,16 +159,14 @@ class AudioRecorder(private val context: Context) {
         }
     }
 
-    fun stopRecording(): File? {
-        if (!_state.value.isRecording) return currentWavFile
+    suspend fun stopRecording(): File? = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        if (!_state.value.isRecording) return@withContext currentWavFile
 
         _state.value = _state.value.copy(isRecording = false)
 
         try {
             audioRecord?.stop()
-            kotlinx.coroutines.runBlocking {
-                recordingJob?.join()
-            }
+            recordingJob?.join()
             audioRecord?.release()
             audioRecord = null
         } catch (e: Exception) {
@@ -195,6 +193,6 @@ class AudioRecorder(private val context: Context) {
         _state.value = _state.value.copy(
             recordedFile = wav
         )
-        return wav
+        wav
     }
 }
