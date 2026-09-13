@@ -63,7 +63,7 @@ fun QuorumSeal(
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(
-                    text = "3-Artisan Zero-Trust Jury ($votesReceived/$quorumRequired Quorum)",
+                    text = "$quorumRequired-Artisan Zero-Trust Jury ($votesReceived/$quorumRequired Quorum)",
                     style = MaterialTheme.typography.labelLarge,
                     color = DeepIndigoSecondary,
                     fontWeight = FontWeight.Bold

@@ -87,7 +87,7 @@ fun HeaderBar(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = if (isOnline) "2G/4G" else "Offline",
+                    text = if (isOnline) "Online" else "Offline",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.8f)
                 )
