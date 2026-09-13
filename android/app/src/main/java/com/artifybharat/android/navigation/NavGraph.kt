@@ -32,6 +32,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.artifybharat.android.features.studio.AuthenticityStudioScreen
+import com.artifybharat.android.features.voice.VoiceCatalogScreen
 import com.artifybharat.android.ui.components.HeaderBar
 import com.artifybharat.android.ui.theme.DeepIndigoSecondary
 import com.artifybharat.android.ui.theme.KhadiBackground
@@ -104,16 +106,17 @@ fun ArtifyBharatNavHost(
             modifier = modifier.padding(innerPadding)
         ) {
             composable(Screen.VoiceCatalog.route) {
-                ScreenPlaceholder(
-                    screen = Screen.VoiceCatalog,
-                    navController = navController
-                )
+                VoiceCatalogScreen(navController = navController)
             }
-            composable(Screen.AuthenticityStudio.route) {
-                ScreenPlaceholder(
-                    screen = Screen.AuthenticityStudio,
-                    navController = navController
-                )
+            composable(
+                route = Screen.AuthenticityStudio.route,
+                arguments = listOf(navArgument("draftId") {
+                    type = NavType.StringType
+                    defaultValue = "draft-demo-01"
+                })
+            ) { backStackEntry ->
+                val draftId = backStackEntry.arguments?.getString("draftId") ?: "draft-demo-01"
+                AuthenticityStudioScreen(navController = navController, draftId = draftId)
             }
             composable(Screen.FairWagePricing.route) {
                 ScreenPlaceholder(
