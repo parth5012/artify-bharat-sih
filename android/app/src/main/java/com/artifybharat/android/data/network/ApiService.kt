@@ -1,6 +1,8 @@
 package com.artifybharat.android.data.network
 
 import com.artifybharat.android.data.network.dto.AIStudioEnhanceResponseDto
+import com.artifybharat.android.data.network.dto.ArtisanIdVerificationRequestDto
+import com.artifybharat.android.data.network.dto.ArtisanIdVerificationResponseDto
 import com.artifybharat.android.data.network.dto.DadiQueryRequestDto
 import com.artifybharat.android.data.network.dto.DadiQueryResponseDto
 import com.artifybharat.android.data.network.dto.DirectPayoutRequestDto
@@ -20,11 +22,14 @@ import com.artifybharat.android.data.network.dto.PeerJuryAssignRequestDto
 import com.artifybharat.android.data.network.dto.PeerJuryAssignResponseDto
 import com.artifybharat.android.data.network.dto.PeerJuryVoteRequestDto
 import com.artifybharat.android.data.network.dto.PeerJuryVoteResponseDto
+import com.artifybharat.android.data.network.dto.PinLoginRequestDto
 import com.artifybharat.android.data.network.dto.PublicPassportVerificationDto
 import com.artifybharat.android.data.network.dto.ReportFakeRequestDto
 import com.artifybharat.android.data.network.dto.ReportFakeResponseDto
 import com.artifybharat.android.data.network.dto.StudioEnhanceResponseDto
+import com.artifybharat.android.data.network.dto.TokenResponseDto
 import com.artifybharat.android.data.network.dto.VoiceCatalogResponseDto
+import com.artifybharat.android.data.network.dto.VoiceRegisterRequestDto
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -37,6 +42,22 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
+
+    // Authentication & Onboarding
+    @POST("auth/verify-artisan-id")
+    suspend fun verifyArtisanId(
+        @Body payload: ArtisanIdVerificationRequestDto
+    ): Response<ArtisanIdVerificationResponseDto>
+
+    @POST("auth/login")
+    suspend fun loginArtisan(
+        @Body payload: PinLoginRequestDto
+    ): Response<TokenResponseDto>
+
+    @POST("auth/register")
+    suspend fun registerArtisan(
+        @Body payload: VoiceRegisterRequestDto
+    ): Response<TokenResponseDto>
 
     // Multilingual Voice Auto-Cataloger
     @Multipart

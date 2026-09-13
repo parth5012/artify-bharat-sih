@@ -16,6 +16,7 @@ Each entry:
 
 | Date | Status | What | Verified | Notes |
 |------|--------|------|----------|-------|
+| 2026-09-13 | Done | Wayfinder Map #71: Fix Onboarding, Permission & Backend Connectivity (NavGraph session gate, 5-step guided onboarding, real token auth, honest offline/error states, runtime permission launcher & rationale dialogs) | 51/51 Android unit tests green, assembleDebug built, backend auth pytest 8/8 green | Child tickets #72-#79 resolved & closed |
 | 2026-09-13 | Done | Wayfinder Map #49: Complete Native Kotlin Android App (MinSDK 24, Target 34, Jetpack Compose, Room SQLCipher, DataStore, CameraX, WorkManager, Retrofit, Bluetooth ESC/POS) | 41/41 unit & E2E tests green, assembleRelease green | Map #49 completed, child tickets #50-#60 resolved and closed via stacked PRs |
 | 2026-09-12 | Done | Babysit PR #48: address CodeRabbit review feedback on payout filters, composite keys, fallback flags | All checks green (pytest 6m35s, ruff 14s, typecheck 29s, CodeRabbit clean) | Ready for merge-pr |
 | 2026-09-12 | Done | Wayfinder Map #22: Phase 8 Admin Backend APIs (DB district heatmap aggregation, audit feed API, PM-DAKSH metrics API) | pytest 12/12 green, ruff clean, black formatted | Map #22 completed, child tickets #36, #37, #38 resolved and closed |

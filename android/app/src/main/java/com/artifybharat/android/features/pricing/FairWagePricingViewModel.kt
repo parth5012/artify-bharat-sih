@@ -35,6 +35,7 @@ data class FairWagePricingUiState(
     ),
     val pricingSummary: String = "MoSJE Statutory Wage Floor + 1.15x GI Tagged Intricacy Premium",
     val isLocked: Boolean = false,
+    val isOfflineEstimate: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -77,32 +78,38 @@ class FairWagePricingViewModel(application: Application) : AndroidViewModel(appl
                 craftCategory = "handloom"
             )
 
-            if (result.isSuccess) {
-                val resp = result.getOrNull()!!
-                _uiState.value = _uiState.value.copy(
-                    hourlyWageRate = resp.hourlyWageRate,
-                    statutoryFloorPrice = resp.statutoryFloorPrice,
-                    selectedPrice = resp.fairRetailPrice,
-                    artisanNetProfit = resp.artisanNetProfit,
-                    costBreakdown = resp.costBreakdown,
-                    pricingSummary = resp.pricingFormulaSummary
+        if (result.isSuccess) {
+            val resp = result.getOrNull()!!
+            _uiState.value = _uiState.value.copy(
+                hourlyWageRate = resp.hourlyWageRate,
+                statutoryFloorPrice = resp.statutoryFloorPrice,
+                selectedPrice = resp.fairRetailPrice,
+                artisanNetProfit = resp.artisanNetProfit,
+                costBreakdown = resp.costBreakdown,
+                pricingSummary = resp.pricingFormulaSummary,
+                isOfflineEstimate = false,
+                errorMessage = null
+            )
+        } else {
+            // Honest offline calculation fallback with disclaimer
+            val err = result.exceptionOrNull()?.localizedMessage ?: "Backend unreachable"
+            val offlineFairWage = (hours / 8.0) * 580.0
+            val offlineFloor = rawMaterial + offlineFairWage + (rawMaterial * 0.05)
+            _uiState.value = _uiState.value.copy(
+                statutoryFloorPrice = offlineFloor,
+                selectedPrice = offlineFloor + 600.0,
+                artisanNetProfit = 600.0,
+                isOfflineEstimate = true,
+                pricingSummary = "ऑफ़लाइन सांविधिक न्यूनतम अनुमान (Offline Statutory Estimate - Backend Disconnected)",
+                errorMessage = "सर्वर उपलब्ध नहीं है ($err) • दरें स्थानीय सांविधिक आधार पर आंकी गई हैं।",
+                costBreakdown = CostBreakdownDto(
+                    rawMaterials = rawMaterial,
+                    fairWages = offlineFairWage,
+                    packagingAndLogistics = rawMaterial * 0.05,
+                    artisanProfit = 600.0
                 )
-            } else {
-                // Offline calculation fallback: floor = (hours / 8 * wage) + material + 5% overhead
-                val offlineFairWage = (hours / 8.0) * 580.0
-                val offlineFloor = rawMaterial + offlineFairWage + (rawMaterial * 0.05)
-                _uiState.value = _uiState.value.copy(
-                    statutoryFloorPrice = offlineFloor,
-                    selectedPrice = offlineFloor + 600.0,
-                    artisanNetProfit = 600.0,
-                    costBreakdown = CostBreakdownDto(
-                        rawMaterials = rawMaterial,
-                        fairWages = offlineFairWage,
-                        packagingAndLogistics = rawMaterial * 0.05,
-                        artisanProfit = 600.0
-                    )
-                )
-            }
+            )
+        }
         }
     }
 

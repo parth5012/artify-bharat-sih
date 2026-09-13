@@ -1,5 +1,6 @@
 package com.artifybharat.android.features.voice
 
+import android.Manifest
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -47,12 +48,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.artifybharat.android.hardware.permissions.rememberPermissionLauncherFlow
 import com.artifybharat.android.navigation.Screen
 import com.artifybharat.android.ui.components.BilingualText
 import com.artifybharat.android.ui.components.DesiButton
 import com.artifybharat.android.ui.components.DesiButtonVariant
 import com.artifybharat.android.ui.components.GiTagBadge
 import com.artifybharat.android.ui.components.HeaderBar
+import com.artifybharat.android.ui.dialogs.PermissionType
 import com.artifybharat.android.ui.theme.CardSurface
 import com.artifybharat.android.ui.theme.DeepIndigoSecondary
 import com.artifybharat.android.ui.theme.KhadiBackground
@@ -84,6 +87,14 @@ fun VoiceCatalogScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    val audioPermissionState = rememberPermissionLauncherFlow(
+        permission = Manifest.permission.RECORD_AUDIO,
+        permissionType = PermissionType.AUDIO,
+        onPermissionGranted = {
+            viewModel.startVoiceRecording()
+        }
+    )
 
     Column(
         modifier = modifier
@@ -229,13 +240,13 @@ fun VoiceCatalogScreen(
                         if (state.isRecording) TerracottaPrimary else MarigoldYellow,
                         CircleShape
                     )
-                    .clickable {
-                        if (state.isRecording) {
-                            viewModel.stopRecordingAndCatalog()
-                        } else {
-                            viewModel.startVoiceRecording()
-                        }
-                    },
+            .clickable {
+                if (state.isRecording) {
+                    viewModel.stopRecordingAndCatalog()
+                } else {
+                    audioPermissionState.launchRequest()
+                }
+            },
                 contentAlignment = Alignment.Center
             ) {
                 if (state.isProcessing) {

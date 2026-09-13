@@ -17,11 +17,13 @@ data class UserSession(
     val authToken: String? = null,
     val artisanId: String? = null,
     val maskedPehchan: String? = null,
-    val artisanName: String = "गौरी देवी (Gauri Devi)",
-    val clusterName: String = "Varanasi Handloom Cluster",
+    val artisanName: String = "अनाम कारीगर (Artisan)",
+    val clusterName: String = "",
     val craftCategory: String = "handloom",
     val stateCode: String = "UP",
-    val isVerified: Boolean = true
+    val isVerified: Boolean = false,
+    val isOnboarded: Boolean = false,
+    val isOfflineDemo: Boolean = false
 )
 
 class UserPreferencesDataStore(private val context: Context) {
@@ -36,25 +38,65 @@ class UserPreferencesDataStore(private val context: Context) {
         val KEY_CRAFT_CATEGORY = stringPreferencesKey("craft_category")
         val KEY_STATE_CODE = stringPreferencesKey("state_code")
         val KEY_IS_VERIFIED = booleanPreferencesKey("is_verified")
+        val KEY_IS_ONBOARDED = booleanPreferencesKey("is_onboarded")
+        val KEY_OFFLINE_DEMO = booleanPreferencesKey("offline_demo")
+        val KEY_CUSTOM_BASE_URL = stringPreferencesKey("custom_base_url")
     }
 
     val userSessionFlow: Flow<UserSession> = context.userDataStore.data.map { prefs ->
+        val isOnboarded = prefs[KEY_IS_ONBOARDED] ?: false
+        val token = secureTokenStorage.getToken()
+        val isDemo = prefs[KEY_OFFLINE_DEMO] ?: false
         UserSession(
-            authToken = secureTokenStorage.getToken(),
-            artisanId = prefs[KEY_ARTISAN_ID] ?: "artisan-demo-01",
-            // Strictly store masked identifier (e.g. PEH-***-88320) per DPDP compliance; NO raw Aadhaar
-            maskedPehchan = prefs[KEY_MASKED_PEHCHAN] ?: "PEH-***-88320",
-            artisanName = prefs[KEY_ARTISAN_NAME] ?: "गौरी देवी (Gauri Devi)",
-            clusterName = prefs[KEY_CLUSTER_NAME] ?: "Varanasi Handloom Cluster",
+            authToken = token,
+            artisanId = prefs[KEY_ARTISAN_ID],
+            // Strictly store masked identifier (e.g. PEH-***-88320) per DPDP compliance; never raw Aadhaar
+            maskedPehchan = prefs[KEY_MASKED_PEHCHAN],
+            artisanName = prefs[KEY_ARTISAN_NAME] ?: if (isOnboarded) "गौरी देवी (Gauri Devi)" else "अनाम कारीगर (Artisan)",
+            clusterName = prefs[KEY_CLUSTER_NAME] ?: if (isOnboarded) "Varanasi Handloom Cluster" else "",
             craftCategory = prefs[KEY_CRAFT_CATEGORY] ?: "handloom",
             stateCode = prefs[KEY_STATE_CODE] ?: "UP",
-            isVerified = prefs[KEY_IS_VERIFIED] ?: true
+            isVerified = prefs[KEY_IS_VERIFIED] ?: false,
+            isOnboarded = isOnboarded,
+            isOfflineDemo = isDemo
         )
+    }
+
+    val isOnboardedFlow: Flow<Boolean> = context.userDataStore.data.map { prefs ->
+        prefs[KEY_IS_ONBOARDED] ?: false
+    }
+
+    val customBaseUrlFlow: Flow<String?> = context.userDataStore.data.map { prefs ->
+        prefs[KEY_CUSTOM_BASE_URL]
     }
 
     val authTokenFlow: Flow<String?> = flowOf(secureTokenStorage.getToken())
 
     fun getAuthToken(): String? = secureTokenStorage.getToken()
+
+    suspend fun setOnboarded(onboarded: Boolean) {
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_IS_ONBOARDED] = onboarded
+        }
+    }
+
+    suspend fun setOfflineDemo(enabled: Boolean) {
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_OFFLINE_DEMO] = enabled
+            if (enabled) {
+                prefs[KEY_IS_ONBOARDED] = true
+                prefs[KEY_IS_VERIFIED] = false
+                prefs[KEY_ARTISAN_NAME] = "डेमो कारीगर (Demo Artisan)"
+                prefs[KEY_CLUSTER_NAME] = "Varanasi Handloom Cluster"
+            }
+        }
+    }
+
+    suspend fun setCustomBaseUrl(url: String) {
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_CUSTOM_BASE_URL] = url
+        }
+    }
 
     suspend fun saveAuthSession(
         token: String,
@@ -76,14 +118,15 @@ class UserPreferencesDataStore(private val context: Context) {
             prefs[KEY_CRAFT_CATEGORY] = craftCategory
             prefs[KEY_STATE_CODE] = stateCode
             prefs[KEY_IS_VERIFIED] = true
+            prefs[KEY_IS_ONBOARDED] = true
+            prefs[KEY_OFFLINE_DEMO] = false
         }
     }
 
     suspend fun clearSession() {
         secureTokenStorage.clearToken()
         context.userDataStore.edit { prefs ->
-            prefs.remove(KEY_ARTISAN_ID)
-            prefs.remove(KEY_MASKED_PEHCHAN)
+            prefs.clear()
         }
     }
 }

@@ -12,6 +12,15 @@ import java.util.concurrent.TimeUnit
 object NetworkClient {
 
     const val DEFAULT_BASE_URL = "http://10.0.2.2:8000/api/v1/"
+    private var customBaseUrl: String? = null
+
+    fun setCustomBaseUrl(url: String?) {
+        customBaseUrl = if (!url.isNullOrBlank()) {
+            if (url.endsWith("/")) url else "$url/"
+        } else null
+    }
+
+    fun getEffectiveBaseUrl(): String = customBaseUrl ?: DEFAULT_BASE_URL
 
     fun createMoshi(): Moshi {
         return Moshi.Builder()
@@ -45,7 +54,7 @@ object NetworkClient {
     }
 
     fun createApiService(
-        baseUrl: String = DEFAULT_BASE_URL,
+        baseUrl: String = getEffectiveBaseUrl(),
         okHttpClient: OkHttpClient? = null,
         moshi: Moshi = createMoshi()
     ): ApiService {

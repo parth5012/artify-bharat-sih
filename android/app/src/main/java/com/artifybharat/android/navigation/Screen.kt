@@ -5,6 +5,18 @@ sealed class Screen(
     val hindiTitle: String,
     val englishTitle: String
 ) {
+    object Splash : Screen(
+        route = "splash",
+        hindiTitle = "स्वागत",
+        englishTitle = "Welcome"
+    )
+
+    object Onboarding : Screen(
+        route = "onboarding",
+        hindiTitle = "कारीगर ऑनबोर्डिंग",
+        englishTitle = "Artisan Onboarding"
+    )
+
     object VoiceCatalog : Screen(
         route = "voice_catalog",
         hindiTitle = "आवाज़ से कैटलॉग",
