@@ -33,6 +33,7 @@ data class DigitalPassportUiState(
     val quorumStatus: String = "3/3 Artisan Quorum Verified",
     val fairRetailPrice: Double = 4200.0,
     val isIssued: Boolean = false,
+    val isOffline: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -109,25 +110,30 @@ class DigitalPassportViewModel(application: Application) : AndroidViewModel(appl
                     generateQrBitmap(resp.verificationUrl)
                 }
 
-                _uiState.value = _uiState.value.copy(
-                    isIssued = true,
-                    passportHash = resp.passportHash,
-                    shortcode = shortcode,
-                    verificationUrl = resp.verificationUrl,
-                    qrBitmap = qr
-                )
-            } else {
-                // Offline fallback with deterministic hash
-                val fallbackUrl = "https://artifybharat.gov.in/verify/A7X-9B2"
-                val qr = withContext(Dispatchers.Default) {
-                    generateQrBitmap(fallbackUrl)
-                }
-                _uiState.value = _uiState.value.copy(
-                    isIssued = true,
-                    shortcode = "A7X-9B2",
-                    verificationUrl = fallbackUrl,
-                    qrBitmap = qr
-                )
+            _uiState.value = _uiState.value.copy(
+                isIssued = true,
+                isOffline = false,
+                passportHash = resp.passportHash,
+                shortcode = shortcode,
+                verificationUrl = resp.verificationUrl,
+                qrBitmap = qr,
+                errorMessage = null
+            )
+        } else {
+            // Honest offline fallback with disclaimer
+            val err = result.exceptionOrNull()?.localizedMessage ?: "Backend unreachable"
+            val fallbackUrl = "https://artifybharat.gov.in/verify/A7X-9B2"
+            val qr = withContext(Dispatchers.Default) {
+                generateQrBitmap(fallbackUrl)
+            }
+            _uiState.value = _uiState.value.copy(
+                isIssued = false,
+                isOffline = true,
+                shortcode = "A7X-9B2",
+                verificationUrl = fallbackUrl,
+                qrBitmap = qr,
+                errorMessage = "सर्वर उपलब्ध नहीं है ($err) • ऑफ़लाइन पूर्वावलोकन कोड दिखाया जा रहा है।"
+            )
             }
         }
     }

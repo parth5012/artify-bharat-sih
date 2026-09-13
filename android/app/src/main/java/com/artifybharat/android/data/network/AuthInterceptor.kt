@@ -26,6 +26,13 @@ class AuthInterceptor(
             }
         }
 
-        return chain.proceed(requestBuilder.build())
+        val response = chain.proceed(requestBuilder.build())
+        if (response.code == 401) {
+            // Token expired or invalid: clear session to redirect to onboarding wall
+            runBlocking {
+                preferencesDataStore.clearSession()
+            }
+        }
+        return response
     }
 }

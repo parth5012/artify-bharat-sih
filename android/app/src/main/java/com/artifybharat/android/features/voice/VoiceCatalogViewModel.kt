@@ -35,6 +35,7 @@ data class VoiceCatalogUiState(
     val rawCostEstimate: Double = 1200.0,
     val dadiAdvice: String? = null,
     val isCataloged: Boolean = false,
+    val isOffline: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -107,33 +108,36 @@ class VoiceCatalogViewModel(application: Application) : AndroidViewModel(applica
                 dialect = _uiState.value.selectedDialect
             )
 
-            if (result.isSuccess) {
-                val resp = result.getOrNull()!!
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    isCataloged = true,
-                    regionalTranscript = resp.transcriptRegional,
-                    englishTranscript = resp.transcriptEnglish,
-                    productTitle = resp.metadata.title,
-                    craftCategory = resp.metadata.craftCategory,
-                    giTagStatus = resp.metadata.giTagStatus,
-                    estimatedDays = resp.metadata.estimatedDays,
-                    estimatedLaborHours = resp.metadata.estimatedDays * 8.0
-                )
+        if (result.isSuccess) {
+            val resp = result.getOrNull()!!
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                isCataloged = true,
+                isOffline = false,
+                regionalTranscript = resp.transcriptRegional,
+                englishTranscript = resp.transcriptEnglish,
+                productTitle = resp.metadata.title,
+                craftCategory = resp.metadata.craftCategory,
+                giTagStatus = resp.metadata.giTagStatus,
+                estimatedDays = resp.metadata.estimatedDays,
+                estimatedLaborHours = resp.metadata.estimatedDays * 8.0
+            )
 
-                // Consult Ask Dadi for contextual craft advice
-                consultDadiAdvice(resp.metadata.title, resp.metadata.craftCategory)
-            } else {
-                // Offline fallback: keep local draft saved for offline sync queue
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    isCataloged = true,
-                    productTitle = "हस्तशिल्प उत्पाद (Offline Draft)",
-                    regionalTranscript = "ऑफ़लाइन आवाज़ रिकॉर्ड की गई (Saved for background sync)",
-                    englishTranscript = "Offline recording saved to sync queue",
-                    errorMessage = "Network unavailable. Saved draft locally to offline sync queue."
-                )
-            }
+            // Consult Ask Dadi for contextual craft advice
+            consultDadiAdvice(resp.metadata.title, resp.metadata.craftCategory)
+        } else {
+            // Honest offline handling: record kept locally in Room sync queue
+            val errorDetails = result.exceptionOrNull()?.localizedMessage ?: "Backend unreachable"
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                isCataloged = false,
+                isOffline = true,
+                productTitle = "हस्तशिल्प उत्पाद (ऑफ़लाइन सहेजा गया)",
+                regionalTranscript = "ऑफ़लाइन आवाज़ रिकॉर्ड (स्थानीय कतार में सुरक्षित)",
+                englishTranscript = "Offline recording queued for background sync",
+                errorMessage = "सर्वर उपलब्ध नहीं है ($errorDetails) • ड्राफ़्ट स्थानीय सिंक कतार में सहेजा गया।"
+            )
+        }
         }
     }
 

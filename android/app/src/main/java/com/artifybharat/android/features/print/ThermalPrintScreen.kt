@@ -1,5 +1,7 @@
 package com.artifybharat.android.features.print
 
+import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.artifybharat.android.hardware.permissions.rememberPermissionLauncherFlow
+import com.artifybharat.android.ui.dialogs.PermissionType
 import com.artifybharat.android.hardware.bluetooth.PrinterConnectionStatus
 import com.artifybharat.android.navigation.Screen
 import com.artifybharat.android.ui.components.DesiButton
@@ -69,6 +73,20 @@ fun ThermalPrintScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+
+    val bluetoothPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Manifest.permission.BLUETOOTH_CONNECT
+    } else {
+        Manifest.permission.BLUETOOTH
+    }
+
+    val bluetoothPermissionState = rememberPermissionLauncherFlow(
+        permission = bluetoothPermission,
+        permissionType = PermissionType.BLUETOOTH,
+        onPermissionGranted = {
+            viewModel.printThermalTag()
+        }
+    )
 
     LaunchedEffect(shortcode) {
         viewModel.setShortcode(shortcode)
@@ -276,7 +294,7 @@ fun ThermalPrintScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 DesiButton(
                     text = "टैग प्रिंट करें (Print 58mm Tag)",
-                    onClick = { viewModel.printThermalTag() },
+                    onClick = { bluetoothPermissionState.launchRequest() },
                     modifier = Modifier.fillMaxWidth(),
                     variant = DesiButtonVariant.PRIMARY,
                     subtext = "Send ESC/POS commands to thermal printer"
