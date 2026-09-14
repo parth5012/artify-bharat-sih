@@ -38,7 +38,7 @@ export const Step3ProfileWelcome: React.FC<Step3ProfileWelcomeProps> = ({
 
   const [name, setName] = useState(data.artisanName || '');
   const [shgName, setShgName] = useState(data.shgGroupName || '');
-  const [shgCount, setShgCount] = useState<number>(data.shgMemberCount || 5);
+  const [shgCount, setShgCount] = useState<number>(data.shgMemberCount ?? 2);
   const [craft, setCraft] = useState(data.craftCategory || CRAFT_CATEGORIES[0]);
   const [cluster, setCluster] = useState(data.clusterName || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -156,7 +156,7 @@ export const Step3ProfileWelcome: React.FC<Step3ProfileWelcomeProps> = ({
                 min={2}
                 max={500}
                 value={shgCount}
-                onChange={(e) => { const val = parseInt(e.target.value, 10); handleShgCountChange(isNaN(val) ? 2 : Math.max(2, val)); }}
+                onChange={(e) => { const val = parseInt(e.target.value, 10); handleShgCountChange(isNaN(val) ? 2 : Math.min(500, Math.max(2, val))); }}
                 className="w-full min-h-[52px] px-4 rounded-xl border-2 border-slate-300 font-semibold text-base text-slate-900 transition-all focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 bg-white"
                 required
               />

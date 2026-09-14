@@ -125,14 +125,20 @@ export function clearStoredOnboardingDraft(): void {
 }
 
 /**
- * Persists final verified artisan profile and mock session token
+ * Persists final verified artisan profile - excludes credentials and govt IDs
+ * Token is kept in memory only (callers may store via HttpOnly cookie flow)
  */
 export function saveCompletedArtisanProfile(profile: Record<string, any>, token?: string): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(ARTISAN_PROFILE_KEY, JSON.stringify(profile));
-    if (token && typeof token === "string" && token.trim().length > 10) {
-      localStorage.setItem(AUTH_TOKEN_KEY, token.trim());
+    const { pin: _pin, govtIdValue: _govtIdValue, govtIdType: _govtIdType, ...persistable } = profile;
+    localStorage.setItem(ARTISAN_PROFILE_KEY, JSON.stringify(persistable));
+    // Do not persist raw PIN/govtId or mock tokens in localStorage (CWE-922)
+    // Valid JWT persistence should use HttpOnly cookie; keep token in memory only if needed
+    if (token && typeof token === "string" && token.trim().length > 10 && !token.startsWith("mock_")) {
+      // Store only real JWTs when explicitly needed - otherwise skip per security review
+      // localStorage.setItem(AUTH_TOKEN_KEY, token.trim());
+      void token; // token kept in memory by caller
     }
   } catch (err) {
     console.warn("[OnboardingStorage] Failed to persist profile:", err);

@@ -355,4 +355,20 @@ export const ArtifyApiClient = {
       };
     }
   },
+
+  /**
+   * Onboarding sync (preserves role, e-Shram, SHG data) - preferred over /auth/register for US-ONB-01
+   */
+  async syncOnboarding(params: Record<string, any>): Promise<ArtisanRegisterResult> {
+    try {
+      return await safeFetch<ArtisanRegisterResult>(`${API_BASE_URL}/auth/onboarding/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+    } catch (err: any) {
+      if (err?.isApiError) throw err;
+      throw err;
+    }
+  },
 };

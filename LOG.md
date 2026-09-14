@@ -87,23 +87,13 @@ Each entry:
 ### Status: Done (US-ONB-01 Backend Onboarding Implementation)
 **Date**: 2026-09-14
 **What Changed**:
-- Extended Artisan model with 
-ole, onboarding_step, is_onboarded, eshram_uan, shg_group_name, shg_member_count, setting 
-ame default to empty string.
-- Defined OnboardingStep1Request, OnboardingStep1Response, OnboardingStep2Request, OnboardingStep2Response, OnboardingStep3Request, OnboardingCompleteResponse, and OnboardingSyncRequest in pp.schemas.auth.
-- Implemented initiate_onboarding, 
-erify_onboarding_id, complete_onboarding, and sync_onboarding with AES-256-GCM PII Vault protection in pp.services.auth_service.
-- Added endpoints /api/v1/auth/onboarding/step1, /api/v1/auth/onboarding/step2, /api/v1/auth/onboarding/step3, and /api/v1/auth/onboarding/sync in pp.api.v1.auth.
-- Created comprehensive test suite in ackend/tests/test_onboarding.py covering all onboarding steps, government ID autofill, manual fallbacks, SHG group leader flows, duplicate phone prevention, subsequent PIN logins, offline sync, and PII encryption.
-Extended Artisan model with:
-role, onboarding_step, is_onboarded, eshram_uan, shg_group_name, shg_member_count, setting
-name default to empty string.
-Defined OnboardingStep1Request, OnboardingStep1Response, OnboardingStep2Request, OnboardingStep2Response, OnboardingStep3Request, OnboardingCompleteResponse, OnboardingSyncRequest in app.schemas.auth.
-Implemented initiate_onboarding, verify_onboarding_id, complete_onboarding, sync_onboarding with AES-256-GCM PII Vault protection in app.services.auth_service.
-Added endpoints /api/v1/auth/onboarding/step1, /api/v1/auth/onboarding/step2, /api/v1/auth/onboarding/step3, /api/v1/auth/onboarding/sync in app.api.v1.auth.
-Created comprehensive test suite in backend/tests/test_onboarding.py and backend/tests/test_onboarding_e2e.py covering all onboarding steps, government autofill, manual fallbacks, SHG group leader flows, duplicate phone prevention, subsequent PIN logins, offline sync, PII encryption.
+- Extended Artisan model with role, onboarding_step, is_onboarded, eshram_uan, shg_group_name, shg_member_count, setting name default to empty string.
+- Defined OnboardingStep1Request, OnboardingStep1Response, OnboardingStep2Request, OnboardingStep2Response, OnboardingStep3Request, OnboardingCompleteResponse, OnboardingSyncRequest in app.schemas.auth.
+- Implemented initiate_onboarding, verify_onboarding_id, complete_onboarding, sync_onboarding with AES-256-GCM PII Vault protection in app.services.auth_service.
+- Added endpoints /api/v1/auth/onboarding/step1, /api/v1/auth/onboarding/step2, /api/v1/auth/onboarding/step3, /api/v1/auth/onboarding/sync in app.api.v1.auth.
+- Created comprehensive test suite in backend/tests/test_onboarding.py and backend/tests/test_onboarding_e2e.py covering all onboarding steps, government autofill, manual fallbacks, SHG group leader flows, duplicate phone prevention, subsequent PIN logins, offline sync, PII encryption.
 
 **Verified**:
-uv run pytest backend/tests/test_onboarding.py backend/tests/test_onboarding_e2e.py (20/20 tests passing green).
+- uv run pytest backend/tests/test_onboarding.py backend/tests/test_onboarding_e2e.py (20/20 tests passing green).
 - Full backend suite regression checks (auth, mosje, pii vault, admin, passport, shortcode, pricing) pass.
 - Ruff and Black formatting verified clean.

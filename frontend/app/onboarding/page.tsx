@@ -111,8 +111,11 @@ function OnboardingContent() {
     );
   };
 
-  // Final Registration / Onboarding Submission
+  const [completionError, setCompletionError] = useState<string | null>(null);
+
+  // Final Registration / Onboarding Submission - via /auth/onboarding/sync to preserve role/e-Shram
   const handleCompleteOnboarding = async () => {
+    setCompletionError(null);
     const phone = (formData.phone || '').trim();
     const pin = (formData.pin || '').trim();
     if (!/^[6-9]\d{9}$/.test(phone) || !/^\d{4}$/.test(pin)) {
@@ -125,26 +128,64 @@ function OnboardingContent() {
       return;
     }
 
-    // 1. Submit to AuthService API
+    // 1. Submit to AuthService via onboarding sync (preserves role, e-Shram, SHG)
     let token: string | undefined;
     try {
-      const regRes = await ArtifyApiClient.registerArtisan({
-        name,
+      const syncPayload: Record<string, any> = {
         phone,
         pin,
-        primary_dialect: formData.dialect,
-        state: formData.state || 'Uttar Pradesh',
-        district: formData.district || 'Varanasi',
-        cluster_name: formData.clusterName || 'Varanasi Handloom Cluster',
-        pehchan_id: formData.govtIdType === 'pehchan' ? formData.govtIdValue : null,
-        trifed_id: formData.govtIdType === 'trifed' ? formData.govtIdValue : null,
-      });
-      token = regRes?.access_token;
-    } catch (apiErr) {
+        name,
+        dialect: formData.dialect,
+        role: formData.role === 'shg' ? 'shg_leader' : 'artisan',
+        id_type: formData.govtIdType || 'none',
+        id_number: formData.govtIdValue || null,
+        state: formData.state || null,
+        district: formData.district || null,
+        cluster_name: formData.clusterName || null,
+        craft_category: formData.craftCategory || null,
+        shg_group_name: formData.shgGroupName || null,
+        shg_member_count: formData.shgMemberCount ?? null,
+      };
+      // Preserve session token if draft was resumed
+      const draftToken = typeof window !== 'undefined' ? localStorage.getItem('artify_session_token') : null;
+      if (draftToken) syncPayload.session_token = draftToken;
+
+      let syncRes: any = null;
+      try {
+        syncRes = await ArtifyApiClient.syncOnboarding(syncPayload);
+        token = syncRes?.access_token;
+      } catch (syncErr: any) {
+        if (syncErr?.isApiError) throw syncErr;
+        // Offline fallback: try legacy register (transport failure only)
+        const regRes = await ArtifyApiClient.registerArtisan({
+          name,
+          phone,
+          pin,
+          primary_dialect: formData.dialect,
+          state: formData.state || 'Uttar Pradesh',
+          district: formData.district || 'Varanasi',
+          cluster_name: formData.clusterName || 'Varanasi Handloom Cluster',
+          pehchan_id: formData.govtIdType === 'pehchan' ? formData.govtIdValue : null,
+          trifed_id: formData.govtIdType === 'trifed' ? formData.govtIdValue : null,
+        });
+        token = regRes?.access_token;
+        // If register returned mock token, treat as offline success (do not treat as API error)
+        if (token?.startsWith('mock_')) {
+          // keep offline success path
+        }
+      }
+    } catch (apiErr: any) {
+      if (apiErr?.isApiError) {
+        // Keep draft, show retryable error - do NOT clear or mark success
+        const msg = apiErr?.message || 'पंजीकरण अस्वीकृत (Registration rejected). कृपया विवरण जांचें और पुनः प्रयास करें।';
+        setCompletionError(msg);
+        console.warn('[OnboardingPage] Registration rejected:', apiErr);
+        return;
+      }
       console.warn('[OnboardingPage] Registration endpoint warning:', apiErr);
     }
 
-    // 2. Persist completed profile to localStorage
+    // 2. Persist completed profile to localStorage (pin/govtId filtered inside)
     saveCompletedArtisanProfile({
       ...formData,
       artisanName: name,
@@ -304,6 +345,11 @@ function OnboardingContent() {
               />
             )}
 
+            {completionError && (
+              <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-sm font-semibold">
+                {completionError}
+              </div>
+            )}
             {/* STEP 3: ARTISAN / SHG PROFILE & DADI TOUR */}
             {formData.step === 3 && (
               <Step3ProfileWelcome
