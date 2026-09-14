@@ -8,6 +8,8 @@
 
 Project-Specific Learnings
 
+- Babysit & Merge Stale Fork PRs: When a contributor's branch branched off an old merge-base and accidentally deleted new main files while making targeted fixes (CORS, redis, service re-exports), rebase onto origin/main keeping main's evolved API surface and additive-only changes while porting the contributor's intent and addressing review comments (e.g. replacing random with secrets.SystemRandom).
+
 - Cryptographic Provenance EXIF order: write EXIF metadata and GPS coordinates *prior* to computing SHA-256 file hashes; otherwise exif.saveAttributes() alters JPEG bitstreams on disk.
 - ESC/POS Thermal Printing: enforce pure US-ASCII in receipt byte builders to avoid unprintable replacement characters on 58mm/80mm micro-controllers.
 - ADR 0004 Statutory Wage Floor: enforce floor validation directly inside ViewModel mutation methods (lockPrice()) and disable UI buttons to prevent distress-sale sub-floor locking.
