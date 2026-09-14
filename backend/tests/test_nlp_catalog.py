@@ -33,12 +33,18 @@ async def test_nlp_voice_cataloging_endpoint(client: AsyncClient):
         json={"name": "Ananya Sharma", "phone": "9988776655", "pin": "1122"},
     )
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     # 2. Upload dummy image to create product
     from tests.test_cv_enhancement import create_dummy_image_bytes
     files = {"image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")}
     data = {"artisan_id": artisan_id, "product_title": "Draft Item"}
-    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     product_id = enhance_res.json()["product_id"]
 
     # 3. Upload voice description audio

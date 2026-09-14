@@ -28,11 +28,17 @@ async def test_pricing_api_endpoint(client: AsyncClient):
         json={"name": "Pricing Tester", "phone": "9123456780", "pin": "5555"},
     )
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     from tests.test_cv_enhancement import create_dummy_image_bytes
     files = {"image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")}
     data = {"artisan_id": artisan_id, "product_title": "Pashmina Shawl"}
-    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     product_id = enhance_res.json()["product_id"]
 
     # Calculate pricing
