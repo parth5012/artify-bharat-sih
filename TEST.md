@@ -63,8 +63,17 @@ pickup code; Artisan **Orders** tab (session above) can Accept/Decline it.
 
 ## 4. Backend seed (real-API mode)
 
+Run from `backend/` (honours `DATABASE_URL`, default sqlite
+`./artify_bharat.db`; creates tables if missing; safe to re-run):
+
+```bash
+uv run python scripts/seed_test_accounts.py
+# seed: {'artisan': 'created', 'customer': 'created', 'product': 'created'}
+```
+
+Equivalent inline snippet (same values the script writes):
+
 ```python
-from app.core.security import get_pin_hash
 from app.models.artisan import Artisan
 from app.models.customer import Customer
 from app.models.product import Product

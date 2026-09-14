@@ -6,6 +6,8 @@ from app.models.passport import HeritagePassport, ChannelExport
 from app.models.pmdaksh import PMDakshEnrollment
 from app.models.customer import Customer
 from app.models.reservation import Reservation
+from app.models.jury import AntiFraudReport, JuryTicket, JuryVote
+from app.models.payout import PayoutTransaction
 
 __all__ = [
     "Base",
@@ -17,4 +19,8 @@ __all__ = [
     "PMDakshEnrollment",
     "Customer",
     "Reservation",
+    "AntiFraudReport",
+    "JuryTicket",
+    "JuryVote",
+    "PayoutTransaction",
 ]
