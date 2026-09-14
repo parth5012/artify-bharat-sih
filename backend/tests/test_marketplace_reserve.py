@@ -355,3 +355,99 @@ def test_otp_mock_accepts_any_six_digit():
     assert otp_service.verify("12") is False
     assert otp_service.generate("9876543210") == "123456"
     assert otp_service.verify("9876543210", "999999") is True
+
+
+async def test_e2e_full_reserve_flow(client, db_session):
+    """T6 full chain: browse -> reserve -> confirm -> my-orders -> cron expiry."""
+    artisan = await _artisan(db_session)
+    artisan_id = artisan.id
+    product = await _product(
+        db_session, artisan, stock_qty=2, stock_type="quantity", title="E2E Khadi"
+    )
+    pid = product.id
+    await db_session.commit()
+
+    # 1. browse: verified-only listing shows full availability
+    browse = await client.get(f"{BASE}/products", params={"search": "E2E Khadi"})
+    assert browse.status_code == 200
+    (item,) = [i for i in browse.json()["items"] if i["title"] == "E2E Khadi"]
+    assert item["available_qty"] == 2
+
+    # 2. reserve with phone OTP -> 7-day hold + pickup code
+    phone_a = "9876543301"
+    res = await client.post(
+        f"{BASE}/reserve",
+        json={
+            "product_id": pid,
+            "qty": 1,
+            "buyer_name": "E2E Buyer",
+            "buyer_phone": phone_a,
+            "otp": "123456",
+        },
+    )
+    assert res.status_code == 201, res.text
+    hold_a = res.json()
+    assert hold_a["status"] == "pending"
+    assert hold_a["pickup_code"] and len(hold_a["pickup_code"]) == 6
+    exp = datetime.fromisoformat(hold_a["expires_at"])
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    assert 6 <= (exp - datetime.now(timezone.utc)).days <= 7
+
+    # 3. 7-day lock visible in browse
+    browse2 = await client.get(f"{BASE}/products", params={"search": "E2E Khadi"})
+    (item2,) = [i for i in browse2.json()["items"] if i["title"] == "E2E Khadi"]
+    assert item2["available_qty"] == 1
+    assert item2["reserved_qty"] == 1
+
+    # 4. artisan Orders Accept -> confirmed
+    ok = await client.patch(
+        f"{BASE}/reservations/{hold_a['id']}/confirm",
+        params={"artisan_id": artisan_id},
+    )
+    assert ok.status_code == 200
+    assert ok.json()["status"] == "confirmed"
+
+    # 5. my-orders shows confirmed hold + same pickup code
+    mine = await client.get(f"{BASE}/my-reservations", params={"phone": phone_a})
+    assert mine.status_code == 200
+    (mine_a,) = mine.json()["items"]
+    assert mine_a["status"] == "confirmed"
+    assert mine_a["pickup_code"] == hold_a["pickup_code"]
+
+    # 6. second pending hold, force-expire, release via cron endpoint
+    phone_b = "9876543302"
+    res_b = await client.post(
+        f"{BASE}/reserve",
+        json={
+            "product_id": pid,
+            "qty": 1,
+            "buyer_name": "E2E Buyer2",
+            "buyer_phone": phone_b,
+            "otp": "123456",
+        },
+    )
+    assert res_b.status_code == 201, res_b.text
+    hold_b_id = res_b.json()["id"]
+    row_b = (
+        await db_session.execute(select(Reservation).where(Reservation.id == hold_b_id))
+    ).scalar_one()
+    row_b.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+    await db_session.commit()
+
+    cron = await client.post(f"{BASE}/expiry/run")
+    assert cron.status_code == 200
+    assert cron.json()["released"] == 1
+
+    mine_b = await client.get(f"{BASE}/my-reservations", params={"phone": phone_b})
+    (expired_b,) = mine_b.json()["items"]
+    assert expired_b["status"] == "expired"
+
+    # confirmed hold keeps its lock; expired hold released it
+    prod = (
+        await db_session.execute(select(Product).where(Product.id == pid))
+    ).scalar_one()
+    assert prod.reserved_qty == 1
+    final = await client.get(f"{BASE}/products", params={"search": "E2E Khadi"})
+    (final_item,) = [i for i in final.json()["items"] if i["title"] == "E2E Khadi"]
+    assert final_item["available_qty"] == 1
