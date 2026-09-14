@@ -22,7 +22,8 @@ Passing query params (?role=artisan vs ?role=shg) from public web portals (web-p
 
 Project-Specific Learnings
 
-- Babysit & Merge Stale Fork PRs: When a contributor's branch branched off an old merge-base and accidentally deleted new main files while making targeted fixes (CORS, redis, service re-exports), rebase onto origin/main keeping main's evolved API surface and additive-only changes while porting the contributor's intent and addressing review comments (e.g. replacing random with secrets.SystemRandom).
+- Keep generated catalog metadata fields intact when adapting backend voice responses to frontend naming: dropping `metadata.description` makes extraction appear incomplete even when NLP succeeded. Pair the request with visible lifecycle stages so slow ASR/translation work is understandable.
+- Voice catalog extraction must accept a draft before a persisted Product exists: the camera flow only saves a local draft, so requiring `product_id` at upload time prevents real voice processing. Keep extraction completion separate from navigation so catalog fields can be reviewed before pricing.
 
 - Cryptographic Provenance EXIF order: write EXIF metadata and GPS coordinates *prior* to computing SHA-256 file hashes; otherwise exif.saveAttributes() alters JPEG bitstreams on disk.
 - ESC/POS Thermal Printing: enforce pure US-ASCII in receipt byte builders to avoid unprintable replacement characters on 58mm/80mm micro-controllers.
@@ -54,6 +55,4 @@ _None yet — populate as the agent discovers patterns, edge cases, and gotchas.
 - **Deep copy for nested schema validation tests**: In Python, dict(payload) creates a shallow copy; mutating nested dictionary fields modifies the source object. Use copy.deepcopy when constructing negative schema test variants.
 - **SQLAlchemy model back_populates mismatch**: When adding two-way relationships in declarative models (e.g. Artisan.payouts and Product.jury_tickets), both sides of the relationship must be defined in the models before registry.configure() is triggered during query execution.
 - **District grain vs cluster multiplicity**: In geospatial heatmaps, grouping by district and state while taking the dominant craft cluster avoids row duplication and multiple counting of district wage payouts.
-
-- **Multi-Step Onboarding Model Fields (US-ONB-01)**: Artisan records created in Step 1 require name to default to empty string since name input is deferred until Step 3. All government IDs (pehchan_id, trifed_id, eshram_uan) are guarded by PIIVault.protect before persistence.
-- **Offline Draft Sync Atomicity**: Composite OnboardingSyncRequest allows mobile rural users to execute steps 1-3 in a single payload, auto-verifying against the master craft registry or falling back gracefully to manual state/district/cluster data while generating a valid JWT access token.
+- **Web Speech DOM typing**: TypeScript's DOM lib exposes `SpeechRecognitionEvent` but not a constructable `SpeechRecognition`; keep a small local interface for browser-prefixed recognition adapters.
