@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Camera, QrCode, Shield, Wifi, WifiOff, Award, LogIn, LogOut, UserPlus } from 'lucide-react';
+import { Camera, QrCode, Shield, Wifi, WifiOff, Award, LogIn, LogOut, UserPlus, ShoppingBag } from 'lucide-react';
 import { RoleSwitcher } from '../artisan/RoleSwitcher';
+import { getCart, totalQty } from '../../services/cart';
 import type { ArtisanRole } from '../../types';
 
 interface NavbarProps {
@@ -22,12 +23,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(window.localStorage.getItem('artify-auth-token')));
+  const [cartCount, setCartCount] = useState(() => totalQty(getCart()));
 
   useEffect(() => {
     const syncAuthState = () => setIsAuthenticated(Boolean(window.localStorage.getItem('artify-auth-token')));
+    const syncCart = () => setCartCount(totalQty(getCart()));
+    syncCart();
     window.addEventListener('artify-auth-change', syncAuthState);
-    return () => window.removeEventListener('artify-auth-change', syncAuthState);
-  }, []);
+    window.addEventListener('storage', syncCart);
+    window.addEventListener('focus', syncCart);
+    return () => {
+      window.removeEventListener('artify-auth-change', syncAuthState);
+      window.removeEventListener('storage', syncCart);
+      window.removeEventListener('focus', syncCart);
+    };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     window.localStorage.removeItem('artify-auth-token');
@@ -89,6 +99,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <QrCode className="w-4 h-4 text-heritage-goldDark" />
               <span>{language === 'hi' ? 'क्रेता सत्यापन' : 'Buyer Passport Portal'}</span>
+            </Link>
+
+            <Link
+              to="/market"
+              className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+                isActive('/market')
+                  ? 'bg-cream-50 text-terracotta-600 shadow-sm'
+                  : 'text-charcoal-700 hover:text-terracotta-600 hover:bg-cream-50/50'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4 text-terracotta-500" />
+              <span>{language === 'hi' ? 'बाज़ार' : 'Market'}</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 flex items-center justify-center bg-terracotta-500 text-white text-[10px] font-bold rounded-full">
+                  {cartCount}
+                </span>
+              )}
             </Link>
 
             <Link
