@@ -15,11 +15,11 @@ DEV_FIXED_CODE = "123456"
 _OTP_RE = re.compile(r"^\d{6}$")
 _store: dict[str, str] = {}
 
-_MOCK_DISABLED_ENVS = {"production", "prod", "staging"}
+_MOCK_ALLOWED_ENVS = {"dev", "development", "local", "test", "testing", "ci"}
 
 
 def _mock_disabled() -> bool:
-    return os.getenv("ENVIRONMENT", "").lower() in _MOCK_DISABLED_ENVS
+    return os.getenv("ENVIRONMENT", "").strip().lower() not in _MOCK_ALLOWED_ENVS
 
 
 def _normalize_phone(raw: str) -> str:

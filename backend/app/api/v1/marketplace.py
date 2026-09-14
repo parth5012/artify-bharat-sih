@@ -21,6 +21,8 @@ from app.services.reserve_service import (
 
 router = APIRouter(prefix="/marketplace", tags=["Buyer Marketplace & Reserves"])
 
+MARKETPLACE_CRON_SECRET = os.getenv("MARKETPLACE_CRON_SECRET", "")
+
 
 class ReserveRequest(BaseModel):
     product_id: str = Field(min_length=1)
@@ -29,6 +31,7 @@ class ReserveRequest(BaseModel):
     buyer_phone: str = Field(min_length=10, max_length=20)
     otp: str = Field(min_length=6, max_length=6)
     artisan_id: str | None = Field(default=None)
+    buyer_artisan_id: str | None = Field(default=None)
 
 
 class ReservationResponse(BaseModel):
@@ -101,7 +104,7 @@ async def create_reserve(payload: ReserveRequest, db: AsyncSession = Depends(get
             buyer_name=payload.buyer_name,
             buyer_phone=payload.buyer_phone,
             otp=payload.otp,
-            buyer_artisan_id=payload.artisan_id,
+            buyer_artisan_id=payload.buyer_artisan_id or payload.artisan_id,
         )
     except ReserveError as exc:
         raise _err_to_http(exc) from exc
@@ -143,7 +146,10 @@ async def run_expiry(
     """Manual/cron trigger for 7-day hold expiry (also see Celery beat)."""
     # TODO: replace shared-secret header with admin JWT / CronJob service account.
     env = os.getenv("ENVIRONMENT", "development").lower()
-    if env in ("production", "prod", "staging") and not x_internal_cron:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing x-internal-cron.")
+    if env in ("production", "prod", "staging"):
+        if not MARKETPLACE_CRON_SECRET or x_internal_cron != MARKETPLACE_CRON_SECRET:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Missing x-internal-cron."
+            )
     released = await release_expired(db)
     return {"released": released}

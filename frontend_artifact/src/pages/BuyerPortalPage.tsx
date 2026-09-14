@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck, Flag, CheckCircle2, Copy, Check, Filter, Search, Sparkles, MapPin, ArrowRight, ShoppingBag, Store, BadgeCheck } from 'lucide-react';
 import { ShortcodeSearch } from '../components/passport/ShortcodeSearch';
 import { DualViewProof } from '../components/passport/DualViewProof';
@@ -36,9 +36,12 @@ function readBuyerArtisanId(): string | null {
 
 export const BuyerPortalPage: React.FC = () => {
   const { code } = useParams<{ code?: string }>();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<PortalTab>('verify');
+  const [activeTab, setActiveTab] = useState<PortalTab>(() =>
+    pathname.startsWith('/market') ? 'shop' : 'verify',
+  );
   const [product, setProduct] = useState<CraftProduct | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

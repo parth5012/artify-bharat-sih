@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Camera, QrCode, Shield, Home, LogIn, LogOut, UserPlus, ShoppingBag } from 'lucide-react';
-import { getCart, totalQty } from '../../services/cart';
+import { getCart, totalQty, CART_CHANGE_EVENT } from '../../services/cart';
 
 export const MobileNav: React.FC = () => {
   const location = useLocation();
@@ -16,10 +16,12 @@ export const MobileNav: React.FC = () => {
     window.addEventListener('artify-auth-change', syncAuthState);
     window.addEventListener('storage', syncCart);
     window.addEventListener('focus', syncCart);
+    window.addEventListener(CART_CHANGE_EVENT, syncCart);
     return () => {
       window.removeEventListener('artify-auth-change', syncAuthState);
       window.removeEventListener('storage', syncCart);
       window.removeEventListener('focus', syncCart);
+      window.removeEventListener(CART_CHANGE_EVENT, syncCart);
     };
   }, [location.pathname]);
 

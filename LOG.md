@@ -126,3 +126,4 @@ Each entry:
 - uv run ruff check backend/app backend/tests: All checks passed.
 - Migration file compiles OK (py_compile).
 
+| 2026-09-14 | Done | CodeRabbit review fixes on PR #93 (map #86): ReserveRequest buyer_artisan_id alias + call site fallback, MARKETPLACE_CRON_SECRET compare in prod/staging (dev unchanged), Customer.hash_phone fail-closed in prod (re-raise), OTP allow-list _MOCK_ALLOWED_ENVS + conftest ENVIRONMENT=test, marketplaceApi toProduct mapper + {items} unwrap for products/my-reservations, BuyerPortal useLocation initial shop tab on /market, artify-cart-change event dispatch + Navbar/MobileNav subscribe | uv run pytest -m \"not slow\" 154 passed 32 deselected; ruff clean; npm run build green frontend_artifact (tsc + vite 1908 modules) | PR left open, no merge; parked: product DTO lift, buyer cancel JWT, OTP-session my-reservations, celery pool disposal, artisan-orders fetch |
