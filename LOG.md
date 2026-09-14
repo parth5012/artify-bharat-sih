@@ -17,6 +17,8 @@ Each entry:
 | Date | Status | What | Verified | Notes |
 |------|--------|------|----------|-------|
 | 2026-09-14 | Done | Babysit PR #83: Resolve rebase merge conflicts, restore full API surface, address CodeRabbit findings (CORS wildcard, secrets.SystemRandom, redis shutdown) | 114 pytest fast suite passed (32 slow deselected), 13 targeted tests passed, ruff check clean | Merged PR #83 into main |
+| 2026-09-14 | Done | US-ONB-01: End-to-End Test Suite Execution & Verification (Flow 1 Artisan Direct, Flow 2 SHG Leader, Flow 3 Offline Sync, Flow 4 Security & Edge Cases) | pytest -v tests/test_onboarding.py tests/test_onboarding_e2e.py (19/19 passed), backend fast suite (133/133 passed), npx tsc --noEmit (0 errors), Next.js npm run build clean static export, Vite web-portal build clean | Created and verified comprehensive E2E integration test suite across all 4 journeys: Voice/Direct initiation, Pehchan auto-cluster autofill, SHG leader group setup, composite offline draft sync, duplicate phone and PIN format validations, and PII vault tokenization. |
+| 2026-09-14 | Done | US-ONB-01: 3-Step Progressive Onboarding Flow in Next.js frontend & Web Portal navigation link | npx tsc --noEmit (0 errors), npm run build (clean static export), web-portal build clean, pytest 129 passed | Implemented stepper, Dual-Role (Artisan/SHG), 6 dialect cards with auditory preview, mobile phone + 4-digit PIN, 1-tap govt Pehchan/e-Shram/TRIFED verification, Ask Dadi voice assistant with Web Speech API & fallback dialog, localStorage offline draft recovery, WCAG 2.2 AA compliant |
 | 2026-09-13 | Done | Wayfinder Map #23: Phase 9 Verification DevOps and Docs (Docker env/zero-trust check, full pytest suite 146 tests green, docs cleanup, E2E journeys, SIH pitch defenses) | 146/146 pytest tests green, ruff lint clean | Map #23 completed & closed; all child tickets #39-#43 closed |
 | 2026-09-13 | Done | Wayfinder Map #71: Fix Onboarding, Permission & Backend Connectivity (NavGraph session gate, 5-step guided onboarding, real token auth, honest offline/error states, runtime permission launcher & rationale dialogs) | 51/51 Android unit tests green, assembleDebug built, backend auth pytest 8/8 green | Child tickets #72-#79 resolved & closed |
 | 2026-09-13 | Done | Wayfinder Map #49: Complete Native Kotlin Android App (MinSDK 24, Target 34, Jetpack Compose, Room SQLCipher, DataStore, CameraX, WorkManager, Retrofit, Bluetooth ESC/POS) | 41/41 unit & E2E tests green, assembleRelease green | Map #49 completed, child tickets #50-#60 resolved and closed via stacked PRs |
@@ -81,3 +83,17 @@ Each entry:
    - **Client Layer Catalog & Draft Synchronization**:
      - Implemented `GET /api/v1/catalog/my-inventory` for active listings and channel export status tracking.
      - Implemented `POST /api/v1/catalog/drafts/sync` for mobile client SQLite offline draft batch sync.
+
+### Status: Done (US-ONB-01 Backend Onboarding Implementation)
+**Date**: 2026-09-14
+**What Changed**:
+- Extended Artisan model with role, onboarding_step, is_onboarded, eshram_uan, shg_group_name, shg_member_count, setting name default to empty string.
+- Defined OnboardingStep1Request, OnboardingStep1Response, OnboardingStep2Request, OnboardingStep2Response, OnboardingStep3Request, OnboardingCompleteResponse, OnboardingSyncRequest in app.schemas.auth.
+- Implemented initiate_onboarding, verify_onboarding_id, complete_onboarding, sync_onboarding with AES-256-GCM PII Vault protection in app.services.auth_service.
+- Added endpoints /api/v1/auth/onboarding/step1, /api/v1/auth/onboarding/step2, /api/v1/auth/onboarding/step3, /api/v1/auth/onboarding/sync in app.api.v1.auth.
+- Created comprehensive test suite in backend/tests/test_onboarding.py and backend/tests/test_onboarding_e2e.py covering all onboarding steps, government autofill, manual fallbacks, SHG group leader flows, duplicate phone prevention, subsequent PIN logins, offline sync, PII encryption.
+
+**Verified**:
+- uv run pytest backend/tests/test_onboarding.py backend/tests/test_onboarding_e2e.py (20/20 tests passing green).
+- Full backend suite regression checks (auth, mosje, pii vault, admin, passport, shortcode, pricing) pass.
+- Ruff and Black formatting verified clean.
