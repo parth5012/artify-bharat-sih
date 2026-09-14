@@ -15,6 +15,17 @@ export interface ProductEvidenceResponse {
   raw_image_url: string;
   enhanced_image_url: string;
   visual_complexity_score: number;
+  auto_cropped_ratio?: string;
+  clahe_applied?: boolean;
+  background_removed?: boolean;
+  status: string;
+  message: string;
+}
+
+export interface StudioImageResponse {
+  raw_image_url?: string;
+  enhanced_image_url: string;
+  visual_complexity_score: number;
   status: string;
   message: string;
 }
@@ -66,4 +77,30 @@ export async function createProductFromEvidence(
   }
 
   return response.json() as Promise<ProductEvidenceResponse>;
+}
+
+export async function enhanceAdditionalProductImage(image: Blob): Promise<StudioImageResponse> {
+  if (USE_MOCKS) {
+    return {
+      enhanced_image_url: '',
+      visual_complexity_score: 0,
+      status: 'enhanced',
+      message: 'Image enhanced locally.',
+    };
+  }
+
+  const formData = new FormData();
+  formData.append('image', image, 'product-detail.jpg');
+  formData.append('remove_bg', 'true');
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/studio/enhance-studio`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw await readApiError(response, 'Additional image enhancement failed');
+  }
+
+  return response.json() as Promise<StudioImageResponse>;
 }

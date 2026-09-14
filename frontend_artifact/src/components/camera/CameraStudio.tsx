@@ -1,11 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, CheckCircle, ShieldAlert, Sparkles } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle, ShieldAlert, Sparkles, Upload, HardDrive } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { SpiritLevel } from './SpiritLevel';
 
 interface CameraStudioProps {
   onCaptureComplete: (imageDataUrl: string, tiltVerified: boolean, capturedAt: string) => void | Promise<void>;
+  onDraftChange?: (imageDataUrl: string, tiltVerified: boolean, capturedAt: string) => void | Promise<void>;
+  onSaveDraft?: (imageDataUrl: string, tiltVerified: boolean, capturedAt: string) => void | Promise<void>;
+  initialCapturedImage?: string | null;
   location?: {
     lat: number;
     lng: number;
@@ -16,9 +19,10 @@ interface CameraStudioProps {
   } | null;
 }
 
-export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, location }) => {
+export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, onDraftChange, onSaveDraft, initialCapturedImage, location }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -28,6 +32,10 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, l
   const [currentTiltAngle, setCurrentTiltAngle] = useState<number>(0.5);
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [isConfirming, setIsConfirming] = useState(false);
+
+  useEffect(() => {
+    if (initialCapturedImage) setCapturedImage(initialCapturedImage);
+  }, [initialCapturedImage]);
 
   const playShutterSound = () => {
     try {
@@ -166,11 +174,30 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, l
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     setCapturedImage(dataUrl);
+    void onDraftChange?.(dataUrl, isTiltValid, new Date().toISOString());
 
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
+  };
+
+  const handleBrowseImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return;
+      setCapturedImage(reader.result);
+      void onDraftChange?.(reader.result, isTiltValid, new Date().toISOString());
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRetake = () => {
@@ -291,6 +318,13 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, l
       <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-terracotta-200/60 pt-4">
         {!capturedImage ? (
           <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleBrowseImage}
+              className="hidden"
+            />
             <div className="text-xs text-charcoal-700 text-center sm:text-left">
               {isTiltValid ? (
                 <span className="text-emerald-700 font-semibold flex items-center gap-1">
@@ -304,16 +338,27 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, l
               )}
             </div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              leftIcon={<Camera className="w-5 h-5" />}
-              disabled={!isTiltValid}
-              onClick={handleCapture}
-              className="w-full sm:w-auto"
-            >
-              Capture Craft Evidence
-            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button
+                variant="outline"
+                size="lg"
+                leftIcon={<Upload className="w-5 h-5" />}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full sm:w-auto"
+              >
+                Browse image
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                leftIcon={<Camera className="w-5 h-5" />}
+                disabled={!isTiltValid}
+                onClick={handleCapture}
+                className="w-full sm:w-auto"
+              >
+                Capture Craft Evidence
+              </Button>
+            </div>
           </>
         ) : (
           <>
@@ -337,6 +382,17 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, l
             >
               {isConfirming ? 'Processing image...' : 'Confirm Evidence & Proceed'}
             </Button>
+            {onSaveDraft && (
+              <Button
+                variant="secondary"
+                size="md"
+                leftIcon={<HardDrive className="w-4 h-4" />}
+                onClick={() => void onSaveDraft(capturedImage, isTiltValid, new Date().toISOString())}
+                className="w-full sm:w-auto"
+              >
+                Save draft &amp; exit
+              </Button>
+            )}
           </>
         )}
       </div>

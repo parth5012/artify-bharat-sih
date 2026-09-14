@@ -7,7 +7,16 @@
 ## 🌟 Executive Overview
 **Artify Bharat** empowers rural Indian handloom weavers and handicraft artisans to seamlessly catalog, price, cryptographically verify, print physical thermal tags, and publish their heritage products directly from modern web browsers to national digital public infrastructure (**GeM**, **ONDC**, **WhatsApp Web**, and **SHG/NGO Bulk Portals**).
 
-By introducing **Zero-Trust Peer Verification**, **Browser-Native GPS & Timestamp Provenance**, **Web Bluetooth 58mm ESC/POS Thermal Label Generation**, and **Direct Jan Dhan / UPI Payouts**, Artify Bharat eliminates predatory middlemen and counterfeit machine-made replicas while providing the **Ministry of Social Justice and Empowerment (MoSJE)** real-time oversight via the **District Economic Heatmap Dashboard**.
+By introducing **Zero-Trust Peer Verification**, **native Android camera/GPS and timestamp provenance**, **Bluetooth 58mm ESC/POS thermal label generation**, and **Direct Jan Dhan / UPI Payouts**, Artify Bharat eliminates predatory middlemen and counterfeit machine-made replicas while providing the **Ministry of Social Justice and Empowerment (MoSJE)** real-time oversight via the **District Economic Heatmap Dashboard**.
+
+## Product Platform Split
+
+- **Artisan Android app (`android/`)**: the complete artisan workspace, including onboarding, phone/PIN authentication, camera evidence, voice cataloging, fair-wage pricing, Digital Heritage Passport creation, thermal printing, SHG coordination, offline drafts, and background sync.
+- **Buyer web portal (`frontend_artifact/`)**: public QR/shortcode passport verification, provenance story, fair-price breakdown, and counterfeit reporting. Buyers do not need the Android app.
+- **Ministry web dashboard (`frontend_artifact/`)**: authenticated monitoring for district heatmaps, verification/audit activity, PM-DAKSH metrics, demand forecasts, exports, and operational management.
+- **Backend API (`backend/`)**: shared authentication, catalog, AI, verification, pricing, passport, payout, logistics, export, and Ministry data services used by both web and Android clients.
+
+The web application is therefore for **buyers and Ministry/administrative users**. Artisan creation and management flows should be implemented and released through the Android app.
 
 ---
 
@@ -20,18 +29,18 @@ flowchart TD
     %% Ministry of Social Justice and Empowerment (MoSJE)
     %% =======================================================
 
-    subgraph Client["🌐 CLIENT LAYER (Responsive Web - React / Next.js & Tailwind CSS)"]
+    subgraph Client["📱 ARTISAN CLIENT (Native Android - Kotlin / Jetpack Compose)"]
         direction TB
         
         subgraph UserModes["👤 Dual-Role Access Engine"]
-            ArtisanUI["🧑🎨 Artisan Direct Mode<br>(Single-User Browser Portal)"]
+            ArtisanUI["🧑🎨 Artisan Direct Mode<br>(Native Android app)"]
             SHGUI["👥 Aggregator / SHG Leader Mode<br>(Multi-Tenant Coordinator Hub)"]
         end
 
         UI_Dash["🏠 Smart Web Dashboard<br>('Naya Product' + Live Inventory Sync)"]
         
         subgraph SmartCaptureBox["📸 Web Media Capture & Authentication"]
-            UI_Capture["📸 Browser Media Capture<br>(MediaDevices API, 1:1 Aspect Ratio, WIP + Final Upload)"]
+            UI_Capture["📸 Native Camera Capture<br>(CameraX, 1:1 Aspect Ratio, WIP + Final Upload)"]
             UI_GPS["📍 Geolocation API & Timestamp Lock<br>(Live Metadata Verification)"]
         end
 
@@ -40,14 +49,14 @@ flowchart TD
         UI_Verify["✅ Verification & Tagging<br>(Digital Passport + 6-Char Shortcode)"]
         
         subgraph HardwareLayer["🖨️ Physical Hardware Layer"]
-            ThermalPrinter["🖨️ Web Bluetooth API Printer<br>(58mm ESC/POS Browser-to-Printer Bridge)"]
+            ThermalPrinter["🖨️ Android Bluetooth Printer<br>(58mm ESC/POS Bridge)"]
         end
 
         UI_Export["🚀 One-Tap Multi-Channel Publish<br>(GeM / ONDC / WhatsApp Web)"]
         UI_Help["💬 'Ask Dadi' Voice Assistant<br>(Interactive Guidance + PM-DAKSH Nudges)"]
         
-        OfflineDB[("📂 Browser IndexedDB<br>(Offline Drafts, Audio Cache & Shortcodes)")]
-        SyncEngine["🔄 Service Worker Sync<br>(Background Auto-Retry Queue)"]
+        OfflineDB[("📂 Encrypted Room Database<br>(Offline Drafts, Audio Cache & Shortcodes)")]
+        SyncEngine["🔄 Android WorkManager Sync<br>(Background Auto-Retry Queue)"]
 
         UserModes --> UI_Dash
         UI_Dash --> UI_Capture --> UI_GPS --> UI_Voice --> UI_Price --> UI_Verify
@@ -199,6 +208,14 @@ cd web-portal
 # Open index.html in your browser or run a lightweight web server:
 npx serve .
 ```
+
+### Artisan Android App
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+Install the generated debug APK on an Android device or emulator. The Android app is the primary artisan client; the web app is not required for artisan capture, cataloging, pricing, or printing.
 
 ---
 

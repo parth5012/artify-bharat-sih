@@ -6,23 +6,46 @@ import { SoloArtisanDashboard } from '../components/artisan/SoloArtisanDashboard
 import { SHGLeaderDashboard } from '../components/artisan/SHGLeaderDashboard';
 import { CameraStudio } from '../components/camera/CameraStudio';
 import { VoiceRecorder } from '../components/voice/VoiceRecorder';
+import { ProductDescriptionStep } from '../components/catalog/ProductDescriptionStep';
 import { FairWageSlider } from '../components/pricing/FairWageSlider';
 import { ThermalPrintPreview } from '../components/print/ThermalPrintPreview';
 import { OfflineDraftManager } from '../components/offline/OfflineDraftManager';
 import { VoiceProfileForm, type ArtisanProfileDraft } from '../components/artisan/VoiceProfileForm';
 import { LocationStatus } from '../components/location/LocationStatus';
 import { Button } from '../components/ui/Button';
-import { saveOfflineDraft } from '../services/db';
+import { getAllOfflineDrafts, saveOfflineDraft, updateOfflineDraft } from '../services/db';
 import { MOCK_PRODUCTS } from '../mocks/mockData';
-import type { ArtisanRole } from '../types';
-import type { VoiceCatalogExtraction } from '../api/catalogApi';
+import type { ArtisanRole, OfflineDraft } from '../types';
+import { getPublicCatalogListings, type CatalogListing, type VoiceCatalogExtraction } from '../api/catalogApi';
 import { loginArtisan, registerOrLoginArtisan, type ArtisanSession } from '../api/authApi';
 import { createProductFromEvidence } from '../api/productApi';
-import { ArtisanOrdersTab } from '../components/market/ArtisanOrdersTab';
+import type { ProductEvidenceResponse } from '../api/productApi';
+import { StudioEnhancement } from '../components/studio/StudioEnhancement';
 
 interface ArtisanPortalPageProps {
   currentRole: ArtisanRole;
   onRoleChange: (role: ArtisanRole) => void;
+}
+
+type PortalStep = 'dashboard' | 'capture' | 'studio' | 'catalog' | 'voice' | 'profile' | 'pricing' | 'print' | 'drafts';
+
+interface WorkflowCheckpoint {
+  activeStep: PortalStep;
+  productTitle: string;
+  gpsData: {
+    lat: number;
+    lng: number;
+    capturedAt: string;
+    village: string;
+    city: string;
+    state: string;
+  } | null;
+  studioDraftId: string | null;
+  updatedAt: string;
+}
+
+function workflowStorageKey(phone: string): string {
+  return `artify-product-workflow-${phone.replace(/\D/g, '')}`;
 }
 
 export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
@@ -31,6 +54,8 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isSignupFlow = new URLSearchParams(location.search).get('signup') === '1';
+  const hasAuthToken = Boolean(window.localStorage.getItem('artify-auth-token'));
 
   const [gpsData, setGpsData] = useState<{
     lat: number;
@@ -40,7 +65,7 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
     city: string;
     state: string;
   } | null>(null);
-  const [activeStep, setActiveStep] = useState<'dashboard' | 'capture' | 'voice' | 'profile' | 'pricing' | 'print' | 'drafts' | 'orders'>('dashboard');
+  const [activeStep, setActiveStep] = useState<PortalStep>('dashboard');
   const [selectedProductCode, setSelectedProductCode] = useState<string>('VRN456');
   const [voiceExtraction, setVoiceExtraction] = useState<VoiceCatalogExtraction | null>(null);
   const [artisanProfile, setArtisanProfile] = useState<ArtisanProfileDraft | null>(null);
@@ -49,23 +74,70 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
   const [productTitle, setProductTitle] = useState('Handcrafted Product');
   const [productUploadState, setProductUploadState] = useState<'idle' | 'uploading' | 'saved' | 'offline' | 'error'>('idle');
   const [productUploadError, setProductUploadError] = useState<string | null>(null);
+  const [capturedEvidence, setCapturedEvidence] = useState<string | null>(null);
+  const [studioResult, setStudioResult] = useState<ProductEvidenceResponse | null>(null);
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [studioDraftId, setStudioDraftId] = useState<string | null>(null);
+  const [resumeStudioDraft, setResumeStudioDraft] = useState<OfflineDraft | null>(null);
+  const [catalogListings, setCatalogListings] = useState<CatalogListing[]>([]);
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      if (window.localStorage.getItem('artify-auth-token')) return;
+      setArtisanSession(null);
+      setArtisanProfile(null);
+      setActiveStep('dashboard');
+      setCapturedEvidence(null);
+      setStudioResult(null);
+      setProductImages([]);
+      navigate('/', { replace: true });
+    };
+    window.addEventListener('artify-auth-change', handleAuthChange);
+    return () => window.removeEventListener('artify-auth-change', handleAuthChange);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!hasAuthToken && !isSignupFlow) {
+      navigate('/', { replace: true });
+    }
+  }, [hasAuthToken, isSignupFlow, navigate]);
+
+  useEffect(() => {
+    getPublicCatalogListings().then(setCatalogListings).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const routeState = location.state as { profile?: ArtisanProfileDraft; session?: ArtisanSession } | null;
     const restoredSession = routeState?.session;
     const restoredProfile = routeState?.profile;
-    const phone = restoredSession?.phone || restoredProfile?.phone;
+    const storedSession = window.localStorage.getItem('artify-artisan-session');
+    const session = restoredSession || (storedSession ? JSON.parse(storedSession) as ArtisanSession : null);
+    const phone = session?.phone || restoredProfile?.phone;
     const storedProfile = phone
       ? window.localStorage.getItem(`artify-artisan-profile-${phone.replace(/\D/g, '')}`)
       : null;
-    const profile = restoredProfile || (storedProfile ? JSON.parse(storedProfile) as ArtisanProfileDraft : null);
+    const profile = restoredProfile || (storedProfile ? JSON.parse(storedProfile) as ArtisanProfileDraft : null) || (session ? {
+      name: session.name,
+      phone: session.phone,
+      pin: '',
+      dialect: '',
+      craftTitle: '',
+      craftType: '',
+      material: '',
+      description: '',
+      laborDays: 0,
+    } : null);
+    const workflow = phone
+      ? JSON.parse(window.localStorage.getItem(workflowStorageKey(phone)) || 'null') as WorkflowCheckpoint | null
+      : null;
 
     if (profile) {
       setArtisanProfile(profile);
-      setActiveStep('profile');
+      setActiveStep(workflow?.activeStep || 'profile');
+      if (workflow?.productTitle) setProductTitle(workflow.productTitle);
+      if (workflow?.gpsData) setGpsData(workflow.gpsData);
+      if (workflow?.studioDraftId) setStudioDraftId(workflow.studioDraftId);
     }
-    const storedSession = window.localStorage.getItem('artify-artisan-session');
-    const session = restoredSession || (storedSession ? JSON.parse(storedSession) as ArtisanSession : null);
     if (session) {
       setArtisanSession(session);
     } else if (profile?.pin && window.localStorage.getItem('artify-auth-token')) {
@@ -78,10 +150,76 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
     if (routeState) {
       window.history.replaceState({}, document.title, window.location.href);
     }
-    if (new URLSearchParams(location.search).get('signup') === '1') {
+    if (isSignupFlow) {
       setActiveStep('voice');
     }
+
+    getAllOfflineDrafts().then((drafts) => {
+      const checkpointDraft = workflow?.studioDraftId
+        ? drafts.find((draft) => draft.id === workflow.studioDraftId)
+        : undefined;
+      const matchingDrafts = drafts
+        .filter((draft) => (draft.studioDraft || draft.wipPhotoDataUrl) && (!draft.artisanId || draft.artisanId === session?.artisan_id))
+        .sort((left, right) => new Date(right.studioDraft?.updatedAt || right.createdAt).getTime() - new Date(left.studioDraft?.updatedAt || left.createdAt).getTime());
+      const latestStudioDraft = checkpointDraft || matchingDrafts[0];
+      if (latestStudioDraft) {
+        setResumeStudioDraft(latestStudioDraft);
+        if (workflow?.studioDraftId === latestStudioDraft.id && workflow.activeStep !== 'profile') {
+          const draft = latestStudioDraft.studioDraft;
+          if (draft) {
+            setCapturedEvidence(draft.capturedImage);
+            setProductTitle(draft.productTitle);
+            setProductImages(draft.enhancedImages.length ? draft.enhancedImages : [draft.enhancedImage]);
+            setStudioResult({
+              product_id: latestStudioDraft.id,
+              raw_image_url: '',
+              enhanced_image_url: draft.enhancedImage,
+              visual_complexity_score: 0,
+              status: 'enhanced',
+              message: 'Saved studio enhancement restored.',
+            });
+          }
+        }
+      }
+    }).catch(() => undefined);
   }, [location]);
+
+  if (!hasAuthToken && !isSignupFlow) return null;
+
+  useEffect(() => {
+    if (artisanProfile || !artisanSession) return;
+    const storedProfile = window.localStorage.getItem(
+      `artify-artisan-profile-${artisanSession.phone.replace(/\D/g, '')}`,
+    );
+    const profile = storedProfile
+      ? JSON.parse(storedProfile) as ArtisanProfileDraft
+      : {
+        name: artisanSession.name,
+        phone: artisanSession.phone,
+        pin: '',
+        dialect: '',
+        craftTitle: '',
+        craftType: '',
+        material: '',
+        description: '',
+        laborDays: 0,
+      };
+    setArtisanProfile(profile);
+    if (activeStep === 'dashboard') setActiveStep('profile');
+  }, [activeStep, artisanProfile, artisanSession]);
+
+  useEffect(() => {
+    const phone = artisanSession?.phone || artisanProfile?.phone;
+    if (!phone || activeStep === 'dashboard') return;
+    const checkpoint: WorkflowCheckpoint = {
+      activeStep,
+      productTitle,
+      gpsData,
+      studioDraftId,
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(workflowStorageKey(phone), JSON.stringify(checkpoint));
+  }, [activeStep, artisanProfile?.phone, artisanSession?.phone, gpsData, productTitle, studioDraftId]);
 
   const selectedProduct = MOCK_PRODUCTS.find((p) => p.shortcode === selectedProductCode) || MOCK_PRODUCTS[0];
 
@@ -97,9 +235,11 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
     try {
       const imageBlob = await fetch(imageDataUrl).then((response) => response.blob());
 
+      const draftId = studioDraftId || `draft-${Date.now()}`;
       try {
         await saveOfflineDraft({
-          id: `draft-${Date.now()}`,
+          id: draftId,
+          artisanId: artisanSession?.artisan_id,
           title: productTitle || 'Handcrafted Product',
           craftType: artisanProfile?.craftType || 'handloom',
           wipPhotoDataUrl: imageDataUrl,
@@ -119,7 +259,7 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
         return;
       }
 
-      await createProductFromEvidence({
+      const result = await createProductFromEvidence({
         artisanId: artisanSession.artisan_id,
         productTitle,
         craftCategory: artisanProfile?.craftType || 'handloom',
@@ -128,8 +268,21 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
         gpsLongitude: gpsData.lng,
         provenanceTimestamp: capturedAt,
       });
+      setCapturedEvidence(imageDataUrl);
+      setStudioResult(result);
+      setStudioDraftId(draftId);
+      await updateOfflineDraft(draftId, {
+        studioDraft: {
+          backendProductId: result.product_id,
+          capturedImage: imageDataUrl,
+          productTitle: productTitle || 'Handcrafted Product',
+          enhancedImage: result.enhanced_image_url,
+          enhancedImages: [result.enhanced_image_url],
+          updatedAt: new Date().toISOString(),
+        },
+      });
       setProductUploadState('saved');
-      setActiveStep('voice');
+      setActiveStep('studio');
     } catch (error) {
       if (error instanceof TypeError || (error instanceof Error && error.message.includes('NetworkError'))) {
         setProductUploadState('offline');
@@ -139,6 +292,41 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
         setProductUploadError(error instanceof Error ? error.message : 'Product saved offline. Server upload will retry later.');
       }
     }
+  };
+
+  const persistCaptureDraft = async (imageDataUrl: string, tiltVerified: boolean, capturedAt: string): Promise<void> => {
+    const draftId = studioDraftId || `draft-${Date.now()}`;
+    const draft: OfflineDraft = {
+      id: draftId,
+      artisanId: artisanSession?.artisan_id,
+      title: productTitle || 'Handcrafted Product',
+      craftType: artisanProfile?.craftType || 'handloom',
+      wipPhotoDataUrl: imageDataUrl,
+      gpsCoords: gpsData ? { lat: gpsData.lat, lng: gpsData.lng } : undefined,
+      tiltVerified,
+      createdAt: new Date().toISOString(),
+      synced: false,
+      provenanceTimestamp: capturedAt,
+    };
+    await saveOfflineDraft(draft);
+    setStudioDraftId(draftId);
+    setCapturedEvidence(imageDataUrl);
+    setResumeStudioDraft(draft);
+    const phone = artisanSession?.phone || artisanProfile?.phone;
+    if (phone) {
+      window.localStorage.setItem(workflowStorageKey(phone), JSON.stringify({
+        activeStep: 'capture',
+        productTitle,
+        gpsData,
+        studioDraftId: draftId,
+        updatedAt: new Date().toISOString(),
+      } satisfies WorkflowCheckpoint));
+    }
+  };
+
+  const handleSaveCaptureDraft = async (imageDataUrl: string, tiltVerified: boolean, capturedAt: string) => {
+    await persistCaptureDraft(imageDataUrl, tiltVerified, capturedAt);
+    setActiveStep('dashboard');
   };
 
   const handleNavigateToPrint = (code?: string) => {
@@ -188,6 +376,7 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
           { id: 'dashboard', label: 'Dashboard', icon: Sparkles },
           { id: 'capture', label: '1. Camera Studio', icon: Camera },
           { id: 'voice', label: '2. Dialect Voice', icon: Mic },
+          { id: 'catalog', label: 'Product Description', icon: FilePenLine },
           { id: 'profile', label: '3. Artisan Profile', icon: UserRound },
           { id: 'pricing', label: '4. Fair Wage Engine', icon: IndianRupee },
           { id: 'print', label: '5. Thermal Print Tag', icon: Printer },
@@ -214,6 +403,39 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
 
       {activeStep === 'dashboard' && (
         <>
+          {(resumeStudioDraft?.studioDraft || resumeStudioDraft?.wipPhotoDataUrl) && (
+            <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-warm sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-emerald-900">Saved product work is ready</h2>
+                <p className="mt-1 text-xs text-emerald-800">Continue {resumeStudioDraft.studioDraft ? 'enhancing and describing' : 'from the saved capture'} {resumeStudioDraft.title} without repeating the photo.</p>
+              </div>
+              <Button
+                variant="gold"
+                onClick={() => {
+                  const draft = resumeStudioDraft.studioDraft;
+                  setStudioDraftId(resumeStudioDraft.id);
+                  setCapturedEvidence(draft?.capturedImage || resumeStudioDraft.wipPhotoDataUrl || null);
+                  setProductTitle(draft?.productTitle || resumeStudioDraft.title);
+                  setProductImages(draft?.enhancedImages || []);
+                  setStudioResult(draft ? {
+                    product_id: draft.backendProductId || resumeStudioDraft.id,
+                    raw_image_url: '',
+                    enhanced_image_url: draft.enhancedImage,
+                    visual_complexity_score: 0,
+                    status: 'enhanced',
+                    message: 'Saved studio enhancement restored.',
+                  } : null);
+                  if (resumeStudioDraft.gpsCoords) {
+                    setGpsData({ ...resumeStudioDraft.gpsCoords, capturedAt: resumeStudioDraft.provenanceTimestamp || resumeStudioDraft.createdAt, village: '', city: '', state: '' });
+                  }
+                  setResumeStudioDraft(null);
+                  setActiveStep(draft ? 'studio' : 'capture');
+                }}
+              >
+                Continue saved work
+              </Button>
+            </div>
+          )}
           {currentRole === 'solo' ? (
             <SoloArtisanDashboard
               onNavigateToCapture={() => setActiveStep('capture')}
@@ -230,6 +452,20 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
               onNavigateToPrint={handleNavigateToPrint}
             />
           )}
+          {catalogListings.length > 0 && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-warm">
+              <h2 className="text-lg font-bold text-emerald-900">Artisan Site Listings</h2>
+              <p className="mt-1 text-xs text-emerald-800">Cataloged products visible to every artisan.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {catalogListings.map((listing) => (
+                  <div key={listing.product_id} className="overflow-hidden rounded-xl border border-emerald-200 bg-white">
+                    {listing.enhanced_image_url && <img src={listing.enhanced_image_url.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}${listing.enhanced_image_url}` : listing.enhanced_image_url} alt={listing.title} className="h-36 w-full object-contain bg-[#fdfbf7]" />}
+                    <div className="p-3"><strong className="text-sm text-charcoal-900">{listing.title}</strong><p className="mt-1 text-xs text-charcoal-600">{listing.craft_category}</p></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex flex-col gap-3 rounded-2xl border border-terracotta-200 bg-cream-50 p-4 shadow-warm sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-bold text-charcoal-900">Add a new product</h2>
@@ -241,6 +477,10 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
               onClick={() => {
                 setProductUploadState('idle');
                 setProductUploadError(null);
+                setCapturedEvidence(null);
+                setStudioResult(null);
+                setProductImages([]);
+                setStudioDraftId(null);
                 setActiveStep('capture');
               }}
             >
@@ -272,8 +512,65 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
             {productUploadError && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{productUploadError}</p>}
           </div>
           <LocationStatus onLocationCaptured={(coords) => setGpsData(coords)} />
-          <CameraStudio location={gpsData} onCaptureComplete={handleCaptureComplete} />
+          <CameraStudio
+            location={gpsData}
+            initialCapturedImage={capturedEvidence}
+            onCaptureComplete={handleCaptureComplete}
+            onDraftChange={persistCaptureDraft}
+            onSaveDraft={handleSaveCaptureDraft}
+          />
         </div>
+      )}
+
+      {activeStep === 'studio' && capturedEvidence && studioResult && (
+        <StudioEnhancement
+          capturedImage={capturedEvidence}
+          result={studioResult}
+          savedImages={productImages}
+          onImageEnhanced={(images) => {
+            if (!studioDraftId) return;
+            void updateOfflineDraft(studioDraftId, {
+              studioDraft: {
+                backendProductId: studioResult?.product_id,
+                capturedImage: capturedEvidence || '',
+                productTitle,
+                enhancedImage: images[0],
+                enhancedImages: images,
+                updatedAt: new Date().toISOString(),
+              },
+            });
+          }}
+          onContinue={(images) => {
+            setProductImages(images);
+            if (studioDraftId) {
+              void updateOfflineDraft(studioDraftId, {
+                studioDraft: {
+                  backendProductId: studioResult?.product_id,
+                  capturedImage: capturedEvidence || '',
+                  productTitle,
+                  enhancedImage: images[0],
+                  enhancedImages: images,
+                  updatedAt: new Date().toISOString(),
+                },
+              });
+            }
+            setActiveStep('catalog');
+          }}
+        />
+      )}
+
+      {activeStep === 'catalog' && productImages.length > 0 && (
+        <ProductDescriptionStep
+          images={productImages}
+          initialTitle={productTitle}
+          productId={studioResult?.product_id}
+          onSaved={async (description) => {
+            setProductTitle(description.title);
+            const listings = await getPublicCatalogListings();
+            setCatalogListings(listings);
+            setActiveStep('dashboard');
+          }}
+        />
       )}
 
       {activeStep === 'voice' && (

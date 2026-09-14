@@ -39,6 +39,7 @@ async def test_studio_enhance_endpoint(client: AsyncClient):
         },
     )
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     image_bytes = create_dummy_image_bytes()
     files = {"image": ("test_saree.jpg", io.BytesIO(image_bytes), "image/jpeg")}
@@ -48,7 +49,12 @@ async def test_studio_enhance_endpoint(client: AsyncClient):
         "craft_category": "handloom",
     }
 
-    res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     assert res.status_code == 200
     res_data = res.json()
     assert res_data["status"] == "enhanced"

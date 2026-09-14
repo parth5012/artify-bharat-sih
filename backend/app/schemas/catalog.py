@@ -31,6 +31,16 @@ class VoiceCatalogResponse(BaseModel):
     status: str
 
 
+class ProductCatalogUpdate(BaseModel):
+    title: str
+    description: str
+    craft_category: str = "handloom"
+    material: Optional[str] = None
+    estimated_days: float = 0
+    seo_tags: List[str] = Field(default_factory=list)
+    enhanced_image_url: Optional[str] = None
+
+
 class InventoryItemResponse(BaseModel):
     product_id: str
     title: str

@@ -20,7 +20,8 @@ export async function apiRequest<T>(
   try {
     const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
-      throw new Error(`API Error ${response.status}: ${response.statusText}`);
+      const body = await response.json().catch(() => null) as { detail?: string } | null;
+      throw new Error(body?.detail || `API Error ${response.status}: ${response.statusText}`);
     }
     return await response.json();
   } catch (error) {

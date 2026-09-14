@@ -25,6 +25,14 @@ export async function saveOfflineDraft(draft: OfflineDraft): Promise<void> {
   await db.put('drafts', draft);
 }
 
+export async function updateOfflineDraft(id: string, updates: Partial<OfflineDraft>): Promise<void> {
+  const db = await getDB();
+  const draft = await db.get('drafts', id);
+  if (draft) {
+    await db.put('drafts', { ...draft, ...updates });
+  }
+}
+
 export async function getAllOfflineDrafts(): Promise<OfflineDraft[]> {
   const db = await getDB();
   return db.getAll('drafts');

@@ -1,7 +1,16 @@
 # ArtifyBharat Web Architecture Specification (MoSJE - SIH PS 26090)
 
 ## 1. System Context & Overview
-**Artify Bharat** is an AI-powered Digital Business Manager & Digital Gatekeeper built for the **Ministry of Social Justice and Empowerment (MoSJE)** under Smart India Hackathon (SIH PS 26090). It empowers marginalized rural weavers and artisans to catalog, price, verify, and publish their heritage handloom and handicraft products directly from responsive web browsers and mobile devices to national digital public infrastructure (**GeM**, **ONDC**, **WhatsApp Web**, and **SHG/NGO Bulk Portals**).
+**Artify Bharat** is an AI-powered Digital Business Manager & Digital Gatekeeper built for the **Ministry of Social Justice and Empowerment (MoSJE)** under Smart India Hackathon (SIH PS 26090). It uses a native Android app for artisan work and web portals for public buyer verification and Ministry operations. Artisans catalog, price, verify, and publish heritage products from Android to national digital public infrastructure (**GeM**, **ONDC**, **WhatsApp Web**, and **SHG/NGO Bulk Portals**).
+
+### Platform Boundaries
+
+| Platform | Primary users | Responsibility |
+|---|---|---|
+| Native Android app (`android/`) | Artisans, SHG coordinators | Onboarding, camera and voice capture, GPS provenance, cataloging, fair-wage pricing, passport creation, thermal printing, offline work, and sync |
+| Buyer web portal | Buyers and the public | QR/shortcode verification, artisan story, price transparency, and fake-product reports |
+| Ministry web dashboard | MoSJE officers, district managers, administrators | District heatmaps, audit logs, jury monitoring, PM-DAKSH metrics, forecasts, exports, and operational management |
+| FastAPI backend | Shared platform services | Auth, storage, AI, verification, pricing, passport, payout, logistics, exports, and APIs |
 
 ```mermaid
 flowchart TD
@@ -10,34 +19,34 @@ flowchart TD
     %% Ministry of Social Justice and Empowerment (MoSJE)
     %% =======================================================
 
-    subgraph Client["🌐 CLIENT LAYER (Responsive Web - React / Next.js & Tailwind CSS)"]
+    subgraph AndroidClient["📱 ARTISAN CLIENT (Native Android - Kotlin / Jetpack Compose)"]
         direction TB
         
         subgraph UserModes["👤 Dual-Role Access Engine"]
-            ArtisanUI["🧑🎨 Artisan Direct Mode<br>(Single-User Browser Portal)"]
-            SHGUI["👥 Aggregator / SHG Leader Mode<br>(Multi-Tenant Coordinator Hub)"]
+            ArtisanUI["🧑🎨 Artisan Direct Mode<br>(Native Android app)"]
+                SHGUI["👥 Aggregator / SHG Leader Mode<br>(Android coordinator hub)"]
         end
 
-        UI_Dash["🏠 Smart Web Dashboard<br>('Naya Product' + Live Inventory Sync)"]
+        UI_Dash["🏠 Smart Artisan Dashboard<br>('Naya Product' + Live Inventory Sync)"]
         
-        subgraph SmartCaptureBox["📸 Web Media Capture & Authentication"]
-            UI_Capture["📸 Browser Media Capture<br>(MediaDevices API, 1:1 Aspect Ratio, WIP + Final Upload)"]
+        subgraph SmartCaptureBox["📸 Native Media Capture & Authentication"]
+            UI_Capture["📸 CameraX Capture<br>(1:1 Aspect Ratio, WIP + Final Upload)"]
             UI_GPS["📍 Geolocation API & Timestamp Lock<br>(Live Metadata Verification)"]
         end
 
-        UI_Voice["🎙️ Zero-Literacy Audio Engine<br>(Web Speech API / Bhashini Audio Stream)"]
+        UI_Voice["🎙️ Zero-Literacy Audio Engine<br>(Android audio / Bhashini Stream)"]
         UI_Price["💰 Fair Wage & Dynamic Pricing<br>(Cost + Hours + Interactive Range Slider)"]
         UI_Verify["✅ Verification & Tagging<br>(Digital Passport + 6-Char Shortcode)"]
         
         subgraph HardwareLayer["🖨️ Physical Hardware Layer"]
-            ThermalPrinter["🖨️ Web Bluetooth API Printer<br>(58mm ESC/POS Browser-to-Printer Bridge)"]
+            ThermalPrinter["🖨️ Android Bluetooth Printer<br>(58mm ESC/POS Bridge)"]
         end
 
         UI_Export["🚀 One-Tap Multi-Channel Publish<br>(GeM / ONDC / WhatsApp Web)"]
         UI_Help["💬 'Ask Dadi' Voice Assistant<br>(Interactive Guidance + PM-DAKSH Nudges)"]
         
-        OfflineDB[("📂 Browser IndexedDB<br>(Offline Drafts, Audio Cache & Shortcodes)")]
-        SyncEngine["🔄 Service Worker Sync<br>(Background Auto-Retry Queue)"]
+        OfflineDB[("📂 Encrypted Room Database<br>(Offline Drafts, Audio Cache & Shortcodes)")]
+        SyncEngine["🔄 Android WorkManager Sync<br>(Background Auto-Retry Queue)"]
 
         UserModes --> UI_Dash
         UI_Dash --> UI_Capture --> UI_GPS --> UI_Voice --> UI_Price --> UI_Verify
@@ -48,6 +57,11 @@ flowchart TD
         UI_Verify -.-> OfflineDB
         OfflineDB --> SyncEngine
         UI_Dash --> UI_Help
+    end
+
+    subgraph WebClients["🌐 WEB CLIENTS (Buyer + Ministry)"]
+        BuyerWeb["🔍 Public Buyer Passport Portal<br>(QR / Shortcode Verification)"]
+        MinistryWeb["📊 MoSJE Ministry Dashboard<br>(District, Audit, PM-DAKSH, Forecasts)"]
     end
 
     subgraph Backend["⚡ BACKEND API GATEWAY (FastAPI / Node.js)"]
@@ -122,7 +136,8 @@ flowchart TD
     end
 
     %% ========== SYSTEM CONNECTIONS ==========
-    Client <-->|REST APIs & WebSockets| Gateway
+    AndroidClient <-->|REST APIs & WebSockets| Gateway
+    WebClients <-->|REST APIs & WebSockets| Gateway
     SyncEngine ==>|Batch Uploads| Gateway
     CoreServices <--> Storage
     CoreServices <--> PII_Vault
