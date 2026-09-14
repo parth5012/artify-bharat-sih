@@ -23,21 +23,31 @@ class JuryTicket(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(
         String(64), primary_key=True, default=lambda: new_id("jury")
     )
-    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True, nullable=False)
+    product_id: Mapped[str] = mapped_column(
+        ForeignKey("products.id"), index=True, nullable=False
+    )
 
     status: Mapped[str] = mapped_column(String(30), default="PENDING", nullable=False)
     # PENDING -> IN_PROGRESS -> QUORUM_GENUINE | QUORUM_SUSPECTED | FLAGGED_VELOCITY_ANOMALY
 
-    assigned_juror_ids: Mapped[str] = mapped_column(String(255), nullable=False)  # comma-separated
-    reassigned_from: Mapped[Optional[str]] = mapped_column(String(255))  # audit trail of swaps
+    assigned_juror_ids: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )  # comma-separated
+    reassigned_from: Mapped[Optional[str]] = mapped_column(
+        String(255)
+    )  # audit trail of swaps
 
     quorum_verdict: Mapped[Optional[str]] = mapped_column(String(30))
     average_craft_score: Mapped[Optional[float]] = mapped_column(Float)
     anomaly_score: Mapped[Optional[float]] = mapped_column(Float)
 
     product: Mapped["Product"] = relationship(back_populates="jury_tickets")
-    votes: Mapped[list["JuryVote"]] = relationship(back_populates="jury_ticket")
-    fraud_reports: Mapped[list["AntiFraudReport"]] = relationship(back_populates="jury_ticket")
+    votes: Mapped[list["JuryVote"]] = relationship(
+        back_populates="jury_ticket", cascade="all, delete-orphan"
+    )
+    fraud_reports: Mapped[list["AntiFraudReport"]] = relationship(
+        back_populates="jury_ticket"
+    )
 
 
 class JuryVote(TimestampMixin, Base):
@@ -46,8 +56,12 @@ class JuryVote(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(
         String(64), primary_key=True, default=lambda: new_id("vote")
     )
-    jury_ticket_id: Mapped[str] = mapped_column(ForeignKey("jury_tickets.id"), index=True, nullable=False)
-    juror_id: Mapped[str] = mapped_column(ForeignKey("artisans.id"), index=True, nullable=False)
+    jury_ticket_id: Mapped[str] = mapped_column(
+        ForeignKey("jury_tickets.id"), index=True, nullable=False
+    )
+    juror_id: Mapped[str] = mapped_column(
+        ForeignKey("artisans.id"), index=True, nullable=False
+    )
 
     vote: Mapped[str] = mapped_column(String(30), nullable=False)
     # GENUINE_HANDMADE | SUSPECTED_MACHINE_MADE
@@ -66,11 +80,19 @@ class AntiFraudReport(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(
         String(64), primary_key=True, default=lambda: new_id("rep_antifraud")
     )
-    product_id: Mapped[str] = mapped_column(ForeignKey("products.id"), index=True, nullable=False)
-    jury_ticket_id: Mapped[Optional[str]] = mapped_column(ForeignKey("jury_tickets.id"), index=True)
+    product_id: Mapped[str] = mapped_column(
+        ForeignKey("products.id"), index=True, nullable=False
+    )
+    jury_ticket_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("jury_tickets.id"), index=True
+    )
 
     reason: Mapped[str] = mapped_column(String(200), nullable=False)
     evidence_photo_ref: Mapped[Optional[str]] = mapped_column(String(255))
-    status: Mapped[str] = mapped_column(String(30), default="ESCALATED_TO_DM", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(30), default="ESCALATED_TO_DM", nullable=False
+    )
 
-    jury_ticket: Mapped[Optional["JuryTicket"]] = relationship(back_populates="fraud_reports")
+    jury_ticket: Mapped[Optional["JuryTicket"]] = relationship(
+        back_populates="fraud_reports"
+    )

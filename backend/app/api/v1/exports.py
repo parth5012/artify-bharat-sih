@@ -2,13 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.services.export_service import export_adapter_service
-from app.schemas.export import ExportChannelRequest, ExportChannelResponse, ChannelExportResult
+from app.schemas.export import (
+    ExportChannelRequest,
+    ExportChannelResponse,
+    ChannelExportResult,
+)
 
 router = APIRouter(prefix="/exports", tags=["One-Tap Multi-Channel Government Export"])
 
 
 @router.post("/sync", response_model=ExportChannelResponse)
-async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSession = Depends(get_db)):
+async def export_product_to_channels(
+    payload: ExportChannelRequest, db: AsyncSession = Depends(get_db)
+):
     """
     Page 7: One-Tap Multi-Channel Government Export.
     Adapts internal product specification into compliant schema payloads for:
@@ -28,9 +34,43 @@ async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSes
         results = []
         passport_hash = ""
         for exp in exports:
-            fmt = "XML" if exp.channel == "GeM" else ("JSON_BECKN" if exp.channel == "ONDC" else "REST_API")
-            passport_hash = exp.export_payload.get("authenticity_verification", {}).get("digital_passport_hash") or \
-                            exp.export_payload.get("passport_hash", "")
+            ch_lower = exp.channel.lower()
+            if "xml" in ch_lower:
+                fmt = "XML"
+            elif "csv" in ch_lower or "shg" in ch_lower:
+                fmt = "CSV"
+            elif ch_lower == "gem":
+                fmt = "JSON"
+            elif ch_lower == "ondc":
+                fmt = "JSON_BECKN"
+            elif "whatsapp" in ch_lower:
+                fmt = "WHATSAPP_INTERACTIVE"
+            else:
+                fmt = "REST_API"
+
+            p_hash = (
+                exp.export_payload.get("authenticity_verification", {}).get(
+                    "digital_passport_hash"
+                )
+                or exp.export_payload.get("metadata", {}).get("digital_passport_hash")
+                or exp.export_payload.get("digital_passport_hash")
+                or exp.export_payload.get("passport_hash", "")
+            )
+            if not p_hash and ch_lower == "ondc":
+                for prov in (
+                    exp.export_payload.get("message", {})
+                    .get("catalog", {})
+                    .get("bpp/providers", [])
+                ):
+                    for item in prov.get("items", []):
+                        for tag in item.get("tags", []):
+                            if tag.get("code") == "heritage_passport":
+                                p_hash = tag.get("value", "")
+                                break
+
+            if p_hash:
+                passport_hash = p_hash
+
             results.append(
                 ChannelExportResult(
                     channel=exp.channel,
@@ -45,7 +85,7 @@ async def export_product_to_channels(payload: ExportChannelRequest, db: AsyncSes
             product_id=payload.product_id,
             passport_hash=passport_hash,
             results=results,
-            message=f"Successfully exported product to {len(results)} external procurement channels."
+            message=f"Successfully exported product to {len(results)} external procurement channels.",
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

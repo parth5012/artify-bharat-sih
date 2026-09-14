@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
+
 class DistrictMetric(BaseModel):
     district_name: str
     state: str
@@ -13,6 +14,7 @@ class DistrictMetric(BaseModel):
     lat: float
     lng: float
 
+
 class DistrictHeatmapResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     total_districts_monitored: int
@@ -20,6 +22,11 @@ class DistrictHeatmapResponse(BaseModel):
     total_wages_disbursed_inr: float
     average_middleman_savings_percent: float
     districts: List[DistrictMetric]
+    is_fallback: Optional[bool] = Field(
+        default=False,
+        description="True if fallback mock/seed data was used because tables were empty",
+    )
+
 
 class AuditLogEntry(BaseModel):
     log_id: str
@@ -32,9 +39,14 @@ class AuditLogEntry(BaseModel):
     anomaly_score: float
     status: str
 
+
 class AuditLogsResponse(BaseModel):
     total_logs: int
     logs: List[AuditLogEntry]
+    is_fallback: Optional[bool] = Field(
+        default=False, description="True if fallback seed data was used"
+    )
+
 
 class PMDakshMetricsResponse(BaseModel):
     total_enrolled: int
@@ -42,6 +54,10 @@ class PMDakshMetricsResponse(BaseModel):
     average_wage_increase_percent: float
     master_artisan_trainers_count: int
     top_craft_sectors: List[Dict[str, Any]]
+    is_fallback: Optional[bool] = Field(
+        default=False, description="True if fallback seed data was used"
+    )
+
 
 class FestivalDemandItem(BaseModel):
     festival_name: str
@@ -49,6 +65,7 @@ class FestivalDemandItem(BaseModel):
     peak_month: str
     recommended_stock_units: int
     trending_crafts: List[str]
+
 
 class DemandForecastResponse(BaseModel):
     forecast_model: str = "Artify-Bharat-Prophet-Festival-AI"

@@ -1,18 +1,40 @@
-# Project Learnings & Decision Rationale
+# Learnings
 
-## Project: ArtifyBharat (SIH Problem Statement 26090)
+> Key learnings, edge cases, and concepts worth remembering for this project.
 
-### 1. Deterministic Cryptographic Hashes for Heritage Passports
-- **Decision**: Used canonical JSON sorting (`json.dumps(..., sort_keys=True, separators=(',', ':'))`) before computing the SHA-256 digest.
-- **Rationale**: Any minor variation in key ordering or whitespace between services could invalidate the cryptographic passport hash. Canonical encoding guarantees tamper-evident validation for consumers scanning QR codes on physical handloom items.
+## - Onboarding Session Gating in Jetpack Compose: Condition `startDestination` on a dedicated `Screen.Splash` rather than dynamic NavHost recreation. `SplashScreen` reads `isOnboardedFlow` and executes `popUpTo(Screen.Splash.route) { inclusive = true }` into `Onboarding` or `VoiceCatalog`, eliminating recomposition flickers and preventing back-press escape.
+- Android Runtime Permission Launcher Flow: Compose's `rememberLauncherForActivityResult(RequestPermission())` combined with custom state handling enables clean JIT rationale dialogs with `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` fallbacks for permanently denied permissions.
+- Honest Offline State Architecture: Rather than swallowing network exceptions and substituting fake mock data in ViewModels, expose explicit `isOffline` and `errorMessage` UI flags. In offline situations, offer explicit "डेमो मोड (Demo Mode)" or save drafts to Room sync queue with clear user communication.
 
-### 2. Fair Wage Protection in Pricing Engine
-- **Decision**: Hardened the pricing formula such that `calculated_fair_wage = labor_days * daily_wage_benchmark` is treated as a non-negotiable floor before applying visual complexity premiums or market benchmarks.
-- **Rationale**: Rural handloom weavers frequently suffer from distress selling and middleman markups. Hardcoding statutory fair wage baselines ensures the artisan's labor investment is preserved in the recommended retail and institutional procurement price points.
+Project-Specific Learnings
 
-### 3. Dual-Layer AI Execution (On-Device + Celery Cloud)
-- **Decision**: Supported both immediate local previews (TFLite U²-Net preview on mobile, simulated in `cv_service.py`) and asynchronous background processing via Celery for heavy cloud inferences.
-- **Rationale**: Rural artisans often operate in intermittent 2G/3G connectivity zones. Decoupling fast on-device feedback from asynchronous cloud background workers prevents UI stalls and accommodates low-bandwidth queues.
+- Cryptographic Provenance EXIF order: write EXIF metadata and GPS coordinates *prior* to computing SHA-256 file hashes; otherwise exif.saveAttributes() alters JPEG bitstreams on disk.
+- ESC/POS Thermal Printing: enforce pure US-ASCII in receipt byte builders to avoid unprintable replacement characters on 58mm/80mm micro-controllers.
+- ADR 0004 Statutory Wage Floor: enforce floor validation directly inside ViewModel mutation methods (lockPrice()) and disable UI buttons to prevent distress-sale sub-floor locking.
+- Pure JVM Unit Testing: android.graphics.Bitmap.createBitmap requires Robolectric or device runtime; test ZXing BitMatrix directly in pure unit tests.
 
-### 4. Pydantic v2 & Hatchling Packaging Conventions
-- **Decision**: Set explicit `tool.hatch.build.targets.wheel.packages = ["app"]` in `backend/pyproject.toml` when project name differs from the top-level package directory. Replaced deprecated Pydantic v1 `example` fields with v2 compliant schema attributes.
+_None yet — populate as the agent discovers patterns, edge cases, and gotchas._
+
+- Canonical JSON (`sort_keys=True, separators=(',',':')`) before SHA-256 for Digital Heritage Passport (see ADR-0002).
+- Fair Wage Floor is non-negotiable floor before premiums (see ADR-0004).
+- Dual-layer AI: on-device preview + Celery cloud workers for 2G/3G zones.
+- Hatchling: `packages=["app"]` when project name differs from package dir; Pydantic v2 schema (no `example`).
+- Restored from backup 2026-09-12: prior learnings archived in `.tmp/harness-backup-2026-09-12/LEARNINGS.md.bak`.
+
+## Decision Log
+
+**Native Android Kotlin App (Wayfinder Map #49)**: Scaffolding complete offline-first Android application in ndroid/ using MinSDK 24, Target 34, Jetpack Compose Material3, Room with SQLCipher AES-256 at-rest encryption, Android KeyStore MasterKey for DPDP-compliant auth tokens (zero raw Aadhaar), CameraX, WorkManager background synchronization with split-revision DRAFT_V2 conflict branching, and SPP ESC/POS thermal printing.
+
+> Why decisions were made, alternatives considered, and consequences.
+
+- **Multi-Channel Export Adapters (Phase 5)**: Implemented XML ElementTree generation for GeM B2G HSN-50072010 specifications, Beckn v1.0 schema validator for ONDC on_search catalog, WhatsApp Cloud API CTA card with NPCI-standard UPI deep-link and shortcode, and SHG tiered volume discount CSV generator. All adapters carry cryptographic Digital Heritage Passport hash.
+- **Admin Backend DB Aggregations (Phase 8, Map #22)**: Replaced mock admin endpoints (/district-heatmap, /audit-logs, /pmdaksh-metrics) with real SQLAlchemy database aggregations. Kept response schemas backward-compatible, added fallback to seed data when database tables are empty, and bounded query limits to prevent resource exhaustion.
+
+## Edge Cases
+
+> Known edge cases, gotchas, and non-obvious behaviors discovered during work.
+
+- **Mocking CV enhance in export tests**: Rembg U2-Net model downloads over network (~170MB) if not cached locally, which stalls unit test suites. Fast export adapter suites mock enhance_image so tests run deterministically in <0.5s.
+- **Deep copy for nested schema validation tests**: In Python, dict(payload) creates a shallow copy; mutating nested dictionary fields modifies the source object. Use copy.deepcopy when constructing negative schema test variants.
+- **SQLAlchemy model back_populates mismatch**: When adding two-way relationships in declarative models (e.g. Artisan.payouts and Product.jury_tickets), both sides of the relationship must be defined in the models before registry.configure() is triggered during query execution.
+- **District grain vs cluster multiplicity**: In geospatial heatmaps, grouping by district and state while taking the dominant craft cluster avoids row duplication and multiple counting of district wage payouts.

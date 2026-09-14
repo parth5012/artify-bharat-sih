@@ -35,3 +35,4 @@ class Artisan(Base):
 
     # Relationships
     products = relationship("Product", back_populates="artisan", cascade="all, delete-orphan")
+    payouts = relationship("PayoutTransaction", back_populates="artisan", cascade="all, delete-orphan")

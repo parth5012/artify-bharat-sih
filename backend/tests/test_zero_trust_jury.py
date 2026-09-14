@@ -99,4 +99,31 @@ async def test_reassign_stale_juror():
     assert "last_reassigned_at" in updated
 
 
+def test_anti_collusion_self_review_and_shg_exclusion():
+    from app.services.verify_jury_service import verify_jury_service
+
+    # 1. Anti-collusion assignment exclusion:
+    # Varanasi jurors: juror_vns_01 (shg_vns_01), juror_vns_02 (shg_vns_02), juror_vns_03 (shg_vns_03), juror_vns_04 (shg_vns_04), juror_vns_05 (shg_vns_05)
+    ticket = verify_jury_service.assign_jury(
+        product_id="prod_anti_collusion_01",
+        cluster_id="Varanasi Handloom Cluster",
+        craft_type="Silk Weaving",
+        artisan_id="juror_vns_01",
+        shg_id="shg_vns_02",
+    )
+    # Neither artisan juror_vns_01 nor same-SHG juror_vns_02 should be assigned
+    for j_id in ticket["assigned_jurors"]:
+        assert j_id != "juror_vns_01", "Artisan must not be assigned to their own jury"
+        assert j_id != "juror_vns_02", "Same-SHG peer must not be assigned to jury (collusion risk)"
+
+    # 2. Self-review prohibition on vote casting
+    with pytest.raises(ValueError, match="Conflict of Interest"):
+        verify_jury_service.cast_vote(
+            jury_ticket_id=ticket["jury_ticket_id"],
+            juror_id="juror_vns_01",
+            verdict="authentic",
+            craft_authenticity_score=0.99,
+        )
+
+
 

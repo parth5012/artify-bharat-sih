@@ -42,3 +42,4 @@ class Product(Base):
     pricing = relationship("ProductPricing", back_populates="product", uselist=False, cascade="all, delete-orphan")
     passport = relationship("HeritagePassport", back_populates="product", uselist=False, cascade="all, delete-orphan")
     exports = relationship("ChannelExport", back_populates="product", cascade="all, delete-orphan")
+    jury_tickets = relationship("JuryTicket", back_populates="product", cascade="all, delete-orphan")

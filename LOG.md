@@ -1,3 +1,36 @@
+# Log
+
+> Every iteration logged with status, what changed, and verification result.
+
+## Format
+
+Each entry:
+
+- **Date**: YYYY-MM-DD HH:MM
+- **Status**: Done | Blocked | Budget | Compacted | Stuck | Outage | Review
+- **What**: Brief description of the task/change
+- **Verified**: What was run to verify (tests, typecheck, etc.)
+- **Notes**: Any decisions or learnings
+
+## Entries
+
+| Date | Status | What | Verified | Notes |
+|------|--------|------|----------|-------|
+| 2026-09-13 | Done | Wayfinder Map #23: Phase 9 Verification DevOps and Docs (Docker env/zero-trust check, full pytest suite 146 tests green, docs cleanup, E2E journeys, SIH pitch defenses) | 146/146 pytest tests green, ruff lint clean | Map #23 completed & closed; all child tickets #39-#43 closed |
+| 2026-09-13 | Done | Wayfinder Map #71: Fix Onboarding, Permission & Backend Connectivity (NavGraph session gate, 5-step guided onboarding, real token auth, honest offline/error states, runtime permission launcher & rationale dialogs) | 51/51 Android unit tests green, assembleDebug built, backend auth pytest 8/8 green | Child tickets #72-#79 resolved & closed |
+| 2026-09-13 | Done | Wayfinder Map #49: Complete Native Kotlin Android App (MinSDK 24, Target 34, Jetpack Compose, Room SQLCipher, DataStore, CameraX, WorkManager, Retrofit, Bluetooth ESC/POS) | 41/41 unit & E2E tests green, assembleRelease green | Map #49 completed, child tickets #50-#60 resolved and closed via stacked PRs |
+| 2026-09-12 | Done | Babysit PR #48: address CodeRabbit review feedback on payout filters, composite keys, fallback flags | All checks green (pytest 6m35s, ruff 14s, typecheck 29s, CodeRabbit clean) | Ready for merge-pr |
+| 2026-09-12 | Done | Wayfinder Map #22: Phase 8 Admin Backend APIs (DB district heatmap aggregation, audit feed API, PM-DAKSH metrics API) | pytest 12/12 green, ruff clean, black formatted | Map #22 completed, child tickets #36, #37, #38 resolved and closed |
+| 2026-09-12 | Done | Babysit PR #47: address CodeRabbit review feedback on export formats, validation, and UPI privacy | All CI checks green (pytest 5m31s, ruff 21s, typecheck 29s, CodeRabbit clean) | Ready for merge-pr |
+| 2026-09-12 | Done | Wayfinder Map #21: Phase 5 Multi-Channel Exports (GeM XML/CSV, ONDC Beckn v1.0, WhatsApp interactive card, SHG wholesale CSV, test suite) | pytest 7/7 green, fast suite green, ruff clean, black clean | PR #47 created, child issues #31, #32, #33, #34, #35 resolved & closed |
+| 2026-09-12 | Done | Harness reset: backed up AGENTS/LOG/LEARNINGS/architecture to `.tmp/harness-backup-2026-09-12/`, wiped + recreated 9 files per harness-setup skill | `git status`, backup listing verified | Prior history archived, fresh harness live |
+| 2026-09-12 | Done | Restored canonical docs/architecture.md from backup; renamed harness version to docs/structure.md | Head checks on both files, `Get-ChildItem docs/*.md` | architecture.md = MoSJE spec (14108B), structure.md = harness overview |
+| 2026-09-12 | Done | Restored old log history from `.tmp/harness-backup-2026-09-12/LOG.md.bak` below | Read backup (49 lines) + current LOG verified | Old sessions preserved verbatim under Archived History |
+
+---
+
+## Archived History — restored 2026-09-12 from `.tmp/harness-backup-2026-09-12/LOG.md.bak`
+
 # Project Iteration Log
 
 ## Session: 2026-09-08 - Final Enhanced Web Architecture Transition & MoSJE Alignment (SIH PS 26090)
