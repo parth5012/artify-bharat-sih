@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Play, Pause, Sparkles, CheckCircle2, Volume2, Globe, Languages, LoaderCircle } from 'lucide-react';
+import { Mic, Square, Play, Pause, Sparkles, CheckCircle2, Volume2, Languages, LoaderCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { uploadVoiceRecording, type VoiceCatalogExtraction } from '../../api/catalogApi';
@@ -318,7 +318,21 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onStoryExtracted, 
 
       {extractionError && (
         <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {extractionError}
+          <p>{extractionError}</p>
+          <p className="mt-2 text-xs font-semibold text-red-900">
+            Start Ollama and try again if the local catalog AI is not running.
+          </p>
+          {audioBlob && (
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Sparkles className="h-4 w-4" />}
+              onClick={() => void handleExtractStory(audioBlob)}
+              className="mt-3"
+            >
+              Try description again
+            </Button>
+          )}
         </div>
       )}
 
@@ -326,58 +340,12 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onStoryExtracted, 
         <div className="mt-6 space-y-4 animate-fade-in-up border-t border-terracotta-200/80 pt-4">
           <div className="flex items-center gap-2 text-emerald-800 font-bold text-sm bg-emerald-50 p-3 rounded-xl border border-emerald-200">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>Voice Extraction Complete: Structured Catalog Generated</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-cream-200/50 rounded-2xl border border-cream-300">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-charcoal-700 uppercase mb-2">
-                <Volume2 className="w-4 h-4 text-terracotta-500" />
-                <span>Original Dialect Speech (Whisper ASR)</span>
-              </div>
-              <p className="text-xs text-charcoal-800 italic bg-white p-3 rounded-xl border border-terracotta-100 shadow-sm">
-                "{extractionResult.originalTranscript}"
-              </p>
-            </div>
-
-            <div className="p-4 bg-cream-200/50 rounded-2xl border border-cream-300">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-charcoal-700 uppercase mb-2">
-                <Globe className="w-4 h-4 text-emerald-600" />
-                <span>Translated English (IndicTrans2)</span>
-              </div>
-              <p className="text-xs text-charcoal-800 bg-white p-3 rounded-xl border border-terracotta-100 shadow-sm">
-                "{extractionResult.translatedEnglish}"
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 bg-terracotta-50/60 rounded-2xl border border-terracotta-200">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-terracotta-800 mb-3">
-              Mistral-7B Structured Extraction
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div>
-                <span className="text-charcoal-700 block">Title:</span>
-                <strong className="text-charcoal-900">{extractionResult.extractedTitle}</strong>
-              </div>
-              <div>
-                <span className="text-charcoal-700 block">Craft Type:</span>
-                <strong className="text-charcoal-900">{extractionResult.extractedCraftType}</strong>
-              </div>
-              <div>
-                <span className="text-charcoal-700 block">Material:</span>
-                <strong className="text-charcoal-900">{extractionResult.extractedMaterial}</strong>
-              </div>
-              <div>
-                <span className="text-charcoal-700 block">Labor Days:</span>
-                <strong className="text-terracotta-700">{extractionResult.estimatedLaborDays} Days</strong>
-              </div>
-            </div>
+            <span>Product description created from your voice</span>
           </div>
 
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
             <h4 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-800">
-              <Sparkles className="h-4 w-4" /> Catalog Description
+              <Sparkles className="h-4 w-4" /> Ollama product description
             </h4>
             <p className="rounded-xl border border-emerald-100 bg-white p-3 text-sm leading-6 text-charcoal-800 shadow-sm">
               {extractionResult.extractedDescription}

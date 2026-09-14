@@ -14,6 +14,48 @@ export interface VoiceCatalogExtraction {
   tags: string[];
 }
 
+export interface CatalogListing {
+  product_id: string;
+  title: string;
+  craft_category: string;
+  status: string;
+  enhanced_image_url?: string;
+  published_channels: string[];
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
+export async function saveProductCatalog(productId: string, payload: {
+  title: string;
+  description: string;
+  craft_category: string;
+  material: string;
+  estimated_days: number;
+  seo_tags: string[];
+  enhanced_image_url?: string;
+}): Promise<CatalogListing> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/catalog/products/${productId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${window.localStorage.getItem('artify-auth-token') || ''}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { detail?: string } | null;
+    throw new Error(body?.detail || `Product catalog save failed (HTTP ${response.status})`);
+  }
+  return response.json() as Promise<CatalogListing>;
+}
+
+export async function getPublicCatalogListings(): Promise<CatalogListing[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/catalog/listings`);
+  if (!response.ok) throw new Error(`Product listings failed (HTTP ${response.status})`);
+  const result = await response.json() as { inventory: CatalogListing[] };
+  return result.inventory;
+}
+
 interface BackendVoiceCatalogResponse {
   transcript_regional: string;
   transcript_english: string;
@@ -65,7 +107,11 @@ export async function uploadVoiceRecording(
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(errorBody?.detail || `Voice catalog extraction failed (HTTP ${response.status})`);
+    const detail = errorBody?.detail || `Voice catalog extraction failed (HTTP ${response.status})`;
+    if (response.status === 502 || detail.toLowerCase().includes('ollama')) {
+      throw new Error('Ollama is not available. Start Ollama and try the product description again.');
+    }
+    throw new Error(detail);
   }
 
   const result = (await response.json()) as BackendVoiceCatalogResponse;

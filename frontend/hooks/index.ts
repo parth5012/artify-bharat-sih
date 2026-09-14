@@ -3,4 +3,5 @@ export * from './useGeolocation';
 export * from './useThermalPrinter';
 export * from './useOfflineDrafts';
 export * from './useDeviceOrientation';
+export * from './useAskDadi';
 

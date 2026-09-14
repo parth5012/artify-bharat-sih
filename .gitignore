@@ -125,7 +125,8 @@ dump.rdb
 ehthumbs.db
 Thumbs.db
 
-# --- Temporary & Scratch Artifacts ---
+# # --- Temporary Scratch Artifacts ---
+*.tsbuildinfo
 extracted_playbook.txt
 tmp/
 scratch/

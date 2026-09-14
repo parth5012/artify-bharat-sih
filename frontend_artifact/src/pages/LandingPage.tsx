@@ -13,10 +13,12 @@ export const LandingPage: React.FC = () => {
   const [pin, setPin] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginError(null);
+    setShowSignupPrompt(false);
     setIsLoggingIn(true);
 
     try {
@@ -40,7 +42,13 @@ export const LandingPage: React.FC = () => {
       window.dispatchEvent(new Event('artify-auth-change'));
       navigate('/artisan', { state: { profile, session } });
     } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Could not sign in. Check your phone number and PIN.');
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('Incorrect phone number or security PIN') || message.includes('401')) {
+        setLoginError('No matching artisan account was found for this phone number and PIN.');
+        setShowSignupPrompt(true);
+      } else {
+        setLoginError(message || 'Could not sign in. Check your phone number and PIN.');
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -121,6 +129,11 @@ export const LandingPage: React.FC = () => {
             />
           </label>
           {loginError && <p className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{loginError}</p>}
+          {showSignupPrompt && (
+            <Link to="/artisan?signup=1" className="sm:col-span-2 text-center text-sm font-semibold text-terracotta-700 underline">
+              Create a new artisan account instead
+            </Link>
+          )}
           <Button type="submit" variant="gold" size="lg" disabled={isLoggingIn} className="sm:col-span-2">
             {isLoggingIn ? 'Signing in...' : 'Login & Open Profile'}
           </Button>

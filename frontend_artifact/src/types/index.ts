@@ -121,6 +121,7 @@ export interface PMDakshMetric {
 
 export interface OfflineDraft {
   id: string;
+  artisanId?: string;
   title: string;
   craftType: string;
   wipPhotoDataUrl?: string;
@@ -130,4 +131,14 @@ export interface OfflineDraft {
   tiltVerified: boolean;
   createdAt: string;
   synced: boolean;
+  studioDraft?: StudioDraft;
+}
+
+export interface StudioDraft {
+  backendProductId?: string;
+  capturedImage: string;
+  productTitle: string;
+  enhancedImage: string;
+  enhancedImages: string[];
+  updatedAt: string;
 }
