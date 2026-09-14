@@ -51,6 +51,27 @@ export interface CraftProduct {
   sha256Hash: string;
   provenanceTimestamp: string;
   jurorStatus: 'Verified' | 'Pending' | 'Rejected' | 'Anomaly';
+  stockQty: number;
+  stockType: 'unique' | 'batch';
+  isListed: boolean;
+  reservedQty: number;
+}
+
+export type ReservationStatus = 'pending' | 'confirmed' | 'declined' | 'expired';
+
+export interface Reservation {
+  id: string;
+  productId: string;
+  qty: number;
+  status: ReservationStatus;
+  expiresAt: string;
+  pickupCode: string;
+  buyerName?: string;
+}
+
+export interface CartItem {
+  product: CraftProduct;
+  qty: number;
 }
 
 export interface PricingRequest {

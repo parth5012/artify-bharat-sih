@@ -5,6 +5,7 @@ import { MobileNav } from './components/layout/MobileNav';
 import { LandingPage } from './pages/LandingPage';
 import { ArtisanPortalPage } from './pages/ArtisanPortalPage';
 import { BuyerPortalPage } from './pages/BuyerPortalPage';
+import { MyReservations } from './components/market/MyReservations';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import type { ArtisanRole, Language } from './types';
 
@@ -60,6 +61,9 @@ export function App() {
             <Route path="/buyer" element={<BuyerPortalPage />} />
             <Route path="/buyer/verify" element={<BuyerPortalPage />} />
             <Route path="/buyer/passport/:code" element={<BuyerPortalPage />} />
+
+            <Route path="/market" element={<BuyerPortalPage />} />
+            <Route path="/my-orders" element={<MyReservations />} />
 
             <Route path="/admin/*" element={<AdminDashboardPage />} />
 

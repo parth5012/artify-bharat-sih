@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Camera, Mic, IndianRupee, Printer, HardDrive, CheckCircle2, UserRound, Plus, MapPin, Clock3, FilePenLine } from 'lucide-react';
+import { ArrowLeft, Sparkles, Camera, Mic, IndianRupee, Printer, HardDrive, CheckCircle2, UserRound, Plus, MapPin, Clock3, FilePenLine, ShoppingBag } from 'lucide-react';
 import { RoleSwitcher } from '../components/artisan/RoleSwitcher';
 import { SoloArtisanDashboard } from '../components/artisan/SoloArtisanDashboard';
 import { SHGLeaderDashboard } from '../components/artisan/SHGLeaderDashboard';
@@ -380,6 +380,7 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
           { id: 'profile', label: '3. Artisan Profile', icon: UserRound },
           { id: 'pricing', label: '4. Fair Wage Engine', icon: IndianRupee },
           { id: 'print', label: '5. Thermal Print Tag', icon: Printer },
+          { id: 'orders', label: '6. Orders', icon: ShoppingBag },
           { id: 'drafts', label: 'Offline Storage', icon: HardDrive },
         ].map((step) => {
           const Icon = step.icon;
@@ -708,6 +709,12 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
             price={selectedProduct.pricing.retailPrice}
             craftCluster={`${selectedProduct.cluster} Cluster`}
           />
+        </div>
+      )}
+
+      {activeStep === 'orders' && (
+        <div className="space-y-6">
+          <ArtisanOrdersTab />
         </div>
       )}
 
