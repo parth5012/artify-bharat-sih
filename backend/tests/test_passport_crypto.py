@@ -109,6 +109,7 @@ async def test_public_passport_allowlist_fields_omits_sensitive_pii(client: Asyn
 
     approved_public_fields = {
         "passport_hash",
+        "shortcode",
         "is_authentic",
         "product_title",
         "craft_category",
