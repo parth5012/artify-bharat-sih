@@ -4,6 +4,7 @@ import type { CartItem } from '../types';
 export const CART_KEY = 'artify-cart';
 export const BUYER_PHONE_KEY = 'artify-buyer-phone';
 export const CART_MAX_ITEMS = 5;
+export const CART_CHANGE_EVENT = 'artify-cart-change';
 
 function readCartSync(): CartItem[] {
   try {
@@ -18,6 +19,7 @@ function readCartSync(): CartItem[] {
 
 function writeCartSync(items: CartItem[]): void {
   window.localStorage.setItem(CART_KEY, JSON.stringify(items));
+  window.dispatchEvent(new CustomEvent(CART_CHANGE_EVENT));
   void persistCartIdb(items);
 }
 

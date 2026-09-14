@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Camera, QrCode, Shield, Wifi, WifiOff, Award, LogIn, LogOut, UserPlus, ShoppingBag } from 'lucide-react';
 import { RoleSwitcher } from '../artisan/RoleSwitcher';
-import { getCart, totalQty } from '../../services/cart';
+import { getCart, totalQty, CART_CHANGE_EVENT } from '../../services/cart';
 import type { ArtisanRole } from '../../types';
 
 interface NavbarProps {
@@ -32,10 +32,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('artify-auth-change', syncAuthState);
     window.addEventListener('storage', syncCart);
     window.addEventListener('focus', syncCart);
+    window.addEventListener(CART_CHANGE_EVENT, syncCart);
     return () => {
       window.removeEventListener('artify-auth-change', syncAuthState);
       window.removeEventListener('storage', syncCart);
       window.removeEventListener('focus', syncCart);
+      window.removeEventListener(CART_CHANGE_EVENT, syncCart);
     };
   }, [location.pathname]);
 

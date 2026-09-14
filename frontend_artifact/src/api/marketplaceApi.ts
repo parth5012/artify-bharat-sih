@@ -16,6 +16,57 @@ export interface ReserveProductPayload {
   buyerArtisanId?: string;
 }
 
+interface BackendProduct {
+  product_id: string;
+  artisan_id: string;
+  title: string;
+  craft_category?: string | null;
+  status?: string | null;
+  stock_qty?: number | null;
+  stock_type?: string | null;
+  reserved_qty?: number | null;
+  available_qty?: number | null;
+}
+
+function toProduct(raw: BackendProduct): CraftProduct {
+  return {
+    id: raw.product_id,
+    shortcode: '',
+    title: raw.title,
+    craftType: raw.craft_category ?? '',
+    cluster: '',
+    artisanName: '',
+    artisanId: raw.artisan_id,
+    wipPhotoUrl: '',
+    cleanPhotoUrl: '',
+    audioStoryUrl: '',
+    transcript: '',
+    translatedText: '',
+    gpsCoordinates: { lat: 0, lng: 0, timestamp: '', verifiedCluster: '', inCluster: false },
+    pricing: {
+      floorPrice: 0,
+      retailPrice: 0,
+      bulkPrice: 0,
+      breakdown: {
+        materialCost: 0,
+        laborCost: 0,
+        skilledWageRate: 0,
+        overheadCost: 0,
+        seasonalMultiplier: 1,
+        craftHeritageCoeff: 1,
+        directWageRealizationPct: 0,
+      },
+    },
+    sha256Hash: '',
+    provenanceTimestamp: '',
+    jurorStatus: 'Verified',
+    stockQty: raw.stock_qty ?? 0,
+    stockType: raw.stock_type === 'batch' ? 'batch' : 'unique',
+    isListed: true,
+    reservedQty: raw.reserved_qty ?? 0,
+  };
+}
+
 interface BackendReservation {
   id: string;
   product_id: string;
@@ -67,7 +118,10 @@ export async function listMarketProducts(params: MarketListParams = {}): Promise
   if (params.cluster) query.set('cluster', params.cluster);
   if (params.search) query.set('search', params.search);
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  return apiRequest<CraftProduct[]>(`/api/v1/marketplace/products${suffix}`);
+  const raw = await apiRequest<{ items: BackendProduct[]; count: number }>(
+    `/api/v1/marketplace/products${suffix}`,
+  );
+  return (raw.items ?? []).map(toProduct);
 }
 
 export async function reserveProduct(payload: ReserveProductPayload): Promise<Reservation> {
@@ -128,10 +182,10 @@ export async function getMyReservations(phone: string): Promise<Reservation[]> {
   }
 
   const query = new URLSearchParams({ phone });
-  const raw = await apiRequest<BackendReservation[]>(
+  const raw = await apiRequest<{ items: BackendReservation[]; count: number }>(
     `/api/v1/marketplace/my-reservations?${query.toString()}`,
   );
-  return raw.map(toReservation);
+  return (raw.items ?? []).map(toReservation);
 }
 
 export async function confirmReservation(

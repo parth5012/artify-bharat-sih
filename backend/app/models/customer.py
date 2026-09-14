@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import os
 import re
 import uuid
 from datetime import datetime, timezone
@@ -63,5 +64,8 @@ class Customer(Base):
 
             key = _load_key()
         except Exception:
+            env = os.getenv("ENVIRONMENT", "development").lower()
+            if env in ("production", "prod", "staging"):
+                raise
             key = _DEV_PHONE_PEPPER
         return hmac.new(key, msisdn.encode("utf-8"), hashlib.sha256).hexdigest()
