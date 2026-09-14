@@ -5,10 +5,18 @@ import { Card } from '../ui/Card';
 import { SpiritLevel } from './SpiritLevel';
 
 interface CameraStudioProps {
-  onCaptureComplete: (imageDataUrl: string, tiltVerified: boolean) => void;
+  onCaptureComplete: (imageDataUrl: string, tiltVerified: boolean, capturedAt: string) => void | Promise<void>;
+  location?: {
+    lat: number;
+    lng: number;
+    capturedAt: string;
+    village: string;
+    city: string;
+    state: string;
+  } | null;
 }
 
-export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete }) => {
+export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete, location }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -19,6 +27,7 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete })
   const [isTiltValid, setIsTiltValid] = useState<boolean>(true);
   const [currentTiltAngle, setCurrentTiltAngle] = useState<number>(0.5);
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const playShutterSound = () => {
     try {
@@ -123,7 +132,26 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete })
       ctx.fillText('1:1 Cryptographic Loom Snapshot Proof', size / 2, size / 2 + 30);
     }
 
-    // Stamp watermark banner
+    const locationLines = location
+      ? [
+        `GPS: ${location.lat}° N, ${location.lng}° E`,
+        `Village: ${location.village}`,
+        `City / District: ${location.city}`,
+        `State: ${location.state}`,
+        `Captured: ${new Date(location.capturedAt).toLocaleString('en-IN')}`,
+      ]
+      : ['GPS location not available'];
+
+    ctx.fillStyle = 'rgba(26, 32, 44, 0.9)';
+    ctx.fillRect(20, size - 185, size - 40, 115);
+    ctx.font = 'bold 17px Inter, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'left';
+    locationLines.forEach((line, index) => {
+      ctx.fillText(line, 40, size - 158 + (index * 20));
+    });
+
+    // Stamp provenance banner
     ctx.fillStyle = 'rgba(26, 32, 44, 0.88)';
     ctx.fillRect(20, size - 70, size - 40, 50);
 
@@ -150,9 +178,14 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete })
     startCamera();
   };
 
-  const handleConfirm = () => {
-    if (capturedImage) {
-      onCaptureComplete(capturedImage, isTiltValid);
+  const handleConfirm = async () => {
+    if (!capturedImage || isConfirming) return;
+
+    setIsConfirming(true);
+    try {
+      await onCaptureComplete(capturedImage, isTiltValid, new Date().toISOString());
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -247,7 +280,7 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete })
             />
             <div className="absolute top-3 right-3 px-3 py-1 bg-emerald-700/90 backdrop-blur-md text-white text-xs font-bold rounded-full flex items-center gap-1 shadow-md">
               <CheckCircle className="w-3.5 h-3.5" />
-              <span>Canvas 2D SHA-256 Snapshot</span>
+              <span>GPS Location Attached</span>
             </div>
           </div>
         )}
@@ -298,10 +331,11 @@ export const CameraStudio: React.FC<CameraStudioProps> = ({ onCaptureComplete })
               variant="gold"
               size="lg"
               leftIcon={<Sparkles className="w-5 h-5" />}
+              isLoading={isConfirming}
               onClick={handleConfirm}
               className="w-full sm:w-auto"
             >
-              Confirm Evidence &amp; Proceed
+              {isConfirming ? 'Processing image...' : 'Confirm Evidence & Proceed'}
             </Button>
           </>
         )}

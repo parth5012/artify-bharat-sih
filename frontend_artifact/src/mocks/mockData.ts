@@ -1,5 +1,7 @@
 import type { CraftProduct, DistrictMetric, AuditFeedItem, PMDakshMetric, ArtisanProfile } from '../types';
 
+const DEMO_CRAFT_IMAGE = '/hero.png';
+
 export const MOCK_ARTISAN_PROFILES: Record<string, ArtisanProfile> = {
   solo: {
     id: 'artisan-001',
@@ -9,7 +11,7 @@ export const MOCK_ARTISAN_PROFILES: Record<string, ArtisanProfile> = {
     pmDakshCertified: true,
     wageMultiplierBefore: 1.0,
     wageMultiplierAfter: 1.38,
-    photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+    photoUrl: DEMO_CRAFT_IMAGE,
   },
   shg_leader: {
     id: 'shg-leader-101',
@@ -21,7 +23,7 @@ export const MOCK_ARTISAN_PROFILES: Record<string, ArtisanProfile> = {
     pmDakshCertified: true,
     wageMultiplierBefore: 1.0,
     wageMultiplierAfter: 1.45,
-    photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    photoUrl: DEMO_CRAFT_IMAGE,
   }
 };
 
@@ -34,8 +36,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
     cluster: 'Varanasi',
     artisanName: 'Mohammad Rahim Ansari',
     artisanId: 'artisan-002',
-    wipPhotoUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    cleanPhotoUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
+    wipPhotoUrl: DEMO_CRAFT_IMAGE,
+    cleanPhotoUrl: DEMO_CRAFT_IMAGE,
     audioStoryUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     transcript: 'Yeh Banarasi Zari humare parivar mein 4 peedhiyon se chal rahi hai. Resham ka dhaga aur asli Zari ki karigari mein 18 din lagte hain.',
     translatedText: 'This Banarasi Zari weaving technique has been passed down in our family for 4 generations. It takes 18 days of intricate craftsmanship with pure silk and golden thread.',
@@ -72,8 +74,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
     cluster: 'Madhubani',
     artisanName: 'Sita Devi Ramani',
     artisanId: 'artisan-001',
-    wipPhotoUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80',
-    cleanPhotoUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
+    wipPhotoUrl: DEMO_CRAFT_IMAGE,
+    cleanPhotoUrl: DEMO_CRAFT_IMAGE,
     audioStoryUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     transcript: 'Hamaar ee Madhubani chitra natural rangan se banol gel aee. Haldi, neem aur cowdung se base banaye ke bambu brush se chitra banawali hai.',
     translatedText: 'This Madhubani artwork is rendered using natural organic pigments. The base is prepared with turmeric and neem extracts, painted using hand-carved bamboo twigs.',
@@ -110,8 +112,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
     cluster: 'Kashmir',
     artisanName: 'Ghulam Nabi Dar',
     artisanId: 'artisan-003',
-    wipPhotoUrl: 'https://images.unsplash.com/photo-1606760227091-3dd858d9721d?auto=format&fit=crop&w=800&q=80',
-    cleanPhotoUrl: 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?auto=format&fit=crop&w=800&q=80',
+    wipPhotoUrl: DEMO_CRAFT_IMAGE,
+    cleanPhotoUrl: DEMO_CRAFT_IMAGE,
     audioStoryUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
     transcript: 'Ladakh ke Changthangi bakri ke Pashm se yeh shaal bani hai. Needle Sozni kaam mein 3 mahine lage hain.',
     translatedText: 'Woven from raw Pashm wool of Changthangi goats in Ladakh. The micro needle Sozni embroidery required 3 full months of dedicated hand crafting.',
@@ -148,8 +150,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
     cluster: 'Kutch',
     artisanName: 'Ismail Abdul Khatri',
     artisanId: 'artisan-004',
-    wipPhotoUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
-    cleanPhotoUrl: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=800&q=80',
+    wipPhotoUrl: DEMO_CRAFT_IMAGE,
+    cleanPhotoUrl: DEMO_CRAFT_IMAGE,
     audioStoryUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
     transcript: 'Yeh Ajrakh chhapai 16 dharmo aur vidhiyon se hoti hai. Natural indigo, madder root aur pomegrante peel ke rang upayog hote hain.',
     translatedText: 'This Ajrakh block printing undergoes 16 stage washing and resist dyeing using natural indigo, madder root, and pomegranate peel.',
@@ -186,8 +188,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
     cluster: 'Pochampally',
     artisanName: 'Konda Laxmaiah',
     artisanId: 'artisan-005',
-    wipPhotoUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-    cleanPhotoUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    wipPhotoUrl: DEMO_CRAFT_IMAGE,
+    cleanPhotoUrl: DEMO_CRAFT_IMAGE,
     audioStoryUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
     transcript: 'Pochampally Ikat mein warp aur weft dono dhagon ko pehle se tie aur dye karke frame pe set kiya jata hai.',
     translatedText: 'In Pochampally Double Ikat, both warp and weft yarns are tied and hand-dyed with mathematical precision prior to weaving.',

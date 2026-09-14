@@ -1,11 +1,51 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Camera, ShieldCheck, Award, ArrowRight, MapPin, IndianRupee, Sparkles, QrCode } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { MOCK_PRODUCTS } from '../mocks/mockData';
+import { loginArtisan, type ArtisanSession } from '../api/authApi';
+import type { ArtisanProfileDraft } from '../components/artisan/VoiceProfileForm';
 
 export const LandingPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoginError(null);
+    setIsLoggingIn(true);
+
+    try {
+      const session: ArtisanSession = await loginArtisan(phone.trim(), pin.trim());
+      const normalizedPhone = session.phone.replace(/\D/g, '');
+      const storedProfile = window.localStorage.getItem(`artify-artisan-profile-${normalizedPhone}`);
+      const profile = storedProfile ? JSON.parse(storedProfile) as ArtisanProfileDraft : {
+        name: session.name,
+        phone: session.phone,
+        pin: '',
+        dialect: '',
+        craftTitle: '',
+        craftType: '',
+        material: '',
+        description: '',
+        laborDays: 0,
+      };
+
+      window.localStorage.setItem('artify-auth-token', session.access_token);
+      window.localStorage.setItem('artify-artisan-session', JSON.stringify(session));
+      window.dispatchEvent(new Event('artify-auth-change'));
+      navigate('/artisan', { state: { profile, session } });
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Could not sign in. Check your phone number and PIN.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   return (
     <div className="space-y-12 py-6 animate-fade-in-up">
       {/* Hero Section */}
@@ -25,11 +65,9 @@ export const LandingPage: React.FC = () => {
           </p>
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
-            <Link to="/artisan">
-              <Button variant="gold" size="lg" rightIcon={<ArrowRight className="w-5 h-5" />} className="shadow-lg hover:scale-105 transition-transform">
-                Artisan Portal Studio
-              </Button>
-            </Link>
+            <span className="inline-flex items-center rounded-xl border border-heritage-gold/60 bg-white/10 px-4 py-3 text-sm font-bold text-heritage-gold">
+              Artisan work happens in the Android app
+            </span>
 
             <Link to="/buyer">
               <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10 hover:scale-105 transition-transform">
@@ -50,6 +88,43 @@ export const LandingPage: React.FC = () => {
             <path fill="#FFFFFF" d="M47.5,-57.2C59.7,-46.1,66.6,-28.9,68.2,-11.6C69.8,5.7,66.1,23.1,56.7,36.5C47.3,49.9,32.2,59.3,15.5,63.9C-1.2,68.5,-19.5,68.3,-34.7,60.8C-49.9,53.3,-62,38.5,-66.3,21.8C-70.6,5.1,-67.1,-13.5,-58.5,-28.3C-49.9,-43.1,-36.2,-54.1,-21.9,-63.9C-7.6,-73.7,7.3,-82.3,22.2,-79.8C37.1,-77.3,52.0,-63.7,47.5,-57.2Z" transform="translate(100 100)" />
           </svg>
         </div>
+      </section>
+
+      <section id="artisan-login" className="mx-auto w-full max-w-xl scroll-mt-24 rounded-3xl border border-terracotta-200 bg-cream-50 p-6 shadow-warm">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold font-heading text-charcoal-900">Artisan Login</h2>
+          <p className="text-sm text-charcoal-700">Sign in with your phone number and PIN to open your saved profile.</p>
+        </div>
+        <form onSubmit={handleLogin} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="text-xs font-semibold text-charcoal-800">
+            Mobile Number
+            <input
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              inputMode="tel"
+              required
+              placeholder="10-digit mobile number"
+              className="mt-1 w-full rounded-xl border border-terracotta-200 bg-white p-3 text-sm outline-none focus:border-terracotta-500"
+            />
+          </label>
+          <label className="text-xs font-semibold text-charcoal-800">
+            Security PIN
+            <input
+              value={pin}
+              onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric"
+              type="password"
+              required
+              minLength={4}
+              placeholder="4-6 digit PIN"
+              className="mt-1 w-full rounded-xl border border-terracotta-200 bg-white p-3 text-sm outline-none focus:border-terracotta-500"
+            />
+          </label>
+          {loginError && <p className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{loginError}</p>}
+          <Button type="submit" variant="gold" size="lg" disabled={isLoggingIn} className="sm:col-span-2">
+            {isLoggingIn ? 'Signing in...' : 'Login & Open Profile'}
+          </Button>
+        </form>
       </section>
 
       {/* Innovation Pillars */}

@@ -126,6 +126,7 @@ export interface OfflineDraft {
   wipPhotoDataUrl?: string;
   voiceAudioDataUrl?: string;
   gpsCoords?: { lat: number; lng: number };
+  provenanceTimestamp?: string;
   tiltVerified: boolean;
   createdAt: string;
   synced: boolean;

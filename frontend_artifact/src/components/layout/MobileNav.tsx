@@ -1,9 +1,23 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Camera, QrCode, Shield, Home } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Camera, QrCode, Shield, Home, LogIn, LogOut, UserPlus } from 'lucide-react';
 
 export const MobileNav: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(window.localStorage.getItem('artify-auth-token')));
+
+  useEffect(() => {
+    const syncAuthState = () => setIsAuthenticated(Boolean(window.localStorage.getItem('artify-auth-token')));
+    window.addEventListener('artify-auth-change', syncAuthState);
+    return () => window.removeEventListener('artify-auth-change', syncAuthState);
+  }, []);
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('artify-auth-token');
+    window.dispatchEvent(new Event('artify-auth-change'));
+    navigate('/');
+  };
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true;
@@ -61,6 +75,21 @@ export const MobileNav: React.FC = () => {
           <Shield className="w-5 h-5" />
           <span>Admin</span>
         </Link>
+
+        {isAuthenticated ? (
+          <button type="button" onClick={handleLogout} className="flex flex-col items-center gap-1 rounded-xl p-2 text-xs font-semibold text-charcoal-700">
+            <LogOut className="h-5 w-5" />
+            <span>Logout</span>
+          </button>
+        ) : (
+          <Link
+            to={location.pathname === '/' ? '#artisan-login' : '/artisan?signup=1'}
+            className="flex flex-col items-center gap-1 rounded-xl p-2 text-xs font-semibold text-charcoal-700"
+          >
+            {location.pathname === '/' ? <LogIn className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+            <span>{location.pathname === '/' ? 'Login' : 'Sign up'}</span>
+          </Link>
+        )}
       </div>
     </div>
   );

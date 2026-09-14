@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Camera, QrCode, Shield, Wifi, WifiOff, Award } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Camera, QrCode, Shield, Wifi, WifiOff, Award, LogIn, LogOut, UserPlus } from 'lucide-react';
 import { RoleSwitcher } from '../artisan/RoleSwitcher';
 import type { ArtisanRole } from '../../types';
 
@@ -20,6 +20,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLanguageChange,
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(window.localStorage.getItem('artify-auth-token')));
+
+  useEffect(() => {
+    const syncAuthState = () => setIsAuthenticated(Boolean(window.localStorage.getItem('artify-auth-token')));
+    window.addEventListener('artify-auth-change', syncAuthState);
+    return () => window.removeEventListener('artify-auth-change', syncAuthState);
+  }, []);
+
+  const handleLogout = () => {
+    window.localStorage.removeItem('artify-auth-token');
+    window.dispatchEvent(new Event('artify-auth-change'));
+    navigate('/');
+  };
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true;
@@ -126,6 +140,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="hidden sm:block">
               <RoleSwitcher currentRole={currentRole} onRoleChange={onRoleChange} />
             </div>
+
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 rounded-xl border border-terracotta-200 bg-cream-50 px-3 py-2 text-xs font-bold text-charcoal-800 transition-colors hover:bg-terracotta-50"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
+            ) : (
+              <div className="hidden items-center gap-2 sm:flex">
+                <Link
+                  to="/#artisan-login"
+                  className="flex items-center gap-1.5 rounded-xl border border-terracotta-200 bg-cream-50 px-3 py-2 text-xs font-bold text-charcoal-800 transition-colors hover:bg-terracotta-50"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span>Login</span>
+                </Link>
+                <Link
+                  to="/artisan?signup=1"
+                  className="flex items-center gap-1.5 rounded-xl bg-terracotta-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-terracotta-600"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span>Sign up</span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
