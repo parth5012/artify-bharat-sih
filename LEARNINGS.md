@@ -2,6 +2,22 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Marketplace E2E Reserve Flow (Map #86 T6)
+
+- **Single-test full chain beats scattered asserts**: one async test driving browse ->
+  reserve -> confirm -> my-reservations -> `/expiry/run` over HTTP catches link bugs
+  (e.g. pickup_code lost after confirm, cron releasing confirmed holds) that isolated
+  unit tests miss. Confirmed holds must survive `release_expired` (only `pending`
+  released) — assert `reserved_qty` stays 1 after cron run.
+- **Force-expiry pattern**: set `row.expires_at = now - 1h`, commit, then POST the real
+  cron endpoint — tests the HTTP gate + service in one shot without waiting 7 days.
+- **Quantity-type product for E2E**: `stock_qty=2, stock_type="quantity"` lets one test
+  hold a confirmed lock AND an expirable pending hold on the same product; unique
+  1-of-1 items can't do both.
+- **Map audit without map access**: issues #86/#92 returned 404 via anonymous web fetch
+  (private repo) — audit against the ticket-quoted Destination + decisions and record
+  the substitution honestly.
+
 ## E2E Onboarding Flow Verification & Resilient Government Fallback (US-ONB-01)
 1. **Master Registry Normalization**: Pehchan and TRIFED card IDs must be strictly stripped and uppercased (PEH-IND-88320) before querying the national master registry; case mismatch silently drops artisans into manual fallback.
 2. **Graceful Fallback for Unregistered Cards**: In field onboarding, newly registered rural artisans often possess freshly issued physical Pehchan cards not yet indexed in the central registry. By capturing manual_state, manual_district, and manual_cluster when verified=False, the backend ensures zero drop-off while marking verification status honestly.
