@@ -16,6 +16,7 @@ Each entry:
 
 | Date | Status | What | Verified | Notes |
 |------|--------|------|----------|-------|
+| 2026-09-14 | Done | Wayfinder T1 #87 CodeReviewer fixes: reservation product_id String(64), TimestampMixin updated_at + migration, bare-default stock test, Customer.hash_phone HMAC, typed rels, composite idx | `uv run pytest -m "not slow"` 141 passed 32 deselected; `uv run ruff check backend/app backend/tests` clean | No commit per instruction; ticket left open |
 | 2026-09-14 | Done | Added dedicated artisan profile review page before fair-wage pricing | `npm run build` green; changed-page diagnostics clean | Form submission saves the phone-specific profile, then requires explicit profile confirmation before pricing |
 | 2026-09-14 | Done | Added side-by-side voice recording and direct manual artisan profile entry | `npm run build` green; changed-file diagnostics clean | Left panel records voice; right panel is immediately editable and switches to extracted values after processing |
 | 2026-09-14 | Done | Added manual artisan profile entry alongside voice autofill | `npm run build` green; changed-file diagnostics clean | Manual mode edits all profile fields, saves the complete profile under a phone-specific localStorage key, and feeds pricing/printing |
@@ -104,3 +105,18 @@ Each entry:
 - uv run pytest backend/tests/test_onboarding.py backend/tests/test_onboarding_e2e.py (20/20 tests passing green).
 - Full backend suite regression checks (auth, mosje, pii vault, admin, passport, shortcode, pricing) pass.
 - Ruff and Black formatting verified clean.
+
+### Status: Done (Marketplace T1 Backend models + migration, issue #87)
+**Date**: 2026-09-14
+**What Changed**:
+- New backend/app/models/customer.py: Customer (phone_hash unique SHA-256 lookup + phone_token PII-vault via protect(), name, created_at).
+- New backend/app/models/reservation.py: Reservation (product_id/customer_id FKs, qty, status pending/confirmed/declined/expired/completed/cancelled, expires_at 7-day default, pickup_code 6-char unique).
+- Extended Product: stock_qty INT default 1, stock_type default unique, is_listed BOOL default False indexed, reserved_qty INT default 0, reservations relationship.
+- backend/app/models/__init__.py exports Customer, Reservation.
+- New alembic migration 0003_marketplace_reserve (customers + reservations tables, products stock columns; downgrade included).
+- New backend/tests/test_marketplace_models.py (4 tests: phone unique, stock defaults, verified-only query, statuses/expiry).
+**Verified**:
+- uv run pytest -m 'not slow' from backend/: 140 passed, 32 deselected.
+- uv run ruff check backend/app backend/tests: All checks passed.
+- Migration file compiles OK (py_compile).
+
