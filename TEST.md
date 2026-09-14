@@ -16,9 +16,10 @@
 | Cluster    | Varanasi (Banarasi Brocade) |
 | Owns       | `prod-001` (1-of-1 unique, listed) |
 
-Log in via the app landing page, or inject the session directly in DevTools
-(Application → Local Storage) so the Artisan **Orders** tab and the
-own-product guard resolve to this artisan:
+Log in via the app landing page (real API: phone + PIN `2222`), or — mock
+mode only — inject the session directly in DevTools
+(Application → Local Storage). The injected token below is **not** a real JWT
+and works only with `VITE_USE_MOCKS=true`:
 
 ```json
 {"access_token": "mock-token-artisan-002", "token_type": "bearer", "artisan_id": "artisan-002", "name": "Mohammad Rahim Ansari", "phone": "9876543202"}
@@ -66,19 +67,30 @@ pickup code; Artisan **Orders** tab (session above) can Accept/Decline it.
 from app.core.security import get_pin_hash
 from app.models.artisan import Artisan
 from app.models.customer import Customer
+from app.models.product import Product
 
 artisan = Artisan(
+    id="artisan-002",
     name="Mohammad Rahim Ansari", phone="9876543202",
     pin_hash=get_pin_hash("2222"), cluster_name="Varanasi Handloom Cluster",
     state="Uttar Pradesh", district="Varanasi",
     is_onboarded=True, onboarding_step=3,
 )
 customer = Customer(name="Test Buyer", phone_hash=Customer.hash_phone("9876543201"))
-# db.add_all([artisan, customer]); await db.commit()
+product = Product(
+    id="prod-001", artisan_id="artisan-002",
+    title="Hand-woven Banarasi Zari Silk Saree",
+    status="published", is_listed=True, stock_qty=1, stock_type="unique",
+)
+# db.add_all([artisan, customer, product]); await db.commit()
 # Plaintext phone never persists — only phone_hash + PII-vault token.
 ```
 
 ## 5. E2E walkthrough (5 min)
+
+> Pick ONE setup path per run: either start clean at step 1 (no seed), or
+> use the §3 seed and skip to step 2 — otherwise you get two pending holds
+> (mock mode doesn't dedupe the seeded reservation against a new reserve).
 
 1. `/market` → add `prod-001` to cart → **Reserve Now** as Test Buyer
    (`9876543201` / `123456`) → 7-day hold + pickup code shown.
@@ -92,7 +104,7 @@ customer = Customer(name="Test Buyer", phone_hash=Customer.hash_phone("987654320
 ## 6. Cleanup
 
 ```js
-['artify-buyer-phone','artify-mock-reservations','artify-cart']
+['artify-buyer-phone','artify-mock-reservations','artify-cart','artify-artisan-session']
   .forEach(k => localStorage.removeItem(k));
 ```
 
