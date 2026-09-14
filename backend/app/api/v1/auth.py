@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -143,13 +144,18 @@ async def onboarding_step1(
     status_code=status.HTTP_200_OK,
 )
 async def onboarding_step2(
-    payload: OnboardingStep2Request, db: AsyncSession = Depends(get_db)
+    payload: OnboardingStep2Request,
+    db: AsyncSession = Depends(get_db),
+    authorization: Optional[str] = Header(None),
 ):
     """
-    US-ONB-01 Step 2: Verify government credentials (Pehchan/TRIFED/e-Shram) with autofill or manual fallback.
+    US-ONB-01 Step 2: Verify government credentials (Pehchan/TRIFED/e-Shram) and autofill with manual fallback.
     """
+    token = payload.session_token
+    if not token and authorization and authorization.startswith("Bearer "):
+        token = authorization[7:].strip()
     try:
-        return await verify_onboarding_id(db, payload)
+        return await verify_onboarding_id(db, payload, session_token=token)
     except AuthError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
@@ -160,13 +166,18 @@ async def onboarding_step2(
     status_code=status.HTTP_200_OK,
 )
 async def onboarding_step3(
-    payload: OnboardingStep3Request, db: AsyncSession = Depends(get_db)
+    payload: OnboardingStep3Request,
+    db: AsyncSession = Depends(get_db),
+    authorization: Optional[str] = Header(None),
 ):
     """
     US-ONB-01 Step 3: Complete artisan or SHG leader onboarding and issue access token.
     """
+    token = payload.session_token
+    if not token and authorization and authorization.startswith("Bearer "):
+        token = authorization[7:].strip()
     try:
-        return await complete_onboarding(db, payload)
+        return await complete_onboarding(db, payload, session_token=token)
     except AuthError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 

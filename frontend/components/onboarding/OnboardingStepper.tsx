@@ -34,8 +34,10 @@ export const OnboardingStepper: React.FC<OnboardingStepperProps> = ({
   onStepClick,
   highestStepReached = 1,
 }) => {
+  const clampedStep = Math.max(1, Math.min(3, typeof currentStep === "number" ? currentStep : 1));
+  const activeStep = STEPS[clampedStep - 1] || STEPS[0];
   const progressPercent =
-    currentStep === 1 ? 33 : currentStep === 2 ? 66 : 100;
+    clampedStep === 1 ? 33 : clampedStep === 2 ? 66 : 100;
 
   return (
     <div
@@ -45,8 +47,7 @@ export const OnboardingStepper: React.FC<OnboardingStepperProps> = ({
     >
       {/* Accessible Live Region */}
       <div className="sr-only" aria-live="polite">
-        चरण {currentStep} का 3: {STEPS[currentStep - 1].titleHi} (
-        {STEPS[currentStep - 1].titleEn})
+        चरण {clampedStep} / 3: {activeStep.titleHi} ({activeStep.titleEn})
       </div>
 
       {/* Progress Bar Top Track */}

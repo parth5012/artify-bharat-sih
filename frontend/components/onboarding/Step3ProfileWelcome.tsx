@@ -36,15 +36,11 @@ export const Step3ProfileWelcome: React.FC<Step3ProfileWelcomeProps> = ({
   const isShg = data.role === 'shg';
   const dialectInfo = REGIONAL_DIALECTS[data.dialect] || REGIONAL_DIALECTS.hindi;
 
-  const [name, setName] = useState(data.artisanName || 'Radha Devi');
-  const [shgName, setShgName] = useState(
-    data.shgGroupName || (isShg ? 'गंगा बुनकर महिला स्वयं सहायता समूह' : '')
-  );
-  const [shgCount, setShgCount] = useState<number>(data.shgMemberCount || 12);
+  const [name, setName] = useState(data.artisanName || '');
+  const [shgName, setShgName] = useState(data.shgGroupName || '');
+  const [shgCount, setShgCount] = useState<number>(data.shgMemberCount || 5);
   const [craft, setCraft] = useState(data.craftCategory || CRAFT_CATEGORIES[0]);
-  const [cluster, setCluster] = useState(
-    data.clusterName || 'वाराणसी हथकरघा क्लस्टर (Varanasi Handloom Cluster)'
-  );
+  const [cluster, setCluster] = useState(data.clusterName || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleNameChange = (val: string) => {
@@ -160,7 +156,7 @@ export const Step3ProfileWelcome: React.FC<Step3ProfileWelcomeProps> = ({
                 min={2}
                 max={500}
                 value={shgCount}
-                onChange={(e) => handleShgCountChange(parseInt(e.target.value) || 1)}
+                onChange={(e) => { const val = parseInt(e.target.value, 10); handleShgCountChange(isNaN(val) ? 2 : Math.max(2, val)); }}
                 className="w-full min-h-[52px] px-4 rounded-xl border-2 border-slate-300 font-semibold text-base text-slate-900 transition-all focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 bg-white"
                 required
               />

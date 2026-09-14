@@ -33,6 +33,17 @@ export const AskDadiVoiceGuide: React.FC<AskDadiVoiceGuideProps> = ({
 }) => {
   const dialectInfo = REGIONAL_DIALECTS[dialect] || REGIONAL_DIALECTS.hindi;
 
+  React.useEffect(() => {
+    if (!isDialogOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCloseDialog();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDialogOpen, onCloseDialog]);
+
   return (
     <>
       {/* Floating Audio Guidance Toggle Button (WCAG min 48px target) */}
@@ -102,6 +113,9 @@ export const AskDadiVoiceGuide: React.FC<AskDadiVoiceGuideProps> = ({
           aria-modal="true"
           aria-labelledby="dadi-dialog-title"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onCloseDialog();
+        }}
         >
           <div className="w-full max-w-lg bg-[#FDFBF7] rounded-3xl p-6 sm:p-7 shadow-2xl border-2 border-amber-500/30 text-slate-900 relative max-h-[90vh] overflow-y-auto">
             {/* Header */}

@@ -16,12 +16,14 @@ export const DraftRestoreBanner: React.FC<DraftRestoreBannerProps> = ({
 }) => {
   const formattedTime = React.useMemo(() => {
     try {
-      return new Date(draft.updatedAt).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
+      const d = new Date(draft.updatedAt);
+      if (isNaN(d.getTime())) return "हाल में (Recently)";
+      return d.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch {
-      return 'हाल ही में (Recently)';
+      return "हाल में (Recently)";
     }
   }, [draft.updatedAt]);
 

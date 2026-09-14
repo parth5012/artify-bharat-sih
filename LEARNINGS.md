@@ -2,9 +2,9 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
-### E2E Onboarding Flow Verification & Resilient Government ID Fallback (US-ONB-01)
+## E2E Onboarding Flow Verification & Resilient Government Fallback (US-ONB-01)
 1. **Master Registry Normalization**: Pehchan and TRIFED card IDs must be strictly stripped and uppercased (PEH-IND-88320) before querying the national master registry; case mismatch silently drops artisans into manual fallback.
-2. **Graceful Fallback for Unregistered Cards**: In field onboarding, newly registered rural artisans often possess freshly issued physical Pehchan cards not yet indexed in the central registry. By capturing manual_state, manual_district, and manual_cluster when erified=False, the backend ensures zero drop-off while marking verification status honestly.
+2. **Graceful Fallback for Unregistered Cards**: In field onboarding, newly registered rural artisans often possess freshly issued physical Pehchan cards not yet indexed in the central registry. By capturing manual_state, manual_district, and manual_cluster when verified=False, the backend ensures zero drop-off while marking verification status honestly.
 3. **Offline Sync Idempotence & Fast Login**: The /api/v1/auth/onboarding/sync endpoint enables composite draft submission directly upon network recovery. Synchronized records instantly become eligible for standard 4-digit PIN authentication via /api/v1/auth/login, bypassing repeated OTPs.
 
 ## Web Speech API & Regional Dialect Fallback (US-ONB-01)

@@ -64,6 +64,7 @@ class ArtisanIdVerificationResponse(BaseModel):
 
 # Aliases for backward-compatibility with backend service modules
 RegisterRequest = VoiceRegisterRequest
+LoginRequest = PinLoginRequest
 
 # --- US-ONB-01 Multi-Step Onboarding & Offline Sync Schemas ---
 
@@ -96,6 +97,7 @@ class OnboardingStep1Response(BaseModel):
 
 class OnboardingStep2Request(BaseModel):
     artisan_id: str
+    session_token: Optional[str] = None
     id_type: OnboardingIdType = Field(default=OnboardingIdType.NONE)
     id_number: Optional[str] = None
     manual_state: Optional[str] = None
@@ -123,6 +125,7 @@ class OnboardingStep2Response(BaseModel):
 
 class OnboardingStep3Request(BaseModel):
     artisan_id: str
+    session_token: Optional[str] = None
     name: str = Field(..., min_length=2, description="Full artisan or leader name")
     craft_category: Optional[str] = None
     shg_group_name: Optional[str] = None
@@ -145,6 +148,7 @@ class OnboardingSyncRequest(BaseModel):
     phone: str = Field(..., pattern=r"^\d{10}$", description="10-digit mobile number")
     pin: str = Field(..., pattern=r"^\d{4}$", description="4-digit security PIN")
     name: str = Field(..., min_length=2, description="Full artisan name")
+    session_token: Optional[str] = None
     dialect: str = Field(default="hindi")
     role: str = Field(default="artisan")
     id_type: Optional[str] = Field(default="none")

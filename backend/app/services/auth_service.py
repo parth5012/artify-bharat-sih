@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.pii_vault import protect as protect_pii, reveal as reveal_pii
-from app.core.security import create_access_token, get_pin_hash, verify_pin
+from app.core.security import create_access_token, decode_access_token, get_pin_hash, verify_pin
 from app.models.artisan import Artisan
 from app.schemas.auth import (
     ArtisanIdVerificationResponse,
@@ -55,6 +55,15 @@ MASTER_ARTISAN_REGISTRY = {
         "district": "Varanasi",
     },
     "UP-VAR-102938": {
+        "artisan_name": "Radha Devi",
+        "craft_category": "Handloom Textile",
+        "cluster_name": "Varanasi Handloom Cluster",
+        "gi_certified": True,
+        "gi_tag_name": "Banarasi Brocade & Saree (GI Reg #39)",
+        "state": "Uttar Pradesh",
+        "district": "Varanasi",
+    },
+    "123456789012": {
         "artisan_name": "Radha Devi",
         "craft_category": "Handloom Textile",
         "cluster_name": "Varanasi Handloom Cluster",
@@ -202,7 +211,7 @@ async def initiate_onboarding(
 
 
 async def verify_onboarding_id(
-    db: AsyncSession, req: OnboardingStep2Request
+    db: AsyncSession, req: OnboardingStep2Request, session_token: Optional[str] = None
 ) -> OnboardingStep2Response:
     """Step 2: Verify government credentials (Pehchan/TRIFED/e-Shram) with autofill or manual fallback."""
     stmt = select(Artisan).where(Artisan.id == req.artisan_id)
@@ -210,6 +219,15 @@ async def verify_onboarding_id(
     artisan = res.scalar_one_or_none()
     if not artisan:
         raise AuthError("Artisan not found", 404)
+
+    if artisan.is_onboarded:
+        raise AuthError("Artisan is already onboarded. Please log in with PIN.", 400)
+
+    token = session_token or req.session_token
+    if token:
+        payload = decode_access_token(token)
+        if not payload or payload.get("sub") != req.artisan_id:
+            raise AuthError("Invalid or expired session token for this artisan ID", 401)
 
     id_type = (
         req.id_type.value if hasattr(req.id_type, "value") else str(req.id_type).lower()
@@ -260,11 +278,21 @@ async def verify_onboarding_id(
         uan_clean = req.id_number.replace("-", "").replace(" ", "").strip()
         artisan.eshram_uan = cast(str, protect_pii(uan_clean))
         is_valid = len(uan_clean) == 12 and uan_clean.isdigit()
-        verified = is_valid
-        if is_valid:
-            message = "e-Shram UAN verified successfully."
+        raw_id = req.id_number.strip().upper()
+        if not is_valid and raw_id not in MASTER_ARTISAN_REGISTRY:
+            verified = False
+            message = "Invalid e-Shram UAN format. Using manual location details."
+        elif uan_clean in MASTER_ARTISAN_REGISTRY or raw_id in MASTER_ARTISAN_REGISTRY:
+            reg = MASTER_ARTISAN_REGISTRY.get(uan_clean) or MASTER_ARTISAN_REGISTRY.get(raw_id)
+            if reg:
+                verified = True
+                cluster_name = reg["cluster_name"]
+                state = reg["state"]
+                district = reg["district"]
+                message = f"e-Shram verified: {reg.get('gi_tag_name', 'GI Certified')}"
         else:
-            message = "Invalid e-Shram UAN. Using manual location details."
+            verified = False
+            message = "e-Shram UAN format valid. Verification pending official registry match. Using manual location details."
 
     elif id_type == "none":
         verified = False
@@ -291,14 +319,23 @@ async def verify_onboarding_id(
 
 
 async def complete_onboarding(
-    db: AsyncSession, req: OnboardingStep3Request
+    db: AsyncSession, req: OnboardingStep3Request, session_token: Optional[str] = None
 ) -> OnboardingCompleteResponse:
-    """Step 3: Save artisan/leader name, craft/SHG info, and finalize onboarding."""
+    """Step 3: Save artisan/leader name, craft/SHG info, finalize onboarding."""
     stmt = select(Artisan).where(Artisan.id == req.artisan_id)
     res = await db.execute(stmt)
     artisan = res.scalar_one_or_none()
     if not artisan:
         raise AuthError("Artisan not found", 404)
+
+    if artisan.is_onboarded:
+        raise AuthError("Artisan is already onboarded. Please log in with PIN.", 400)
+
+    token = session_token or req.session_token
+    if token:
+        payload = decode_access_token(token)
+        if not payload or payload.get("sub") != req.artisan_id:
+            raise AuthError("Invalid or expired session token for this artisan ID", 401)
 
     artisan.name = req.name
     if req.shg_group_name:
@@ -339,9 +376,19 @@ async def sync_onboarding(
     if existing is not None:
         if existing.is_onboarded:
             raise AuthError(
-                "Phone number already registered. Please log in using your 4-digit PIN.",
+                "Phone number is already registered. Please log in using your 4-digit PIN.",
                 400,
             )
+        # If continuing an unfinalized record, verify ownership via session_token or matching PIN
+        authorized = False
+        if req.session_token:
+            payload = decode_access_token(req.session_token)
+            if payload and payload.get("sub") == existing.id:
+                authorized = True
+        if not authorized and verify_pin(req.pin, existing.pin_hash):
+            authorized = True
+        if not authorized:
+            raise AuthError("Unauthorized: matching session token or PIN required to complete registration", 401)
         artisan = existing
     else:
         artisan = Artisan(
@@ -399,8 +446,20 @@ async def sync_onboarding(
                 district = reg["district"]
     elif id_type == "eshram" and req.id_number:
         clean_uan = req.id_number.replace("-", "").replace(" ", "").strip()
+        raw_id = req.id_number.strip().upper()
         artisan.eshram_uan = cast(str, protect_pii(clean_uan))
-        verified = len(clean_uan) == 12 and clean_uan.isdigit()
+        if clean_uan in MASTER_ARTISAN_REGISTRY or raw_id in MASTER_ARTISAN_REGISTRY:
+            reg = MASTER_ARTISAN_REGISTRY.get(clean_uan) or MASTER_ARTISAN_REGISTRY.get(raw_id)
+            if reg:
+                verified = True
+                if not req.cluster_name and not req.manual_cluster:
+                    cluster = reg["cluster_name"]
+                if not req.state and not req.manual_state:
+                    state = reg["state"]
+                if not req.district and not req.manual_district:
+                    district = reg["district"]
+        else:
+            verified = False
 
     artisan.cluster_name = cluster
     artisan.state = state

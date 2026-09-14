@@ -75,8 +75,16 @@ export function getStoredOnboardingDraft(): OnboardingData | null {
     const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && parsed.step) {
-      return { ...DEFAULT_ONBOARDING_DATA, ...parsed };
+    if (parsed && typeof parsed === 'object') {
+      const step = (typeof parsed.step === 'number' && parsed.step >= 1 && parsed.step <= 3)
+        ? (parsed.step as 1 | 2 | 3)
+        : 1;
+      return {
+        ...DEFAULT_ONBOARDING_DATA,
+        ...parsed,
+        step,
+        pin: '', // Never populate PIN from storage
+      };
     }
     return null;
   } catch (err) {
@@ -89,7 +97,7 @@ export function getStoredOnboardingDraft(): OnboardingData | null {
  * Saves current draft to localStorage
  */
 export function saveOnboardingDraft(data: Partial<OnboardingData>): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   try {
     const existing = getStoredOnboardingDraft() || DEFAULT_ONBOARDING_DATA;
     const updated: OnboardingData = {
@@ -97,9 +105,10 @@ export function saveOnboardingDraft(data: Partial<OnboardingData>): void {
       ...data,
       updatedAt: new Date().toISOString(),
     };
-    localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(updated));
+    const { pin: _pin, ...persistable } = updated;
+    localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(persistable));
   } catch (err) {
-    console.warn('[OnboardingStorage] Failed to save draft:', err);
+    console.warn("[OnboardingStorage] Failed to save draft:", err);
   }
 }
 
@@ -118,15 +127,14 @@ export function clearStoredOnboardingDraft(): void {
 /**
  * Persists final verified artisan profile and mock session token
  */
-export function saveCompletedArtisanProfile(profile: Record<string, any>): void {
-  if (typeof window === 'undefined') return;
+export function saveCompletedArtisanProfile(profile: Record<string, any>, token?: string): void {
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(ARTISAN_PROFILE_KEY, JSON.stringify(profile));
-    localStorage.setItem(
-      AUTH_TOKEN_KEY,
-      `artify_jwt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-    );
+    if (token && typeof token === "string" && token.trim().length > 10) {
+      localStorage.setItem(AUTH_TOKEN_KEY, token.trim());
+    }
   } catch (err) {
-    console.warn('[OnboardingStorage] Failed to persist profile:', err);
+    console.warn("[OnboardingStorage] Failed to persist profile:", err);
   }
 }

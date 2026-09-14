@@ -111,14 +111,27 @@ function OnboardingContent() {
     );
   };
 
-  // Final Registration & Onboarding Submission
+  // Final Registration / Onboarding Submission
   const handleCompleteOnboarding = async () => {
-    // 1. Submit to AuthService API (with graceful fallback)
+    const phone = (formData.phone || '').trim();
+    const pin = (formData.pin || '').trim();
+    if (!/^[6-9]\d{9}$/.test(phone) || !/^\d{4}$/.test(pin)) {
+      goToStep(1);
+      return;
+    }
+    const name = (formData.artisanName || '').trim();
+    if (!name) {
+      goToStep(3);
+      return;
+    }
+
+    // 1. Submit to AuthService API
+    let token: string | undefined;
     try {
-      await ArtifyApiClient.registerArtisan({
-        name: formData.artisanName || 'Radha Devi',
-        phone: formData.phone || '9876543210',
-        pin: formData.pin || '4421',
+      const regRes = await ArtifyApiClient.registerArtisan({
+        name,
+        phone,
+        pin,
         primary_dialect: formData.dialect,
         state: formData.state || 'Uttar Pradesh',
         district: formData.district || 'Varanasi',
@@ -126,20 +139,22 @@ function OnboardingContent() {
         pehchan_id: formData.govtIdType === 'pehchan' ? formData.govtIdValue : null,
         trifed_id: formData.govtIdType === 'trifed' ? formData.govtIdValue : null,
       });
+      token = regRes?.access_token;
     } catch (apiErr) {
       console.warn('[OnboardingPage] Registration endpoint warning:', apiErr);
     }
 
-    // 2. Persist completed profile in localStorage
+    // 2. Persist completed profile to localStorage
     saveCompletedArtisanProfile({
       ...formData,
+      artisanName: name,
+      phone,
       isRegistered: true,
       registeredAt: new Date().toISOString(),
-    });
+    }, token);
 
-    // 3. Clear the incomplete draft
+    // 3. Clear incomplete draft
     clearStoredOnboardingDraft();
-
     // 4. Show celebratory confirmation
     setIsCompletedSuccess(true);
     speak(

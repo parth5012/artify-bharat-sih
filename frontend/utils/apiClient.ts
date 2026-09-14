@@ -215,17 +215,25 @@ const LOCAL_MASTER_ARTISANS: Record<string, Omit<ArtisanIdVerificationResult, 'i
   },
 };
 
-async function safeFetch<T>(url: string, options: RequestInit): Promise<T> {
+async function safeFetch<T>(url: string, options?: RequestInit): Promise<T> {
   try {
     const res = await fetch(url, options);
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(errBody.detail || `Server error (${res.status}): ${res.statusText}`);
+      const error: any = new Error(errBody.detail || `Server error (${res.status}): ${res.statusText}`);
+      error.status = res.status;
+      error.isApiError = true;
+      throw error;
     }
     return await res.json();
   } catch (err: any) {
-    if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      throw new Error(`Network offline or API endpoint unreachable: ${url}`);
+    if (err.isApiError) {
+      throw err;
+    }
+    if (err.name === "TypeError" || err.message?.includes("fetch") || err.message?.includes("Network")) {
+      const netError: any = new Error(`Network offline or API endpoint unreachable: ${url}`);
+      netError.isNetworkError = true;
+      throw netError;
     }
     throw err;
   }
@@ -293,7 +301,10 @@ export const ArtifyApiClient = {
         }),
       });
       return result;
-    } catch (networkOrApiErr) {
+    } catch (networkOrApiErr: any) {
+      if (networkOrApiErr?.isApiError) {
+        throw networkOrApiErr;
+      }
       console.warn('[ArtifyApiClient] Remote ID verification unavailable, checking local master registry:', networkOrApiErr);
       if (LOCAL_MASTER_ARTISANS[cleanId]) {
         const local = LOCAL_MASTER_ARTISANS[cleanId];
@@ -330,7 +341,10 @@ export const ArtifyApiClient = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       });
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.isApiError) {
+        throw err;
+      }
       console.warn('[ArtifyApiClient] Register endpoint unavailable, generating local session token:', err);
       return {
         access_token: `mock_artisan_jwt_${Date.now()}`,

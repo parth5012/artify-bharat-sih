@@ -172,6 +172,39 @@ async def test_step2_eshram_verified(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_step2_eshram_unindexed_format_valid(client: AsyncClient):
+    # Step 1
+    s1 = await client.post(
+        "/api/v1/auth/onboarding/step1",
+        json={
+            "phone": "9876500066",
+            "pin": "1234",
+            "dialect": "hindi",
+            "role": "artisan",
+        },
+    )
+    artisan_id = s1.json()["artisan_id"]
+
+    # Step 2: Unindexed 12-digit e-Shram UAN (format valid, but not in registry -> verified is False)
+    s2 = await client.post(
+        "/api/v1/auth/onboarding/step2",
+        json={
+            "artisan_id": artisan_id,
+            "id_type": "eshram",
+            "id_number": "999988887777",
+            "manual_state": "Bihar",
+            "manual_district": "Madhubani",
+            "manual_cluster": "Madhubani Art Cluster",
+        },
+    )
+    assert s2.status_code == 200
+    data = s2.json()
+    assert data["verified"] is False
+    assert "pending official registry match" in data["message"]
+    assert data["state"] == "Bihar"
+
+
+@pytest.mark.asyncio
 async def test_step2_none_manual_fallback(client: AsyncClient):
     # Step 1
     s1 = await client.post(
@@ -330,6 +363,7 @@ async def test_step3_complete_shg_leader(client: AsyncClient, db_session: AsyncS
     stmt = select(Artisan).where(Artisan.id == artisan_id)
     res = await db_session.execute(stmt)
     artisan = res.scalar_one_or_none()
+    assert artisan is not None
     assert artisan.shg_group_name == "Mahila Bunker Samiti"
     assert artisan.shg_member_count == 15
     assert artisan.role == "shg_leader"
@@ -465,6 +499,7 @@ async def test_offline_draft_sync_shg_leader(
     stmt = select(Artisan).where(Artisan.phone == "9876500014")
     res_db = await db_session.execute(stmt)
     artisan = res_db.scalar_one_or_none()
+    assert artisan is not None
     assert artisan.shg_group_name == "Saraswati Self Help Group"
     assert artisan.shg_member_count == 18
     assert artisan.cluster_name == "Kutch Embroidery Cluster"
