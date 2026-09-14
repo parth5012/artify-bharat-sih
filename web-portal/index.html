@@ -395,17 +395,20 @@
         <span>🔍</span> Buyer Passport Portal
       </button>
       <button class="nav-tab-btn" onclick="switchTab('client-tab', this)">
-        <span>📱</span> Artisan & SHG Web Hub
+        <span>📱</span> Artisan SHG Web Hub
       </button>
       <button class="nav-tab-btn" onclick="switchTab('admin-tab', this)">
         <span>📊</span> MoSJE Admin Dashboard
       </button>
       <button class="nav-tab-btn" onclick="switchTab('sandbox-tab', this)">
-        <span>🧪</span> Gov & Logistics Sandbox
+        <span>🧪</span> Gov Logistics Sandbox
       </button>
       <button class="nav-tab-btn" id="nav-aistudio-btn" onclick="switchTab('aistudio-tab', this)">
-        <span>✨</span> AI Studio
+        <span>✨</span> Studio
       </button>
+      <a href="http://localhost:3000/onboarding" target="_blank" rel="noopener noreferrer" class="nav-tab-btn" style="text-decoration:none; background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.45); font-weight:700;" title="Launch 3-Step Voice & MoSJE e-KYC Onboarding Flow">
+        <span>📝</span> 3-Step Onboarding
+      </a>
     </nav>
   </header>
 
@@ -563,26 +566,55 @@
     </section>
 
 
-    <!-- ========================================================
-         TAB 2: ARTISAN & SHG LEADER WEB CLIENT
-         ======================================================== -->
-    <section id="client-tab" class="tab-content">
-      
-      <!-- DUAL ROLE ACCESS SWITCHER -->
-      <div class="role-switcher-card">
-        <div>
-          <span style="font-size:1.1rem; font-weight:800; color:#1E3A8A;">Dual-Role Access Engine:</span>
-          <span style="font-size:0.9rem; color:#3B82F6; margin-left:0.5rem;">Select active operating mode</span>
+<!-- ========================================================
+     TAB 2: ARTISAN & SHG LEADER WEB CLIENT
+======================================================== -->
+<section id="client-tab" class="tab-content">
+
+    <!-- FIRST-TIME ARTISAN ONBOARDING BANNER (US-ONB-01) -->
+    <div style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 2px solid #F59E0B; border-radius: 16px; padding: 1.1rem 1.4rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.12);">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: #D97706; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(180, 83, 9, 0.4);">
+          👵
         </div>
-        <div style="display:flex; gap:0.6rem;">
-          <button id="role-btn-artisan" class="role-pill active" onclick="setRole('artisan')">
-            🧑🎨 Artisan Direct Mode
-          </button>
-          <button id="role-btn-shg" class="role-pill" onclick="setRole('shg')">
-            👥 Aggregator / SHG Leader Mode (Multi-Tenant)
-          </button>
+        <div>
+          <div style="font-weight: 800; font-size: 1.05rem; color: #78350F; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span>नए कारीगर या स्वयं सहायता समूह? (First-Time Artisan Onboarding)</span>
+            <span style="font-size: 0.72rem; font-weight: 800; background: #C04A26; color: white; padding: 0.2rem 0.6rem; border-radius: 9999px; letter-spacing: 0.5px;">US-ONB-01 3-STEP FLOW</span>
+          </div>
+          <p style="font-size: 0.85rem; color: #92400E; margin-top: 0.2rem; line-height: 1.4;">
+            Pehchan ID / e-Shram सत्यापन, 6 क्षेत्रीय बोलियों में दादी का वॉयस गाइड और 0% बिचौलिया कमीशन सुरक्षा तुरंत सक्रिय करें।
+          </p>
         </div>
       </div>
+      <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        <a href="http://localhost:3000/onboarding?role=artisan" target="_blank" rel="noopener noreferrer" style="background: #C04A26; color: white; padding: 0.65rem 1.2rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(192, 74, 38, 0.35); transition: all 0.2s ease;">
+          🧑🎨 एकल कारीगर ऑनबोर्डिंग (Artisan Direct)
+        </a>
+        <a href="http://localhost:3000/onboarding?role=shg" target="_blank" rel="noopener noreferrer" style="background: #1E40AF; color: white; padding: 0.65rem 1.2rem; border-radius: 10px; font-weight: 700; font-size: 0.88rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(30, 64, 175, 0.35); transition: all 0.2s ease;">
+          👥 SHG हब ऑनबोर्डिंग (SHG Leader Hub)
+        </a>
+      </div>
+    </div>
+
+    <!-- DUAL ROLE ACCESS SWITCHER -->
+    <div class="role-switcher-card">
+      <div>
+        <span style="font-size:1.1rem; font-weight:800; color:#1E3A8A;">Dual-Role Access Engine:</span>
+        <span style="font-size:0.9rem; color:#3B82F6; margin-left:0.5rem;">Select active operating mode or register new profile</span>
+      </div>
+      <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+        <button id="role-btn-artisan" class="role-pill active" onclick="setRole('artisan')">
+          🧑🎨 Artisan Direct Mode
+        </button>
+        <button id="role-btn-shg" class="role-pill" onclick="setRole('shg')">
+          👥 Aggregator / SHG Leader Mode (Multi-Tenant)
+        </button>
+        <a id="onboarding-role-link" href="http://localhost:3000/onboarding?role=artisan" target="_blank" rel="noopener noreferrer" style="font-size:0.8rem; font-weight:700; color:#92400E; background:#FEF3C7; padding:0.4rem 0.85rem; border-radius:9999px; text-decoration:none; border:1px solid #F59E0B; display:inline-flex; align-items:center; gap:0.35rem;" title="Open Onboarding for selected role">
+          <span>📝</span> <span id="onboarding-link-label">Register in Artisan Direct</span> ↗
+        </a>
+      </div>
+    </div>
 
       <div class="grid-2">
         
@@ -1580,15 +1612,26 @@
       alert(`🚩 Anti-Fraud Audit Triggered for ${code}!\n\nStatus: ESCROW_FROZEN_PENDING_INSPECTION\nAction: Incident logged into MoSJE Nodal Officer queue and assigned to 3 randomized cluster peer jurors.`);
     }
 
-    function setRole(role) {
-      document.getElementById('role-btn-artisan').classList.toggle('active', role === 'artisan');
-      document.getElementById('role-btn-shg').classList.toggle('active', role === 'shg');
+  function setRole(role) {
+    document.getElementById('role-btn-artisan').classList.toggle('active', role === 'artisan');
+    document.getElementById('role-btn-shg').classList.toggle('active', role === 'shg');
+    const roleLink = document.getElementById('onboarding-role-link');
+    const roleLabel = document.getElementById('onboarding-link-label');
+    if (roleLink && roleLabel) {
       if (role === 'shg') {
-        alert("👥 Switched to Aggregator / SHG Leader Mode:\nManaging 18 registered village artisans in Varanasi cluster.");
+        roleLink.href = 'http://localhost:3000/onboarding?role=shg';
+        roleLabel.innerText = 'Register in SHG Hub Mode';
       } else {
-        alert("🧑🎨 Switched to Artisan Direct Mode (Single User).");
+        roleLink.href = 'http://localhost:3000/onboarding?role=artisan';
+        roleLabel.innerText = 'Register in Artisan Direct';
       }
     }
+    if (role === 'shg') {
+      alert("👥 Switched to Aggregator / SHG Leader Mode:\nManaging 18 registered village artisans in Varanasi cluster.");
+    } else {
+      alert("🧑🎨 Switched to Artisan Direct Mode (Single User).");
+    }
+  }
 
     function simulateCapture() {
       alert("📸 WIP Loom Photo Captured! Gyro balanced (0.0° tilt), GPS Lock verified (25.3176° N, 82.9739° E).");

@@ -1,84 +1,56 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
 from app.core.pii_vault import protect as protect_pii
-from app.core.security import get_pin_hash, verify_pin, create_access_token
+from app.core.security import create_access_token, get_pin_hash, verify_pin
 from app.models.artisan import Artisan
 from app.schemas.auth import (
-    VoiceRegisterRequest,
-    PinLoginRequest,
-    TokenResponse,
     ArtisanIdVerificationRequest,
     ArtisanIdVerificationResponse,
+    OnboardingCompleteResponse,
+    OnboardingStep1Request,
+    OnboardingStep1Response,
+    OnboardingStep2Request,
+    OnboardingStep2Response,
+    OnboardingStep3Request,
+    OnboardingSyncRequest,
+    PinLoginRequest,
+    TokenResponse,
+    VoiceRegisterRequest,
 )
 from app.schemas.mosje import (
-    MoSJEAuthRequest,
-    MoSJEAuthResponse,
     EShramLookupRequest,
     EShramLookupResponse,
+    MoSJEAuthRequest,
+    MoSJEAuthResponse,
     PMSurajLookupRequest,
-    PMSurajLookupResponse
+    PMSurajLookupResponse,
+)
+from app.services.auth_service import (
+    AuthError,
+    MASTER_ARTISAN_REGISTRY,
+    complete_onboarding,
+    initiate_onboarding,
+    sync_onboarding,
+    verify_onboarding_id,
 )
 
-router = APIRouter(prefix="/auth", tags=["Voice Authentication & Verification Service (AuthService)"])
+router = APIRouter(
+    prefix="/auth", tags=["Voice Authentication & Verification Service (AuthService)"]
+)
 
 
-# Master registry mock database for Pehchan Card, TRIFED, e-Shram, and MoSJE schemes
-MASTER_ARTISAN_REGISTRY = {
-    "PEH-IND-88320": {
-        "artisan_name": "Gauri Devi",
-        "craft_category": "Handloom Textile",
-        "cluster_name": "Varanasi Handloom Cluster",
-        "gi_certified": True,
-        "gi_tag_name": "Banarasi Brocade & Saree (GI Reg #39)",
-        "state": "Uttar Pradesh",
-        "district": "Varanasi",
-    },
-    "UP-VAR-102938": {
-        "artisan_name": "Radha Devi",
-        "craft_category": "Handloom Textile",
-        "cluster_name": "Varanasi Handloom Cluster",
-        "gi_certified": True,
-        "gi_tag_name": "Banarasi Brocade & Saree (GI Reg #39)",
-        "state": "Uttar Pradesh",
-        "district": "Varanasi",
-    },
-    "TRIFED-UP-VNS-1049": {
-        "artisan_name": "Gauri Devi",
-        "craft_category": "Handloom Textile",
-        "cluster_name": "Varanasi Handloom Cluster",
-        "gi_certified": True,
-        "gi_tag_name": "Banarasi Brocade & Saree (GI Reg #39)",
-        "state": "Uttar Pradesh",
-        "district": "Varanasi",
-    },
-    "PEH-KSH-55120": {
-        "artisan_name": "Bashir Ahmad Mir",
-        "craft_category": "Pashmina Hand-Spun Shawls",
-        "cluster_name": "Kashmir Pashmina Cluster",
-        "gi_certified": True,
-        "gi_tag_name": "Kashmir Pashmina (GI Reg #46)",
-        "state": "Jammu & Kashmir",
-        "district": "Srinagar",
-    },
-    "TRIFED-BR-MDB-2201": {
-        "artisan_name": "Sita Devi",
-        "craft_category": "Madhubani Folk Art",
-        "cluster_name": "Madhubani Art Cluster",
-        "gi_certified": True,
-        "gi_tag_name": "Madhubani Paintings (GI Reg #105)",
-        "state": "Bihar",
-        "district": "Madhubani",
-    },
-}
-
-
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register_artisan(payload: VoiceRegisterRequest, db: AsyncSession = Depends(get_db)):
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
+async def register_artisan(
+    payload: VoiceRegisterRequest, db: AsyncSession = Depends(get_db)
+):
     """
     Page 1: Voice-First Onboarding.
-    Registers rural artisan with dialect profile, geo-cluster, and 4-digit security PIN.
+    Registers a rural artisan with dialect profile, geo-cluster, and 4-digit security PIN.
     """
     stmt = select(Artisan).where(Artisan.phone == payload.phone)
     res = await db.execute(stmt)
@@ -86,7 +58,7 @@ async def register_artisan(payload: VoiceRegisterRequest, db: AsyncSession = Dep
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An artisan with this phone number is already registered. Please log in using your 4-digit PIN."
+            detail="An artisan with this phone number is already registered. Please log in using your 4-digit PIN.",
         )
 
     artisan = Artisan(
@@ -97,19 +69,20 @@ async def register_artisan(payload: VoiceRegisterRequest, db: AsyncSession = Dep
         state=payload.state,
         district=payload.district,
         cluster_name=payload.cluster_name,
-        # DPDP Act 2023: govt IDs persisted as opaque vault tokens (or
-        # plaintext passthrough when PII_VAULT_KEY is unset in dev/test).
-        trifed_id=protect_pii(payload.trifed_id),
-        pehchan_id=protect_pii(payload.pehchan_id),
         geo_lat=payload.geo_lat,
         geo_lng=payload.geo_lng,
+        pehchan_id=protect_pii(payload.pehchan_id),
+        trifed_id=protect_pii(payload.trifed_id),
         is_verified=True,
+        role="artisan",
+        onboarding_step=3,
+        is_onboarded=True,
     )
     db.add(artisan)
     await db.commit()
     await db.refresh(artisan)
 
-    token = create_access_token(subject=artisan.id)
+    token = create_access_token(subject=artisan.id, role=artisan.role)
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -131,10 +104,10 @@ async def login_artisan(payload: PinLoginRequest, db: AsyncSession = Depends(get
     if not artisan or not verify_pin(payload.pin, artisan.pin_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect phone number or security PIN."
+            detail="Incorrect phone number or security PIN.",
         )
 
-    token = create_access_token(subject=artisan.id)
+    token = create_access_token(subject=artisan.id, role=artisan.role)
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -144,11 +117,85 @@ async def login_artisan(payload: PinLoginRequest, db: AsyncSession = Depends(get
     )
 
 
+# --- US-ONB-01 Multi-Step Onboarding & Sync Endpoints ---
+
+
+@router.post(
+    "/onboarding/step1",
+    response_model=OnboardingStep1Response,
+    status_code=status.HTTP_200_OK,
+)
+async def onboarding_step1(
+    payload: OnboardingStep1Request, db: AsyncSession = Depends(get_db)
+):
+    """
+    US-ONB-01 Step 1: Initiate onboarding with phone, 4-digit PIN, dialect, and role.
+    """
+    try:
+        return await initiate_onboarding(db, payload)
+    except AuthError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+@router.post(
+    "/onboarding/step2",
+    response_model=OnboardingStep2Response,
+    status_code=status.HTTP_200_OK,
+)
+async def onboarding_step2(
+    payload: OnboardingStep2Request, db: AsyncSession = Depends(get_db)
+):
+    """
+    US-ONB-01 Step 2: Verify government credentials (Pehchan/TRIFED/e-Shram) with autofill or manual fallback.
+    """
+    try:
+        return await verify_onboarding_id(db, payload)
+    except AuthError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+@router.post(
+    "/onboarding/step3",
+    response_model=OnboardingCompleteResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def onboarding_step3(
+    payload: OnboardingStep3Request, db: AsyncSession = Depends(get_db)
+):
+    """
+    US-ONB-01 Step 3: Complete artisan or SHG leader onboarding and issue access token.
+    """
+    try:
+        return await complete_onboarding(db, payload)
+    except AuthError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+@router.post(
+    "/onboarding/sync",
+    response_model=OnboardingCompleteResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def onboarding_sync(
+    payload: OnboardingSyncRequest, db: AsyncSession = Depends(get_db)
+):
+    """
+    US-ONB-01 Offline/Draft Sync: 1-shot onboarding synchronization for offline artisans/SHG groups.
+    """
+    try:
+        return await sync_onboarding(db, payload)
+    except AuthError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+# --- Government & Verification DPI Microservice Endpoints ---
+
+
 @router.post("/verify-artisan-id", response_model=ArtisanIdVerificationResponse)
-async def verify_artisan_id(payload: ArtisanIdVerificationRequest):
+async def verify_artisan_id_endpoint(payload: ArtisanIdVerificationRequest):
     """
     AuthService Verification Microservice:
-    Validates Pehchan Card or TRIFED ID against government master craft registry.
+    Validates Pehchan Card and TRIFED IDs against government master craft registry.
     """
     id_clean = payload.identifier_value.strip().upper()
     if id_clean in MASTER_ARTISAN_REGISTRY:
@@ -164,7 +211,7 @@ async def verify_artisan_id(payload: ArtisanIdVerificationRequest):
             gi_tag_name=data["gi_tag_name"],
             state=data["state"],
             district=data["district"],
-            verification_source="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)"
+            verification_source="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)",
         )
 
     return ArtisanIdVerificationResponse(
@@ -178,7 +225,7 @@ async def verify_artisan_id(payload: ArtisanIdVerificationRequest):
         gi_tag_name=None,
         state=None,
         district=None,
-        verification_source="National Artisan Registry (Unverified / Record Not Found)"
+        verification_source="National Artisan Registry (Unverified / Record Not Found)",
     )
 
 
@@ -186,10 +233,13 @@ async def verify_artisan_id(payload: ArtisanIdVerificationRequest):
 async def verify_mosje_scheme(payload: MoSJEAuthRequest):
     """
     MoSJE DPI Microservice:
-    Validates artisan enrollment in PM-DAKSH, PM-SURAJ, or e-KYC registries.
+    Validates artisan enrollment in PM-DAKSH, PM-SURAJ, and e-KYC registries.
     """
-    is_valid = bool(payload.scheme_registration_number and len(payload.scheme_registration_number) >= 4)
-    
+    is_valid = bool(
+        payload.scheme_registration_number
+        and len(payload.scheme_registration_number) > 4
+    )
+
     return MoSJEAuthResponse(
         verified=is_valid,
         scheme_type=payload.scheme_type,
@@ -202,8 +252,8 @@ async def verify_mosje_scheme(payload: MoSJEAuthRequest):
         details={
             "subsidy_eligible": True,
             "interest_subvention_pct": 5.0,
-            "escrow_bank": "State Bank of India (Jan Dhan Account)"
-        }
+            "escrow_bank": "State Bank of India (Jan Dhan Account)",
+        },
     )
 
 
@@ -212,8 +262,6 @@ async def lookup_eshram_worker(payload: EShramLookupRequest):
     """
     e-Shram DPI Microservice:
     Validates 12-digit UAN number for unorganized handicraft workers.
-    DPDP note: the UAN is transient-only (caller-supplied echo) — it is
-    never persisted to the DB or written to logs by this endpoint.
     """
     is_valid = len(payload.uan_number.replace("-", "").replace(" ", "")) == 12
     return EShramLookupResponse(
@@ -221,11 +269,11 @@ async def lookup_eshram_worker(payload: EShramLookupRequest):
         uan_number=payload.uan_number,
         worker_name="Radha Devi",
         primary_occupation="Handloom Silk Weaver & Artisan",
-        sub_category="Weaving and Allied Craft Work",
+        sub_category="Weaving & Allied Craft Work",
         state="Uttar Pradesh",
         district="Varanasi",
         social_category="OBC / Recognized Artisan",
-        pension_scheme_enrolled=True
+        pension_scheme_enrolled=True,
     )
 
 
@@ -242,5 +290,5 @@ async def lookup_pmsuraj_credit(payload: PMSurajLookupRequest):
         sanctioned_amount_inr=100000.0,
         subsidy_percentage=35.0,
         credit_status="SANCTIONED_DISBURSED",
-        nodal_agency="National Scheduled Castes Finance and Development Corporation (NSFDC / MoSJE)"
+        nodal_agency="National Scheduled Castes Finance & Development Corporation (NSFDC / MoSJE)",
     )

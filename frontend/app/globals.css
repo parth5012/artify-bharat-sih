@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --terracotta: #C04A26;
+  --terracotta-dark: #8F3014;
+  --terracotta-light: #FFEDE6;
+  --ochre: #D97706;
+  --trust-green: #15803D;
+  --silk: #FDFBF7;
+}
+
+body {
+  background-color: #FDFBF7;
+  color: #0F172A;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+*:focus-visible {
+  outline: 2px solid #D97706;
+  outline-offset: 2px;
+}

@@ -2,6 +2,20 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+### E2E Onboarding Flow Verification & Resilient Government ID Fallback (US-ONB-01)
+1. **Master Registry Normalization**: Pehchan and TRIFED card IDs must be strictly stripped and uppercased (PEH-IND-88320) before querying the national master registry; case mismatch silently drops artisans into manual fallback.
+2. **Graceful Fallback for Unregistered Cards**: In field onboarding, newly registered rural artisans often possess freshly issued physical Pehchan cards not yet indexed in the central registry. By capturing manual_state, manual_district, and manual_cluster when erified=False, the backend ensures zero drop-off while marking verification status honestly.
+3. **Offline Sync Idempotence & Fast Login**: The /api/v1/auth/onboarding/sync endpoint enables composite draft submission directly upon network recovery. Synchronized records instantly become eligible for standard 4-digit PIN authentication via /api/v1/auth/login, bypassing repeated OTPs.
+
+## Web Speech API & Regional Dialect Fallback (US-ONB-01)
+Browser window.speechSynthesis provides zero-install, zero-cost text-to-speech for rural craftspeople in Hindi (hi-IN), Bengali (bn-IN), and Marathi (mr-IN). In environments where audio permissions or native voices are missing, pairing useAskDadi with a persistent visual Devanagari/English dialog modal ensures zero degradation for non-verbal or hearing-impaired artisans (WCAG 2.2 AA).
+
+## Offline Draft Resilience (US-ONB-01)
+In rural 2G/3G connectivity contexts, debouncing onboarding state mutations into localStorage (artify_onboarding_draft) with a visible DraftRestoreBanner prevents catastrophic form loss without requiring server sessions or unverified phone SMS handshakes.
+
+## Dual-Role Onboarding Synchronization (US-ONB-01)
+Passing query params (?role=artisan vs ?role=shg) from public web portals (web-portal/index.html) to the Next.js onboarding suite (frontend/app/onboarding/page.tsx) requires wrapping client search params in React <Suspense> boundaries to avoid Next.js static prerendering de-optimizations.
+
 ## - Onboarding Session Gating in Jetpack Compose: Condition `startDestination` on a dedicated `Screen.Splash` rather than dynamic NavHost recreation. `SplashScreen` reads `isOnboardedFlow` and executes `popUpTo(Screen.Splash.route) { inclusive = true }` into `Onboarding` or `VoiceCatalog`, eliminating recomposition flickers and preventing back-press escape.
 - Android Runtime Permission Launcher Flow: Compose's `rememberLauncherForActivityResult(RequestPermission())` combined with custom state handling enables clean JIT rationale dialogs with `Settings.ACTION_APPLICATION_DETAILS_SETTINGS` fallbacks for permanently denied permissions.
 - Honest Offline State Architecture: Rather than swallowing network exceptions and substituting fake mock data in ViewModels, expose explicit `isOffline` and `errorMessage` UI flags. In offline situations, offer explicit "डेमो मोड (Demo Mode)" or save drafts to Room sync queue with clear user communication.
@@ -40,3 +54,6 @@ _None yet — populate as the agent discovers patterns, edge cases, and gotchas.
 - **Deep copy for nested schema validation tests**: In Python, dict(payload) creates a shallow copy; mutating nested dictionary fields modifies the source object. Use copy.deepcopy when constructing negative schema test variants.
 - **SQLAlchemy model back_populates mismatch**: When adding two-way relationships in declarative models (e.g. Artisan.payouts and Product.jury_tickets), both sides of the relationship must be defined in the models before registry.configure() is triggered during query execution.
 - **District grain vs cluster multiplicity**: In geospatial heatmaps, grouping by district and state while taking the dominant craft cluster avoids row duplication and multiple counting of district wage payouts.
+
+- **Multi-Step Onboarding Model Fields (US-ONB-01)**: Artisan records created in Step 1 require name to default to empty string since name input is deferred until Step 3. All government IDs (pehchan_id, trifed_id, eshram_uan) are guarded by PIIVault.protect before persistence.
+- **Offline Draft Sync Atomicity**: Composite OnboardingSyncRequest allows mobile rural users to execute steps 1-3 in a single payload, auto-verifying against the master craft registry or falling back gracefully to manual state/district/cluster data while generating a valid JWT access token.
