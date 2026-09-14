@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Camera, QrCode, Shield, Home, LogIn, LogOut, UserPlus } from 'lucide-react';
+import { Camera, QrCode, Shield, Home, LogIn, LogOut, UserPlus, ShoppingBag } from 'lucide-react';
+import { getCart, totalQty } from '../../services/cart';
 
 export const MobileNav: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(window.localStorage.getItem('artify-auth-token')));
+  const [cartCount, setCartCount] = useState(() => totalQty(getCart()));
 
   useEffect(() => {
     const syncAuthState = () => setIsAuthenticated(Boolean(window.localStorage.getItem('artify-auth-token')));
+    const syncCart = () => setCartCount(totalQty(getCart()));
+    syncCart();
     window.addEventListener('artify-auth-change', syncAuthState);
-    return () => window.removeEventListener('artify-auth-change', syncAuthState);
-  }, []);
+    window.addEventListener('storage', syncCart);
+    window.addEventListener('focus', syncCart);
+    return () => {
+      window.removeEventListener('artify-auth-change', syncAuthState);
+      window.removeEventListener('storage', syncCart);
+      window.removeEventListener('focus', syncCart);
+    };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     window.localStorage.removeItem('artify-auth-token');
@@ -62,6 +72,23 @@ export const MobileNav: React.FC = () => {
         >
           <QrCode className="w-5 h-5" />
           <span>Buyer</span>
+        </Link>
+
+        <Link
+          to="/market"
+          className={`relative flex flex-col items-center gap-1 p-2 rounded-xl text-xs font-semibold transition-colors ${
+            isActive('/market')
+              ? 'text-terracotta-600 bg-terracotta-50'
+              : 'text-charcoal-700 hover:text-terracotta-600'
+          }`}
+        >
+          <ShoppingBag className="w-5 h-5" />
+          <span>Market</span>
+          {cartCount > 0 && (
+            <span className="absolute top-0 right-1 min-w-5 h-5 px-1 flex items-center justify-center bg-terracotta-500 text-white text-[10px] font-bold rounded-full">
+              {cartCount}
+            </span>
+          )}
         </Link>
 
         <Link
