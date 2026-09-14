@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional, List
+from pathlib import Path
 from app.core.database import get_db
 from app.core.storage import storage_manager
 from app.core.security import get_current_artisan, AuthenticatedPrincipal
@@ -17,9 +18,16 @@ from app.schemas.catalog import (
     InventoryItemResponse,
     DraftSyncRequest,
     DraftSyncResponse,
+    ProductCatalogUpdate,
 )
 
 router = APIRouter(prefix="/catalog", tags=["Multilingual Voice Auto-Cataloger & Inventory"])
+
+
+def _enhanced_media_url(path: Optional[str]) -> Optional[str]:
+    if not path:
+        return None
+    return f"/media/enhanced/{Path(path).name}"
 
 
 @router.post("/voice", response_model=VoiceCatalogResponse)
@@ -178,6 +186,67 @@ async def get_my_inventory(
         active_listings_count=active_count,
         drafts_count=draft_count,
         inventory=items
+    )
+
+
+@router.patch("/products/{product_id}", response_model=InventoryItemResponse)
+async def save_product_catalog(
+    product_id: str,
+    payload: ProductCatalogUpdate = Body(...),
+    current_artisan: AuthenticatedPrincipal = Depends(get_current_artisan),
+    db: AsyncSession = Depends(get_db),
+):
+    product = await db.get(Product, product_id)
+    if not product and payload.enhanced_image_url:
+        enhanced_filename = Path(payload.enhanced_image_url.split("/")[-1]).name
+        product = (
+            await db.execute(
+                select(Product).where(Product.enhanced_image_path.like(f"%{enhanced_filename}"))
+            )
+        ).scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found. Please run Studio enhancement again.")
+    if product.artisan_id != current_artisan.id and current_artisan.role not in {"admin", "supervisor", "procurement_officer"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for this product")
+
+    product.title = payload.title
+    product.description = payload.description
+    product.craft_category = payload.craft_category
+    product.visual_complexity_score = product.visual_complexity_score or 0.3
+    product.status = "cataloged"
+    product.seo_tags = payload.seo_tags
+    await db.commit()
+    await db.refresh(product)
+    return InventoryItemResponse(
+        product_id=product.id,
+        title=product.title,
+        craft_category=product.craft_category,
+        status=product.status,
+        enhanced_image_url=_enhanced_media_url(product.enhanced_image_path),
+        published_channels=["Artisan Site"],
+        created_at=product.created_at,
+    )
+
+
+@router.get("/listings", response_model=InventoryListResponse)
+async def get_public_catalog_listings(db: AsyncSession = Depends(get_db)):
+    products = (await db.execute(select(Product).where(Product.status == "cataloged"))).scalars().all()
+    return InventoryListResponse(
+        total_items=len(products),
+        active_listings_count=len(products),
+        drafts_count=0,
+        inventory=[
+            InventoryItemResponse(
+                product_id=product.id,
+                title=product.title,
+                craft_category=product.craft_category,
+                status=product.status,
+                enhanced_image_url=_enhanced_media_url(product.enhanced_image_path),
+                published_channels=["Artisan Site"],
+                created_at=product.created_at,
+            )
+            for product in products
+        ],
     )
 
 

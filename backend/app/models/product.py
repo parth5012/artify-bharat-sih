@@ -22,6 +22,9 @@ class Product(Base):
     raw_image_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     enhanced_image_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     voice_audio_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    provenance_latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    provenance_longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    provenance_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Voice & NLP Inferences
     transcript_regional: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
