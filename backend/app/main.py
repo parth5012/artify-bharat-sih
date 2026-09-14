@@ -21,6 +21,13 @@ async def lifespan(app: FastAPI):
     Path(settings.STORAGE_LOCAL_DIR).mkdir(parents=True, exist_ok=True)
     yield
     # Shutdown
+    try:
+        from app.core.security import _redis
+
+        if _redis is not None:
+            await _redis.aclose()
+    except Exception:
+        pass
     await engine.dispose()
 
 

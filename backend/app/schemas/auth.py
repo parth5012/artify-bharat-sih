@@ -30,12 +30,19 @@ class TokenResponse(BaseModel):
 
 
 class ArtisanIdVerificationRequest(BaseModel):
-    identifier_type: str = Field(default="pehchan", description="Identifier type: 'pehchan' or 'trifed'")
-    identifier_value: str = Field(..., description="Government artisan registration string (e.g. PEH-IND-88320 or TRIFED-UP-VNS-1049)")
+    identifier_type: str = Field(
+        default="pehchan", description="Identifier type: 'pehchan' or 'trifed'"
+    )
+    identifier_value: str = Field(
+        ...,
+        description="Government artisan registration string (e.g. PEH-IND-88320 or TRIFED-UP-VNS-1049)",
+    )
 
 
 class ArtisanIdVerificationResponse(BaseModel):
-    is_valid: bool = Field(..., description="Whether ID is verified in national artisan database")
+    is_valid: bool = Field(
+        ..., description="Whether ID is verified in national artisan database"
+    )
     identifier_type: str
     identifier_value: str
     artisan_name: Optional[str] = None
@@ -45,4 +52,11 @@ class ArtisanIdVerificationResponse(BaseModel):
     gi_tag_name: Optional[str] = None
     state: Optional[str] = None
     district: Optional[str] = None
-    verification_source: str = Field(default="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)")
+    verification_source: str = Field(
+        default="National Handicrafts & Handlooms Database (Pehchan / TRIFED Registry)"
+    )
+
+
+# Aliases for backward-compatibility with backend service modules
+RegisterRequest = VoiceRegisterRequest
+LoginRequest = PinLoginRequest
