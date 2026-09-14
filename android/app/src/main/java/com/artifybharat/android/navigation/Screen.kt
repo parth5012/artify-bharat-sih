@@ -76,4 +76,29 @@ sealed class Screen(
         hindiTitle = "हथकरघा हाट",
         englishTitle = "Direct Craft Marketplace"
     )
+
+    // Voice Registration Flow
+    object VoiceRegistrationModeSelection : Screen(
+        route = "voice_registration_mode",
+        hindiTitle = "पंजीकरण मोड",
+        englishTitle = "Registration Mode"
+    )
+
+    object VoiceRegistrationLanguageSelection : Screen(
+        route = "voice_registration_language",
+        hindiTitle = "भाषा चुनें",
+        englishTitle = "Select Language"
+    )
+
+    object VoiceRegistrationFlow : Screen(
+        route = "voice_registration_flow",
+        hindiTitle = "आवाज़ पंजीकरण",
+        englishTitle = "Voice Registration"
+    )
+
+    object VoiceRegistrationPreview : Screen(
+        route = "voice_registration_preview",
+        hindiTitle = "जानकारी की समीक्षा करें",
+        englishTitle = "Review Information"
+    )
 }

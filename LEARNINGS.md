@@ -8,6 +8,9 @@
 
 Project-Specific Learnings
 
+- Keep generated catalog metadata fields intact when adapting backend voice responses to frontend naming: dropping `metadata.description` makes extraction appear incomplete even when NLP succeeded. Pair the request with visible lifecycle stages so slow ASR/translation work is understandable.
+- Voice catalog extraction must accept a draft before a persisted Product exists: the camera flow only saves a local draft, so requiring `product_id` at upload time prevents real voice processing. Keep extraction completion separate from navigation so catalog fields can be reviewed before pricing.
+
 - Cryptographic Provenance EXIF order: write EXIF metadata and GPS coordinates *prior* to computing SHA-256 file hashes; otherwise exif.saveAttributes() alters JPEG bitstreams on disk.
 - ESC/POS Thermal Printing: enforce pure US-ASCII in receipt byte builders to avoid unprintable replacement characters on 58mm/80mm micro-controllers.
 - ADR 0004 Statutory Wage Floor: enforce floor validation directly inside ViewModel mutation methods (lockPrice()) and disable UI buttons to prevent distress-sale sub-floor locking.
@@ -38,3 +41,4 @@ _None yet — populate as the agent discovers patterns, edge cases, and gotchas.
 - **Deep copy for nested schema validation tests**: In Python, dict(payload) creates a shallow copy; mutating nested dictionary fields modifies the source object. Use copy.deepcopy when constructing negative schema test variants.
 - **SQLAlchemy model back_populates mismatch**: When adding two-way relationships in declarative models (e.g. Artisan.payouts and Product.jury_tickets), both sides of the relationship must be defined in the models before registry.configure() is triggered during query execution.
 - **District grain vs cluster multiplicity**: In geospatial heatmaps, grouping by district and state while taking the dominant craft cluster avoids row duplication and multiple counting of district wage payouts.
+- **Web Speech DOM typing**: TypeScript's DOM lib exposes `SpeechRecognitionEvent` but not a constructable `SpeechRecognition`; keep a small local interface for browser-prefixed recognition adapters.

@@ -47,7 +47,17 @@ class Settings(BaseSettings):
     WHISPER_MODEL_SIZE: str = "base"
     INDICTRANS2_ENDPOINT: str = "http://localhost:8001/translate"
     MISTRAL_LLM_ENDPOINT: str = "http://localhost:11434/api/generate"  # Ollama / vLLM endpoint
-    MISTRAL_MODEL_NAME: str = "mistral:7b-instruct"
+    MISTRAL_MODEL_NAME: str = "mistral"
+    BHASHINI_API_KEY: str = ""
+    BHASHINI_ULCA_API_KEY: str = ""
+    Inference: str = ""
+    Udyat: str = ""
+    BHASHINI_USER_ID: str = ""
+    BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543d6"
+    BHASHINI_ASR_MODEL_ID: str = ""
+    BHASHINI_TRANSLATION_MODEL_ID: str = ""
+    BHASHINI_CONFIG_URL: str = "https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline"
+    BHASHINI_INFERENCE_URL: str = "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
     U2NET_WEIGHTS_PATH: str = "./models/u2net.pth"
     XGBOOST_PRICING_MODEL_PATH: str = "./models/pricing_xgboost.json"
 

@@ -4,10 +4,12 @@ import android.app.Application
 import android.util.Log
 import com.artifybharat.android.data.network.NetworkClient
 import com.artifybharat.android.data.preferences.UserPreferencesDataStore
+import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+@HiltAndroidApp
 class ArtifyBharatApplication : Application() {
 
     override fun onCreate() {

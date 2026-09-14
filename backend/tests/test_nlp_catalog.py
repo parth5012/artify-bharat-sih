@@ -1,6 +1,28 @@
 import pytest
 import io
 from httpx import AsyncClient
+from app.services.nlp_service import nlp_service
+
+
+@pytest.mark.asyncio
+async def test_nlp_metadata_uses_spoken_labor_days():
+    metadata = await nlp_service.generate_catalog_metadata(
+        "We hand-weave this silk saree over 30 days.",
+        "हम सिल्क साड़ी तीस दिन में बनाते हैं।",
+    )
+
+    assert metadata["estimated_days"] == 30
+    assert metadata["description"] == "We hand-weave this silk saree over 30 days."
+
+
+@pytest.mark.asyncio
+async def test_nlp_metadata_does_not_invent_unknown_profile_fields():
+    metadata = nlp_service._fallback_catalog_metadata("I make things by hand.", "")
+
+    assert metadata["title"] == ""
+    assert metadata["craft_category"] == ""
+    assert metadata["material"] == ""
+    assert metadata["artisan_dialect"] is None
 
 
 @pytest.mark.asyncio
@@ -30,5 +52,6 @@ async def test_nlp_voice_cataloging_endpoint(client: AsyncClient):
     assert res_data["status"] == "cataloged"
     assert "Banarasi" in res_data["metadata"]["title"]
     assert "GI Tagged" in res_data["metadata"]["gi_tag_status"]
+    assert res_data["metadata"]["description"] == res_data["transcript_english"]
     assert len(res_data["metadata"]["seo_tags"]) > 0
     assert res_data["metadata"]["estimated_days"] > 0
