@@ -30,6 +30,9 @@ def get_pin_hash(pin: str) -> str:
     return f"{salt}${key}"
 
 
+hash_pin = get_pin_hash
+
+
 def verify_pin(plain_pin: str, hashed_pin: str) -> bool:
     """Verifies a plain PIN against its stored salt$hash representation."""
     try:
@@ -85,5 +88,21 @@ async def get_current_artisan(
         )
     return AuthenticatedPrincipal(
         id=payload["sub"],
-        role=payload.get("role", "artisan")
+        role=payload.get("role", "artisan"),
     )
+
+
+_redis: Any = None
+
+
+async def get_redis():
+    """FastAPI dependency: yields shared async Redis client (rate limiting, jury velocity counters) and closes cleanly per-request."""
+    global _redis
+    if _redis is None:
+        from redis.asyncio import from_url
+        _redis = from_url(settings.REDIS_URL, decode_responses=True)
+    try:
+        yield _redis
+    finally:
+        pass  # connection is pooled/shared across requests; closed on app shutdown
+

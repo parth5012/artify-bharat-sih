@@ -16,6 +16,7 @@ Each entry:
 
 | Date | Status | What | Verified | Notes |
 |------|--------|------|----------|-------|
+| 2026-09-14 | Done | Babysit PR #83: Resolve rebase merge conflicts, restore full API surface, address CodeRabbit findings (CORS wildcard, secrets.SystemRandom, redis shutdown) | 114 pytest fast suite passed (32 slow deselected), 13 targeted tests passed, ruff check clean | Merged PR #83 into main |
 | 2026-09-13 | Done | Wayfinder Map #23: Phase 9 Verification DevOps and Docs (Docker env/zero-trust check, full pytest suite 146 tests green, docs cleanup, E2E journeys, SIH pitch defenses) | 146/146 pytest tests green, ruff lint clean | Map #23 completed & closed; all child tickets #39-#43 closed |
 | 2026-09-13 | Done | Wayfinder Map #71: Fix Onboarding, Permission & Backend Connectivity (NavGraph session gate, 5-step guided onboarding, real token auth, honest offline/error states, runtime permission launcher & rationale dialogs) | 51/51 Android unit tests green, assembleDebug built, backend auth pytest 8/8 green | Child tickets #72-#79 resolved & closed |
 | 2026-09-13 | Done | Wayfinder Map #49: Complete Native Kotlin Android App (MinSDK 24, Target 34, Jetpack Compose, Room SQLCipher, DataStore, CameraX, WorkManager, Retrofit, Bluetooth ESC/POS) | 41/41 unit & E2E tests green, assembleRelease green | Map #49 completed, child tickets #50-#60 resolved and closed via stacked PRs |

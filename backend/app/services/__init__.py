@@ -13,6 +13,11 @@ from app.services.assistant_service import assistant_service
 from app.services.pricing_service import pricing_service
 from app.services.passport_service import passport_service
 from app.services.export_service import export_adapter_service, ExportAdapterService
+from app.services import auth_service
+from app.services.logistics_service import logistics_service
+from app.services.notify_service import notify_service
+from app.services.payout_service import payout_service
+from app.services.verify_jury_service import verify_jury_service
 
 export_service = export_adapter_service
 
@@ -25,4 +30,9 @@ __all__ = [
     "export_adapter_service",
     "export_service",
     "ExportAdapterService",
+    "auth_service",
+    "logistics_service",
+    "notify_service",
+    "payout_service",
+    "verify_jury_service",
 ]
