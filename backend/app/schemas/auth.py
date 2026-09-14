@@ -77,12 +77,12 @@ class OnboardingIdType(str, Enum):
 
 
 class OnboardingStep1Request(BaseModel):
-    phone: str = Field(..., pattern=r"^\d{10}$", description="10-digit mobile number")
+    phone: str = Field(..., pattern=r"^[6-9]\d{9}$", description="10-digit Indian mobile number")
     pin: str = Field(..., pattern=r"^\d{4}$", description="4-digit security PIN")
     dialect: str = Field(
         default="hindi", description="Artisan preferred dialect / language"
     )
-    role: str = Field(default="artisan", description="Role: 'artisan' or 'shg_leader'")
+    role: str = Field(default="artisan", pattern=r"^(artisan|shg_leader)$", description="Role: 'artisan' or 'shg_leader'")
 
 
 class OnboardingStep1Response(BaseModel):
@@ -145,12 +145,12 @@ class OnboardingCompleteResponse(BaseModel):
 
 
 class OnboardingSyncRequest(BaseModel):
-    phone: str = Field(..., pattern=r"^\d{10}$", description="10-digit mobile number")
+    phone: str = Field(..., pattern=r"^[6-9]\d{9}$", description="10-digit Indian mobile number")
     pin: str = Field(..., pattern=r"^\d{4}$", description="4-digit security PIN")
     name: str = Field(..., min_length=2, description="Full artisan name")
     session_token: Optional[str] = None
     dialect: str = Field(default="hindi")
-    role: str = Field(default="artisan")
+    role: str = Field(default="artisan", pattern=r"^(artisan|shg_leader)$")
     id_type: Optional[str] = Field(default="none")
     id_number: Optional[str] = None
     state: Optional[str] = None
