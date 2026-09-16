@@ -11,6 +11,7 @@ celery_app = Celery(
         "app.workers.tasks_cv",
         "app.workers.tasks_nlp",
         "app.workers.tasks_scraper",
+        "app.workers.tasks_marketplace",
     ],
 )
 
@@ -26,6 +27,10 @@ celery_app.conf.update(
         "daily-handicraft-market-price-scrape": {
             "task": "app.workers.tasks_scraper.scrape_handicraft_benchmarks",
             "schedule": 86400.0,  # Run daily
+        },
+        "hourly-marketplace-hold-expiry": {
+            "task": "app.workers.tasks_marketplace.release_expired_reservations",
+            "schedule": 3600.0,  # Release 7-day holds past expires_at
         },
     },
 )

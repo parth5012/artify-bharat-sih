@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import uuid
+from datetime import datetime
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -9,6 +10,7 @@ from app.core.storage import storage_manager
 from app.services.cv_service import cv_service, PipelineStepResult as CvPipelineStepResult
 from app.models.product import Product
 from app.models.artisan import Artisan
+from app.core.security import get_current_artisan, AuthenticatedPrincipal
 from app.schemas.studio import (
     StudioEnhanceResponse,
     AIStudioEnhanceResponse,
@@ -16,6 +18,10 @@ from app.schemas.studio import (
 )
 
 router = APIRouter(prefix="/studio", tags=["Camera Module & Studio Enhancement"])
+
+
+def _media_url(folder: str, filename: str) -> str:
+    return f"/media/{folder}/{filename}"
 
 
 def _complexity_to_pricing_factor(score: float) -> str:
@@ -147,7 +153,11 @@ async def enhance_product_photo(
     artisan_id: str = Form(...),
     product_title: str = Form("Handcrafted Product"),
     craft_category: str = Form("handloom"),
+    gps_latitude: float | None = Form(None),
+    gps_longitude: float | None = Form(None),
+    provenance_timestamp: str | None = Form(None),
     image: UploadFile = File(...),
+    current_artisan: AuthenticatedPrincipal = Depends(get_current_artisan),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -159,7 +169,10 @@ async def enhance_product_photo(
     - Visual complexity score computation
     Creates a Product record linked to the artisan.
     """
-    artisan_res = await db.execute(select(Artisan).where(Artisan.id == artisan_id))
+    if artisan_id != current_artisan.id and current_artisan.role not in {"admin", "supervisor", "procurement_officer"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized for this artisan")
+
+    artisan_res = await db.execute(select(Artisan).where(Artisan.id == current_artisan.id))
     artisan = artisan_res.scalar_one_or_none()
     if not artisan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Artisan not found")
@@ -177,15 +190,27 @@ async def enhance_product_photo(
 
     # Process via Computer Vision service
     try:
-        enhanced_bytes, complexity_score = cv_service.enhance_image(raw_bytes)
+        pipeline_result = cv_service.enhance_image_with_detail(raw_bytes)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=str(exc),
         ) from exc
-    enhanced_path = await storage_manager.save_enhanced_image(enhanced_bytes, enhanced_filename)
+    enhanced_path = await storage_manager.save_enhanced_image(
+        pipeline_result.enhanced_bytes, enhanced_filename
+    )
 
     # Persist Product Record
+    parsed_timestamp = None
+    if provenance_timestamp:
+        try:
+            parsed_timestamp = datetime.fromisoformat(provenance_timestamp.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="provenance_timestamp must be an ISO-8601 timestamp",
+            ) from exc
+
     product = Product(
         id=product_id,
         artisan_id=artisan.id,
@@ -193,7 +218,10 @@ async def enhance_product_photo(
         craft_category=craft_category,
         raw_image_path=raw_path,
         enhanced_image_path=enhanced_path,
-        visual_complexity_score=complexity_score,
+        visual_complexity_score=pipeline_result.complexity_score,
+        provenance_latitude=gps_latitude,
+        provenance_longitude=gps_longitude,
+        provenance_timestamp=parsed_timestamp,
         status="enhanced",
     )
     db.add(product)
@@ -202,9 +230,13 @@ async def enhance_product_photo(
 
     return StudioEnhanceResponse(
         product_id=product.id,
-        raw_image_url=raw_path,
-        enhanced_image_url=enhanced_path,
-        visual_complexity_score=complexity_score,
+        raw_image_url=_media_url("raw", raw_filename),
+        enhanced_image_url=_media_url("enhanced", enhanced_filename),
+        visual_complexity_score=pipeline_result.complexity_score,
+        clahe_applied=pipeline_result.clahe_applied,
+        background_removed=pipeline_result.background_removed,
+        crop_applied=pipeline_result.crop_applied,
+        rembg_used=pipeline_result.rembg_used,
         auto_cropped_ratio="1:1",
         status="enhanced",
         message="Image successfully enhanced to studio quality with background removed.",

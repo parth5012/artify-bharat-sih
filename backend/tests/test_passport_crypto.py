@@ -63,11 +63,17 @@ async def test_passport_issuance_and_public_verification(client: AsyncClient):
         },
     )
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     from tests.test_cv_enhancement import create_dummy_image_bytes
     files = {"image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")}
     data = {"artisan_id": artisan_id, "product_title": "GI Banarasi Brocade"}
-    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     product_id = enhance_res.json()["product_id"]
 
     # Add pricing
@@ -109,6 +115,7 @@ async def test_public_passport_allowlist_fields_omits_sensitive_pii(client: Asyn
 
     approved_public_fields = {
         "passport_hash",
+        "shortcode",
         "is_authentic",
         "product_title",
         "craft_category",

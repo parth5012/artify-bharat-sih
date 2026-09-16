@@ -12,6 +12,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.notify import router as notify_router
 from app.api.v1.whatsapp import router as whatsapp_router
 from app.api.v1.mock_sandbox import router as mock_router
+from app.api.v1.marketplace import router as marketplace_router
 
 api_v1_router = APIRouter()
 
@@ -28,3 +29,4 @@ api_v1_router.include_router(admin_router)
 api_v1_router.include_router(notify_router)
 api_v1_router.include_router(whatsapp_router)
 api_v1_router.include_router(mock_router)
+api_v1_router.include_router(marketplace_router)
