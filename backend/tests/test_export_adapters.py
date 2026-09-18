@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from unittest.mock import patch
 from httpx import AsyncClient
 from app.services.export_service import export_adapter_service
+from app.services.passport_service import generate_shortcode, _shortcode_variants
 from app.models.artisan import Artisan
 from app.models.product import Product
 from app.models.pricing import ProductPricing
@@ -284,6 +285,39 @@ def test_shg_bulk_wholesale_csv_export():
     assert row["digital_passport_hash"] == "a" * 64
     assert row["shortcode"] == "M3B-77L"
     assert row["verification_url"] == "https://artifybharat.in/verify/M3B-77L"
+
+
+def test_export_shortcode_fallback_uses_canonical_generator():
+    """#103: null-shortcode passports must export a resolvable canonical code.
+
+    Raw ``passport_hash[:6]`` prefixes (e.g. AAAAAA) never resolve via
+    ``resolve_shortcode`` variants; the fallback must be ``generate_shortcode``.
+    """
+    artisan, product, pricing, passport = _create_mock_entities()
+    passport.shortcode = None
+    passport.verification_url = ""
+
+    expected = generate_shortcode(passport.passport_hash)
+    assert len(expected) == 7 and expected[3] == "-"
+    assert expected != passport.passport_hash[:6].upper()
+
+    card = export_adapter_service.format_for_whatsapp(
+        product, artisan, pricing, passport
+    )
+    assert card["metadata"]["shortcode"] == expected
+    assert expected in card["interactive"]["body"]["text"]
+    assert card["interactive"]["action"]["parameters"]["url"].endswith(expected)
+
+    shg = export_adapter_service.format_for_shg_csv(product, artisan, pricing, passport)
+    assert shg["shortcode"] == expected
+
+    # Resolvable through the same normalization the verify path uses,
+    # including lowercase/no-hyphen user input (resolve_shortcode matches
+    # case-insensitively + hyphen-insensitively at the DB layer).
+    assert expected in _shortcode_variants(shg["shortcode"])
+    dehy_lower = expected.replace("-", "").lower()
+    variant_dehy = [v.replace("-", "").lower() for v in _shortcode_variants(expected)]
+    assert dehy_lower in variant_dehy
 
 
 @pytest.mark.asyncio

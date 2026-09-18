@@ -11,6 +11,7 @@ from app.models.artisan import Artisan
 from app.models.pricing import ProductPricing
 from app.models.passport import HeritagePassport, ChannelExport
 from app.core.pii_vault import reveal as reveal_pii
+from app.services.passport_service import generate_shortcode
 
 
 class ExportAdapterService:
@@ -389,7 +390,9 @@ class ExportAdapterService:
                 "Heritage Passport must have a valid passport_hash for WhatsApp export"
             )
 
-        shortcode = passport.shortcode or passport.passport_hash[:6].upper()
+        # Null shortcode (legacy row) falls back to the canonical deterministic
+        # generator so printed tags always resolve via resolve_shortcode (#103).
+        shortcode = passport.shortcode or generate_shortcode(passport.passport_hash)
         verification_url = (
             passport.verification_url or f"https://artifybharat.in/verify/{shortcode}"
         )
@@ -510,7 +513,8 @@ class ExportAdapterService:
         bulk_unit_price = round(unit_price * (1.0 - (discount_pct / 100.0)), 2)
         total_lot_price = round(bulk_unit_price * min_quantity, 2)
         lead_time_days = int(pricing.labor_days * max(1.0, min_quantity / 2.0))
-        shortcode = passport.shortcode or passport.passport_hash[:6].upper()
+        # Same canonical fallback as WhatsApp export (#103).
+        shortcode = passport.shortcode or generate_shortcode(passport.passport_hash)
         state_code = artisan.state[:2].upper() if artisan.state else "IN"
         shg_catalog_code = f"SHG-{state_code}-{uuid.uuid4().hex[:6].upper()}"
 
