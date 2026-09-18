@@ -65,12 +65,20 @@ def generate_passport_hash(
     return hash_digest
 
 
-def generate_passport_qr_code(passport_hash: str) -> str:
+def generate_passport_qr_code(passport_hash: str, shortcode: Optional[str] = None) -> str:
     """
     Generates a high-contrast QR code image encoding the public verification URL.
+
+    Canonical verification URL is shortcode-based
+    (``{BASE}/{shortcode}``). When ``shortcode`` is provided it is encoded;
+    otherwise falls back to ``passport_hash`` for backward compatibility
+    (pre-4.2 QRs). Mirrors :func:`generate_passport_qr_svg_xml` so PNG and
+    SVG tags scan identically.
+
     Returns base64 data URI string suitable for direct frontend rendering and inclusion in product labels.
     """
-    verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{passport_hash}"
+    code = (str(shortcode).strip() if shortcode else "") or str(passport_hash)
+    verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{code}"
     qr = qrcode.QRCode(
         version=1,
         box_size=10,

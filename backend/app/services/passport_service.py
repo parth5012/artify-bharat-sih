@@ -296,7 +296,7 @@ class PassportService:
                     break
             _collision_counter += 1
             shortcode = generate_shortcode(passport_hash, salt=str(_collision_counter))
-        qr_data_uri = generate_passport_qr_code(passport_hash)
+        qr_data_uri = generate_passport_qr_code(passport_hash, shortcode)
         qr_svg_data_uri = generate_passport_qr_svg_data_uri(passport_hash, shortcode)
         verification_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{shortcode}"
         final_price = pricing.final_price if pricing else 4500.0

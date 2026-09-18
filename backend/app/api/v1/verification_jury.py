@@ -1,78 +1,86 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import List, Optional
-from app.schemas.verification_jury import (
-    PeerJuryAssignRequest,
-    PeerJuryAssignResponse,
-    PeerJuryVoteRequest,
-    PeerJuryVoteResponse,
+"""Deprecated proxy (Wayfinder #100).
+
+Superseded by app.api.v1.verify (DB-backed). Kept for backward-compatible
+imports only — router.py wires verify.py. All handlers below persist via
+app.services.jury_db_service (NOT the legacy in-memory singleton), so no
+report is lost on restart even if this router is mounted somewhere.
+"""
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.v1.verify import (
+    jury_assign as _jury_assign,
+    jury_status as _jury_status,
+    jury_vote as _jury_vote,
+    report_fake as _report_fake,
+)
+from app.core.database import get_db
+from app.core.security import get_redis
+from app.schemas.jury import (
+    JuryAssignRequest,
+    JuryAssignResponse,
+    JuryStatusResponse,
+    JuryVoteRequest,
+    JuryVoteResponse,
     ReportFakeRequest,
     ReportFakeResponse,
 )
-from app.services.verify_jury_service import verify_jury_service
 
-router = APIRouter(prefix="/verify", tags=["Zero-Trust Verification Engine & Peer Jury"])
-
-
-@router.post("/jury/assign", response_model=PeerJuryAssignResponse)
-async def assign_peer_jury(payload: PeerJuryAssignRequest):
-    """
-    Zero-Trust Verification Engine:
-    Assigns 3 randomized peer jury artisans from the cluster for craft verification.
-    """
-    ticket = verify_jury_service.assign_jury(
-        product_id=payload.product_id,
-        cluster_id=payload.cluster_id,
-        craft_type=payload.craft_type or "Handloom Weaving"
-    )
-    return PeerJuryAssignResponse(
-        jury_ticket_id=ticket["jury_ticket_id"],
-        product_id=ticket["product_id"],
-        cluster_id=ticket["cluster_id"],
-        assigned_jurors=ticket["assigned_jurors"],
-        quorum_required=ticket["quorum_required"],
-        status=ticket["status"]
-    )
+router = APIRouter(
+    prefix="/verify", tags=["Zero-Trust Verification Engine & Peer Jury"]
+)
 
 
-@router.post("/jury/vote", response_model=PeerJuryVoteResponse)
-async def submit_jury_vote(payload: PeerJuryVoteRequest):
-    """
-    Records a peer juror's vote and computes consensus score.
-    """
-    res = verify_jury_service.cast_vote(
-        jury_ticket_id=payload.jury_ticket_id,
-        juror_id=payload.juror_id,
-        verdict=payload.verdict,
-        craft_authenticity_score=payload.craft_authenticity_score,
-        comments=payload.comments
-    )
-    return PeerJuryVoteResponse(**res)
+@router.post(
+    "/jury/assign", response_model=JuryAssignResponse, deprecated=True, status_code=201
+)
+async def assign_peer_jury(
+    payload: JuryAssignRequest, db: AsyncSession = Depends(get_db)
+):
+    """Deprecated: use POST /api/v1/verify/jury/assign (verify.py, DB-backed)."""
+    return await _jury_assign(payload, db)
 
 
-@router.get("/jury/status/{jury_ticket_id}")
-async def get_jury_ticket_status(jury_ticket_id: str):
-    """
-    Retrieves verification status and voting progress for a jury ticket.
-    """
-    ticket = verify_jury_service.get_jury_status(jury_ticket_id)
-    if not ticket:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Jury ticket {jury_ticket_id} not found."
-        )
-    return ticket
+@router.post("/jury/vote", response_model=JuryVoteResponse, deprecated=True)
+async def submit_jury_vote(
+    payload: JuryVoteRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: Any = Depends(get_redis),
+):
+    """Deprecated: use POST /api/v1/verify/jury/vote (verify.py, DB-backed)."""
+    try:
+        return await _jury_vote(payload, db, redis)
+    except HTTPException:
+        raise
 
 
-@router.post("/report-fake", response_model=ReportFakeResponse)
-async def report_counterfeit_item(payload: ReportFakeRequest):
-    """
-    Buyer Anti-Fraud Feedback Loop:
-    Flags suspected counterfeit or machine-made craft and triggers an audit investigation.
-    """
-    res = verify_jury_service.report_counterfeit(
-        shortcode_or_hash=payload.shortcode_or_hash,
-        reason=payload.reason,
-        reporter_phone=payload.reporter_phone,
-        evidence_base64=payload.evidence_image_base64
-    )
-    return ReportFakeResponse(**res)
+@router.get("/jury/status/{jury_ticket_id}", deprecated=True)
+async def get_jury_ticket_status(
+    jury_ticket_id: str, db: AsyncSession = Depends(get_db)
+):
+    """Deprecated: use GET /api/v1/verify/jury/status/{id} (verify.py)."""
+    resp: JuryStatusResponse = await _jury_status(jury_ticket_id, db)
+    jurors = resp.assigned_juror_ids or []
+    return {
+        "jury_ticket_id": resp.jury_ticket_id,
+        "product_id": resp.product_id,
+        "cluster_id": None,
+        "assigned_jurors": jurors,
+        "quorum_required": 2,
+        "votes": {},
+        "status": resp.status,
+        "anomaly_score": 0.02,
+    }
+
+
+@router.post(
+    "/report-fake", response_model=ReportFakeResponse, deprecated=True, status_code=201
+)
+async def report_counterfeit_item(
+    payload: ReportFakeRequest, db: AsyncSession = Depends(get_db)
+):
+    """Deprecated: use POST /api/v1/verify/report-fake (verify.py, DB-backed)."""
+    return await _report_fake(payload, db)
