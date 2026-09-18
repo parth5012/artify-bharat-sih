@@ -1,8 +1,5 @@
 package com.artifybharat.android.features.onboarding
 
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,13 +21,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
@@ -47,6 +42,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,12 +58,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.artifybharat.android.data.network.NetworkClient
 import com.artifybharat.android.hardware.location.LocationProvider
+import com.artifybharat.android.hardware.permissions.JitPermissions
 import com.artifybharat.android.navigation.Screen
 import com.artifybharat.android.ui.components.BilingualText
 import com.artifybharat.android.ui.components.DesiButton
 import com.artifybharat.android.ui.components.DesiButtonVariant
 import com.artifybharat.android.ui.components.GiTagBadge
 import com.artifybharat.android.ui.components.QuorumSeal
+import com.artifybharat.android.ui.dialogs.PermissionRationaleDialog
 import com.artifybharat.android.ui.theme.CardSurface
 import com.artifybharat.android.ui.theme.DeepIndigoSecondary
 import com.artifybharat.android.ui.theme.KhadiBackground
@@ -77,15 +77,13 @@ fun OnboardingScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = viewModel(),
+    // T4 JIT: blocker removed — param unused, kept for back-compat.
     onPermissionsRequest: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val permissionsLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        viewModel.goToNextStep()
-    }
+    // T4 (#112) JIT: no bulk permissions gate. OS dialogs fire inline in context
+    // (mic on voice, camera on Studio tap, GPS on cluster suggest) — deny never blocks.
 
     LaunchedEffect(uiState.isOnboardingComplete) {
         if (uiState.isOnboardingComplete) {
@@ -262,21 +260,14 @@ fun OnboardingScreen(
                     onBack = { viewModel.goToPreviousStep() }
                 )
             }
+            // T4 (#112) JIT: legacy blocker step passes straight through to completion.
             OnboardingStep.PERMISSIONS_OVERVIEW -> {
-                PermissionsOverviewStep(
-                    onRequestPermissions = {
-                        onPermissionsRequest?.invoke() ?: run {
-                            permissionsLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.RECORD_AUDIO,
-                                    Manifest.permission.CAMERA,
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                )
-                            )
-                        }
-                    },
-                    onBack = { viewModel.goToPreviousStep() }
+                CompletionStep(
+                    artisanName = uiState.artisanName,
+                    clusterName = uiState.clusterName,
+                    craftCategory = uiState.craftCategory,
+                    isGiCertified = uiState.isGiCertified,
+                    onEnterApp = { viewModel.completeOnboardingAndEnterApp() }
                 )
             }
             OnboardingStep.COMPLETION -> {
@@ -455,7 +446,16 @@ private fun WelcomeLanguageStep(
     onNext: () -> Unit,
     onBack: () -> Unit
 ) {
+    // T4 (#112) JIT mic: 1-line Hindi why + Learn-more rationale; text fallback never blocks.
+    var showMicRationale by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (showMicRationale) {
+            PermissionRationaleDialog(
+                permissionType = com.artifybharat.android.ui.dialogs.PermissionType.AUDIO,
+                onConfirm = { showMicRationale = false },
+                onDismiss = { showMicRationale = false }
+            )
+        }
         if (onboardingMode == OnboardingMode.SHG) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
@@ -562,6 +562,22 @@ private fun WelcomeLanguageStep(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // T4 (#112) JIT mic why-line + Learn-more; deny falls back to typing, never blocks.
+        Text(
+            text = JitPermissions.MIC_WHY_HINDI,
+            fontSize = 12.sp,
+            color = DeepIndigoSecondary.copy(alpha = 0.85f)
+        )
+        Text(
+            text = "और जानें (Learn more)",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TerracottaPrimary,
+            modifier = Modifier
+                .clickable(onClickLabel = "माइक अनुमति के बारे में जानें") { showMicRationale = true }
+                .padding(vertical = 4.dp)
+        )
 
         // Voice Bhasha entry: Mic button + Speak-name with Yes/No confirm card
         OutlinedTextField(
@@ -841,7 +857,16 @@ private fun ClusterConfirmationStep(
     onNext: () -> Unit,
     onBack: () -> Unit
 ) {
+    // T4 (#112) JIT GPS: auto-suggest is optional; manual list never blocks.
+    var showLocationRationale by remember { mutableStateOf(false) }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (showLocationRationale) {
+            PermissionRationaleDialog(
+                permissionType = com.artifybharat.android.ui.dialogs.PermissionType.LOCATION,
+                onConfirm = { showLocationRationale = false },
+                onDismiss = { showLocationRationale = false }
+            )
+        }
         BilingualText(
             hindi = "शिल्प क्लस्टर और श्रेणी पुष्टि",
             english = "Craft Cluster & GI Registry Confirmation",
@@ -878,6 +903,23 @@ private fun ClusterConfirmationStep(
                     GiTagBadge(giTagStatus = "certified", regNumber = giTagName)
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+
+                // T4 (#112) JIT GPS why-line + Learn-more; deny falls back to manual list.
+                Text(
+                    text = JitPermissions.LOCATION_WHY_HINDI,
+                    fontSize = 12.sp,
+                    color = DeepIndigoSecondary.copy(alpha = 0.85f)
+                )
+                Text(
+                    text = "और जानें (Learn more)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TerracottaPrimary,
+                    modifier = Modifier
+                        .clickable(onClickLabel = "स्थान अनुमति के बारे में जानें") { showLocationRationale = true }
+                        .padding(vertical = 4.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "चयनित क्लस्टर:",
@@ -937,133 +979,6 @@ private fun ClusterConfirmationStep(
             variant = DesiButtonVariant.OUTLINE,
             modifier = Modifier.fillMaxWidth()
         )
-    }
-}
-
-@Composable
-private fun PermissionsOverviewStep(
-    onRequestPermissions: () -> Unit,
-    onBack: () -> Unit
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        BilingualText(
-            hindi = "एप्लिकेशन अनुमतियां",
-            english = "Required Hardware Sensor Permissions",
-            primaryStyle = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Bold,
-                color = TerracottaPrimary
-            ),
-            secondaryStyle = MaterialTheme.typography.bodyMedium.copy(color = DeepIndigoSecondary),
-            horizontalAlignment = Alignment.CenterHorizontally
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "आर्टिफ़ाई भारत की शून्य-कौशल सुविधाओं के लिए निम्न 3 अनुमतियों की आवश्यकता है:",
-            fontSize = 13.sp,
-            color = DeepIndigoSecondary.copy(alpha = 0.85f),
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PermissionCard(
-            icon = Icons.Default.Mic,
-            titleHindi = "माइक्रोफोन / आवाज़",
-            titleEnglish = "Microphone (Voice Cataloging)",
-            desc = "स्थानीय बोलियों (भोजपुरी, मैथिली) में बोलकर उत्पाद दर्ज करने और 'दादी से पूछो' सलाह हेतु।"
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        PermissionCard(
-            icon = Icons.Default.CameraAlt,
-            titleHindi = "कैमरा",
-            titleEnglish = "Camera (Authenticity Studio)",
-            desc = "हथकरघा निर्माण के विभिन्न चरणों की तस्वीरें लेने और एआई फोटो संवर्धन हेतु।"
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        PermissionCard(
-            icon = Icons.Default.LocationOn,
-            titleHindi = "स्थान (GPS)",
-            titleEnglish = "Location (GI Cluster Anchor)",
-            desc = "डिजिटल हेरिटेज पासपोर्ट में प्रमाणित भौगोलिक उपदर्शन (GI) क्लस्टर स्थान दर्ज करने हेतु।"
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        DesiButton(
-            text = "अनुमतियां दें और आगे बढ़ें",
-            subtext = "Grant Permissions & Proceed",
-            onClick = onRequestPermissions,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        DesiButton(
-            text = "पीछे जाएं",
-            subtext = "Back",
-            onClick = onBack,
-            variant = DesiButtonVariant.OUTLINE,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-private fun PermissionCard(
-    icon: ImageVector,
-    titleHindi: String,
-    titleEnglish: String,
-    desc: String
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = CardSurface),
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(TerracottaPrimary.copy(alpha = 0.12f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = titleEnglish,
-                    tint = TerracottaPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = titleHindi,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = titleEnglish,
-                    fontSize = 12.sp,
-                    color = TextEnglishSecondary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = desc,
-                    fontSize = 12.sp,
-                    color = DeepIndigoSecondary.copy(alpha = 0.8f)
-                )
-            }
-        }
     }
 }
 

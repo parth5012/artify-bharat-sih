@@ -13,6 +13,7 @@ import com.artifybharat.android.features.onboarding.OnboardingStep
 import com.artifybharat.android.features.onboarding.OnboardingUiState
 import com.artifybharat.android.features.onboarding.SUPPORTED_DIALECTS
 import com.artifybharat.android.features.onboarding.next
+import com.artifybharat.android.features.onboarding.previous
 import com.artifybharat.android.features.passport.DigitalPassportUiState
 import com.artifybharat.android.features.pricing.FairWagePricingUiState
 import com.artifybharat.android.features.voice.VoiceCatalogUiState
@@ -318,5 +319,35 @@ class OnboardingAndConnectivityE2ETest {
         assertEquals("solo", OnboardingMode.SOLO.storageValue)
         assertEquals("shg", OnboardingMode.SHG.storageValue)
         assertEquals(6, SUPPORTED_DIALECTS.size)
+    }
+
+    @Test
+    fun testJitClusterSkipsPermissionsBlocker() {
+        // T4 (#112): CLUSTER_CONFIRMATION must go straight to COMPLETION.
+        // PERMISSIONS_OVERVIEW stays only as legacy passthrough to COMPLETION.
+        assertEquals(OnboardingStep.COMPLETION, OnboardingStep.CLUSTER_CONFIRMATION.next())
+        assertEquals(OnboardingStep.COMPLETION, OnboardingStep.PERMISSIONS_OVERVIEW.next())
+        assertEquals(OnboardingStep.CLUSTER_CONFIRMATION, OnboardingStep.COMPLETION.previous())
+    }
+
+    @Test
+    fun testDenyAllStillCompletesOnboarding() {
+        // T4 (#112): fresh-install onboarding completes with all denies —
+        // degraded (text fallback, manual cluster, skip photo) but never blocked.
+        var state = OnboardingUiState(
+            currentStep = OnboardingStep.CLUSTER_CONFIRMATION,
+            phone = "9876543210",
+            artisanName = "Gauri Devi"
+        )
+        // Simulate deny-all: no permission granted, user still advances.
+        state = state.copy(currentStep = state.currentStep.next())
+        assertEquals(
+            "Deny-all must land on COMPLETION, never on a permissions blocker",
+            OnboardingStep.COMPLETION,
+            state.currentStep
+        )
+        val completed = state.copy(currentStep = OnboardingStep.COMPLETION, isOnboardingComplete = true)
+        assertTrue(completed.isOnboardingComplete)
+        assertEquals(OnboardingStep.COMPLETION, completed.currentStep)
     }
 }

@@ -1,5 +1,6 @@
 package com.artifybharat.android.features.studio
 
+import android.Manifest
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -49,10 +50,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.artifybharat.android.hardware.permissions.JitPermissions
+import com.artifybharat.android.hardware.permissions.rememberPermissionLauncherFlow
 import com.artifybharat.android.navigation.Screen
 import com.artifybharat.android.ui.components.DesiButton
 import com.artifybharat.android.ui.components.DesiButtonVariant
 import com.artifybharat.android.ui.components.HeaderBar
+import com.artifybharat.android.ui.dialogs.PermissionType
 import com.artifybharat.android.ui.theme.CardSurface
 import com.artifybharat.android.ui.theme.DeepIndigoSecondary
 import com.artifybharat.android.ui.theme.KhadiBackground
@@ -83,7 +87,17 @@ fun AuthenticityStudioScreen(
 
     val previewView = remember { PreviewView(context) }
 
-    LaunchedEffect(lifecycleOwner) {
+    // T4 (#112) JIT camera: OS dialog fires on first shutter tap only.
+    // Deny falls back to skip-photo (Proceed to Pricing stays enabled);
+    // permanent-deny routes to Settings via the rationale dialog.
+    val cameraPermissionState = rememberPermissionLauncherFlow(
+        permission = Manifest.permission.CAMERA,
+        permissionType = PermissionType.CAMERA,
+        onPermissionGranted = { viewModel.capturePhoto() }
+    )
+
+    LaunchedEffect(lifecycleOwner, cameraPermissionState.isGranted) {
+        if (!cameraPermissionState.isGranted) return@LaunchedEffect
         try {
             viewModel.cameraManager.bindCamera(lifecycleOwner, previewView.surfaceProvider)
         } catch (e: Exception) {
@@ -274,6 +288,24 @@ fun AuthenticityStudioScreen(
             tonalElevation = 8.dp
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // T4 (#112) JIT camera why-line; deny shows skip-photo fallback, never blocks.
+                Text(
+                    text = JitPermissions.CAMERA_WHY_HINDI,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DeepIndigoSecondary.copy(alpha = 0.85f),
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                if (cameraPermissionState.isPermanentlyDenied) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = JitPermissions.denyFallback(JitPermissions.JitPermission.CAMERA),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DeepIndigoSecondary,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 state.statusMessage?.let { msg ->
                     Text(
                         text = msg,
@@ -316,7 +348,13 @@ fun AuthenticityStudioScreen(
                             .border(4.dp, Color.White, CircleShape)
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                viewModel.capturePhoto()
+                                if (cameraPermissionState.isGranted) {
+                                    viewModel.capturePhoto()
+                                } else {
+                                    // T4 JIT: first tap triggers OS dialog (asked at most once
+                                    // per flow); deny keeps Proceed-to-Pricing enabled.
+                                    cameraPermissionState.launchRequest()
+                                }
                             },
                         contentAlignment = Alignment.Center
                     ) {
