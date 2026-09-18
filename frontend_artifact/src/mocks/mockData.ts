@@ -30,7 +30,8 @@ export const MOCK_ARTISAN_PROFILES: Record<string, ArtisanProfile> = {
 export const MOCK_PRODUCTS: CraftProduct[] = [
   {
     id: 'prod-001',
-    shortcode: 'ABC123',
+    shortcode: 'A7X-9B2',
+    legacyShortcode: 'ABC123',
     title: 'Hand-woven Banarasi Zari Silk Saree',
     craftType: 'Banarasi Brocade',
     cluster: 'Varanasi',
@@ -72,7 +73,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
   },
   {
     id: 'prod-002',
-    shortcode: 'VRN456',
+    shortcode: 'M3B-77L',
+    legacyShortcode: 'VRN456',
     title: 'Madhubani Kohbar Tree of Life Canvas',
     craftType: 'Mithila Painting',
     cluster: 'Madhubani',
@@ -114,7 +116,8 @@ export const MOCK_PRODUCTS: CraftProduct[] = [
   },
   {
     id: 'prod-003',
-    shortcode: 'MDB789',
+    shortcode: 'K9P-12M',
+    legacyShortcode: 'MDB789',
     title: 'Kashmir Pashmina Hand-Embroidered Stole',
     craftType: 'Kani Pashmina',
     cluster: 'Kashmir',
@@ -353,7 +356,7 @@ export const MOCK_DISTRICT_METRICS: DistrictMetric[] = [
 export const MOCK_AUDIT_FEED: AuditFeedItem[] = [
   {
     id: 'audit-101',
-    productShortcode: 'ABC123',
+    productShortcode: 'A7X-9B2',
     craftName: 'Hand-woven Banarasi Zari Silk Saree',
     artisanName: 'Mohammad Rahim Ansari',
     cluster: 'Varanasi',
@@ -369,7 +372,7 @@ export const MOCK_AUDIT_FEED: AuditFeedItem[] = [
   },
   {
     id: 'audit-102',
-    productShortcode: 'VRN456',
+    productShortcode: 'M3B-77L',
     craftName: 'Madhubani Kohbar Canvas',
     artisanName: 'Sita Devi Ramani',
     cluster: 'Madhubani',
@@ -402,7 +405,7 @@ export const MOCK_AUDIT_FEED: AuditFeedItem[] = [
   },
   {
     id: 'audit-104',
-    productShortcode: 'MDB789',
+    productShortcode: 'K9P-12M',
     craftName: 'Kashmir Pashmina Stole',
     artisanName: 'Ghulam Nabi Dar',
     cluster: 'Kashmir',

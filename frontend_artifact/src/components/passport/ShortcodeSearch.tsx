@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, QrCode, ArrowRight, Tag } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { normalizeShortcode } from '../../api/passportApi';
 
 interface ShortcodeSearchProps {
   onSearch: (code: string) => void;
@@ -9,9 +10,9 @@ interface ShortcodeSearchProps {
 }
 
 const SAMPLE_CODES = [
-  { code: 'ABC123', label: 'Banarasi Zari Saree' },
-  { code: 'VRN456', label: 'Madhubani Canvas' },
-  { code: 'MDB789', label: 'Pashmina Stole' },
+  { code: 'A7X-9B2', label: 'Banarasi Zari Saree' },
+  { code: 'M3B-77L', label: 'Madhubani Canvas' },
+  { code: 'K9P-12M', label: 'Pashmina Stole' },
 ];
 
 export const ShortcodeSearch: React.FC<ShortcodeSearchProps> = ({
@@ -24,13 +25,15 @@ export const ShortcodeSearch: React.FC<ShortcodeSearchProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (code.trim()) {
-      onSearch(code.trim().toUpperCase());
+      const normalized = normalizeShortcode(code);
+      onSearch(normalized || code.trim().toUpperCase());
     }
   };
 
   const handleChipClick = (sampleCode: string) => {
-    setCode(sampleCode);
-    onSearch(sampleCode);
+    const normalized = normalizeShortcode(sampleCode);
+    setCode(normalized || sampleCode);
+    onSearch(normalized || sampleCode);
   };
 
   return (
@@ -47,14 +50,14 @@ export const ShortcodeSearch: React.FC<ShortcodeSearchProps> = ({
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-terracotta-500">
             <Search className="w-5 h-5" />
           </div>
-          <input
-            type="text"
-            maxLength={8}
-            placeholder="e.g. ABC123, VRN456, MDB789"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-terracotta-200 rounded-2xl text-base font-mono font-bold tracking-wider text-charcoal-900 placeholder:font-sans placeholder:font-normal placeholder:text-charcoal-700 uppercase focus:outline-none focus:border-terracotta-500 shadow-inner-warm"
-          />
+        <input
+          type="text"
+          maxLength={64}
+          placeholder="e.g. A7X-9B2, M3B-77L, K9P-12M"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-terracotta-200 rounded-2xl text-base font-mono font-bold tracking-wider text-charcoal-900 placeholder:font-sans placeholder:font-normal placeholder:text-charcoal-700 uppercase focus:outline-none focus:border-terracotta-500 shadow-inner-warm"
+        />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">

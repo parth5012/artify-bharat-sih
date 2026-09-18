@@ -6,7 +6,7 @@ from app.api.v1.pricing import router as pricing_router
 from app.api.v1.passport import router as passport_router
 from app.api.v1.exports import router as exports_router
 from app.api.v1.assistant import router as assistant_router
-from app.api.v1.verification_jury import router as jury_router
+from app.api.v1.verify import router as jury_router
 from app.api.v1.logistics_payout import router as logistics_payout_router
 from app.api.v1.admin import router as admin_router
 from app.api.v1.notify import router as notify_router

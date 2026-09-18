@@ -8,12 +8,15 @@ interface ReportFakeModalProps {
   isOpen: boolean;
   onClose: () => void;
   shortcode: string;
+  /** Optional backend product id for passport resolution. */
+  productId?: string;
 }
 
 export const ReportFakeModal: React.FC<ReportFakeModalProps> = ({
   isOpen,
   onClose,
   shortcode,
+  productId,
 }) => {
   const [reason, setReason] = useState<'Machine-made' | 'Incorrect provenance' | 'Suspicious product' | 'Incorrect artisan information' | 'Other'>('Machine-made');
   const [description, setDescription] = useState<string>('');
@@ -29,6 +32,7 @@ export const ReportFakeModal: React.FC<ReportFakeModalProps> = ({
     try {
       const response = await reportFakeProduct({
         shortcode,
+        productId,
         reason,
         description,
         reporterContact,

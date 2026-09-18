@@ -16,7 +16,7 @@ import { Badge } from '../components/ui/Badge';
 import { Loader } from '../components/ui/Loader';
 import { ErrorState } from '../components/ui/ErrorState';
 import { Toast } from '../components/ui/Toast';
-import { getPassportByShortcode } from '../api/passportApi';
+import { getPassportByShortcode, normalizeShortcode } from '../api/passportApi';
 import { listMarketProducts } from '../api/marketplaceApi';
 import { getCart, addToCart, updateCartQty, removeFromCart, clearCart, totalQty } from '../services/cart';
 import type { CraftProduct, CartItem, Reservation } from '../types';
@@ -75,7 +75,7 @@ export const BuyerPortalPage: React.FC = () => {
         setProduct(null);
         setErrorMsg(`No Digital Passport found matching code: "${shortcode}". Please check shortcode on thermal tag.`);
       }
-    } catch (err) {
+    } catch {
       setErrorMsg('Failed to query passport provenance ledger.');
     } finally {
       setIsLoading(false);
@@ -86,7 +86,7 @@ export const BuyerPortalPage: React.FC = () => {
     if (code) {
       loadPassport(code);
     } else {
-      loadPassport('ABC123');
+      loadPassport('A7X-9B2');
     }
   }, [code]);
 
@@ -113,9 +113,10 @@ export const BuyerPortalPage: React.FC = () => {
   }, [activeTab, fetchShop]);
 
   const handleSearchSubmit = (inputCode: string) => {
+    const normalized = normalizeShortcode(inputCode) || inputCode.trim().toUpperCase();
     setActiveTab('verify');
-    navigate(`/buyer/passport/${inputCode}`);
-    loadPassport(inputCode);
+    navigate(`/buyer/passport/${normalized}`);
+    loadPassport(normalized);
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -233,13 +234,13 @@ export const BuyerPortalPage: React.FC = () => {
 
           {isLoading && <Loader size="lg" label="Decrypting SHA-256 Provenance Ledger..." />}
 
-          {!isLoading && errorMsg && (
-            <ErrorState
-              title="Passport Not Found"
-              message={errorMsg}
-              onRetry={() => loadPassport('ABC123')}
-            />
-          )}
+        {!isLoading && errorMsg && (
+          <ErrorState
+            title="Passport Not Found"
+            message={errorMsg}
+            onRetry={() => loadPassport('A7X-9B2')}
+          />
+        )}
 
           {/* Active Passport Presentation */}
           {!isLoading && product && (
@@ -455,6 +456,7 @@ export const BuyerPortalPage: React.FC = () => {
           isOpen={isReportModalOpen}
           onClose={() => setIsReportModalOpen(false)}
           shortcode={product.shortcode}
+          productId={product.id}
         />
       )}
 

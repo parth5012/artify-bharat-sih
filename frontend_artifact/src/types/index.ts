@@ -17,6 +17,7 @@ export interface ArtisanProfile {
 export interface CraftProduct {
   id: string;
   shortcode: string;
+  legacyShortcode?: string;
   title: string;
   craftType: string;
   cluster: string;
@@ -102,6 +103,27 @@ export interface ReportFakeRequest {
   reason: 'Machine-made' | 'Incorrect provenance' | 'Suspicious product' | 'Incorrect artisan information' | 'Other';
   description: string;
   reporterContact?: string;
+  /** Optional backend product id — improves passport/shortcode resolution. */
+  productId?: string;
+}
+
+export interface ReportFakeResponse {
+  success: boolean;
+  /** Frontend ticket ref — maps 1:1 to backend report_id. */
+  ticketId: string;
+  report_id?: string;
+  status?: string;
+}
+
+export interface JuryStatus {
+  jury_ticket_id: string;
+  product_id: string;
+  status: string;
+  votes_received: number;
+  quorum_size: number;
+  quorum_verdict?: string | null;
+  average_craft_score?: number | null;
+  last_updated: string;
 }
 
 export interface AuditFeedItem {

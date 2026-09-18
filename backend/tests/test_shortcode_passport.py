@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.core.passport import (
     compute_wip_digest,
     generate_passport_hash,
+    generate_passport_qr_code,
     generate_passport_qr_svg_data_uri,
     generate_passport_qr_svg_xml,
 )
@@ -149,4 +150,45 @@ async def test_shortcode_resolve_case_hyphen_robustness():
         assert data is not None
         assert data["artisan_name"] == "Radha Devi"
     assert await passport_service.resolve_shortcode("ZZZ-999", None) is None
+
+
+def _capture_qr_url(fn, *args, **kwargs):
+    """Run a QR generator with qrcode.QRCode patched to capture add_data URL."""
+    import qrcode as _qrcode
+
+    captured: dict[str, str] = {}
+    OrigQR = _qrcode.QRCode
+
+    class CapQR(OrigQR):
+        def add_data(self, d, *a, **k):
+            captured["url"] = d
+            return super().add_data(d, *a, **k)
+
+    with patch("qrcode.QRCode", CapQR):
+        fn(*args, **kwargs)
+    return captured.get("url", "")
+
+
+def test_png_svg_qr_url_parity_shortcode_primary():
+    settings = get_settings()
+    passport_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    shortcode = generate_shortcode(passport_hash)
+    expected = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{shortcode}"
+    png_url = _capture_qr_url(generate_passport_qr_code, passport_hash, shortcode)
+    svg_url = _capture_qr_url(
+        generate_passport_qr_svg_xml, passport_hash, shortcode
+    )
+    assert png_url == expected
+    assert svg_url == expected
+    assert png_url == svg_url
+
+
+def test_png_qr_hash_fallback_pre42():
+    settings = get_settings()
+    passport_hash = "f4c1b892a01d5678bc901ef23456789abcdef0123456789abcdef0123456789a"
+    fallback_url = f"{settings.PASSPORT_VERIFICATION_BASE_URL}/{passport_hash}"
+    assert _capture_qr_url(generate_passport_qr_code, passport_hash) == fallback_url
+    assert (
+        _capture_qr_url(generate_passport_qr_svg_xml, passport_hash) == fallback_url
+    )
 
