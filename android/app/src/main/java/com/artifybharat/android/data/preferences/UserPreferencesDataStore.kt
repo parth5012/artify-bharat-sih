@@ -21,6 +21,7 @@ data class UserSession(
     val clusterName: String = "",
     val craftCategory: String = "handloom",
     val stateCode: String = "UP",
+    val onboardingMode: String = "solo",
     val isVerified: Boolean = false,
     val isOnboarded: Boolean = false,
     val isOfflineDemo: Boolean = false
@@ -41,6 +42,7 @@ class UserPreferencesDataStore(private val context: Context) {
         val KEY_IS_ONBOARDED = booleanPreferencesKey("is_onboarded")
         val KEY_OFFLINE_DEMO = booleanPreferencesKey("offline_demo")
         val KEY_CUSTOM_BASE_URL = stringPreferencesKey("custom_base_url")
+        val KEY_ONBOARDING_MODE = stringPreferencesKey("onboarding_mode")
     }
 
     val userSessionFlow: Flow<UserSession> = context.userDataStore.data.map { prefs ->
@@ -56,6 +58,7 @@ class UserPreferencesDataStore(private val context: Context) {
             clusterName = prefs[KEY_CLUSTER_NAME] ?: if (isOnboarded) "Varanasi Handloom Cluster" else "",
             craftCategory = prefs[KEY_CRAFT_CATEGORY] ?: "handloom",
             stateCode = prefs[KEY_STATE_CODE] ?: "UP",
+            onboardingMode = prefs[KEY_ONBOARDING_MODE] ?: "solo",
             isVerified = prefs[KEY_IS_VERIFIED] ?: false,
             isOnboarded = isOnboarded,
             isOfflineDemo = isDemo
@@ -71,6 +74,17 @@ class UserPreferencesDataStore(private val context: Context) {
     }
 
     val authTokenFlow: Flow<String?> = flowOf(secureTokenStorage.getToken())
+
+    val onboardingModeFlow: Flow<String> = context.userDataStore.data.map { prefs ->
+        prefs[KEY_ONBOARDING_MODE] ?: "solo"
+    }
+
+    suspend fun setOnboardingMode(mode: String) {
+        val normalized = if (mode == "shg") "shg" else "solo"
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_ONBOARDING_MODE] = normalized
+        }
+    }
 
     fun getAuthToken(): String? = secureTokenStorage.getToken()
 

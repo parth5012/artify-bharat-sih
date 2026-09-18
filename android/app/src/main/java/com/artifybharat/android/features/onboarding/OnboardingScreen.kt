@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,14 +26,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -199,11 +205,26 @@ fun OnboardingScreen(
 
         // Screen Body by Step
         when (uiState.currentStep) {
+            OnboardingStep.MODE_SELECT -> {
+                ModeSelectStep(
+                    selectedMode = uiState.onboardingMode,
+                    onSelectMode = { viewModel.selectOnboardingMode(it) },
+                    onNext = { viewModel.goToNextStep() }
+                )
+            }
             OnboardingStep.WELCOME_LANGUAGE -> {
                 WelcomeLanguageStep(
                     selectedDialect = uiState.selectedDialect,
+                    onboardingMode = uiState.onboardingMode,
+                    spokenName = uiState.spokenName,
+                    showVoiceConfirm = uiState.showVoiceConfirm,
                     onSelectDialect = { viewModel.selectDialect(it) },
-                    onNext = { viewModel.goToNextStep() }
+                    onReadout = { /* TTS stub: Bhashini readout wired in follow-up */ },
+                    onSpeakName = { viewModel.setSpokenName(it) },
+                    onConfirmVoice = { viewModel.confirmSpokenName(it) },
+                    onSwitchAccount = { viewModel.selectOnboardingMode(OnboardingMode.SOLO) },
+                    onNext = { viewModel.goToNextStep() },
+                    onBack = { viewModel.goToPreviousStep() }
                 )
             }
             OnboardingStep.IDENTITY_VERIFICATION -> {
@@ -265,12 +286,206 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun WelcomeLanguageStep(
-    selectedDialect: String,
-    onSelectDialect: (String) -> Unit,
+private fun ModeSelectStep(
+    selectedMode: OnboardingMode,
+    onSelectMode: (OnboardingMode) -> Unit,
     onNext: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        BilingualText(
+            hindi = "आप कौन हैं?",
+            english = "Who is using this phone? (Step 0)",
+            primaryStyle = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                color = TerracottaPrimary
+            ),
+            secondaryStyle = MaterialTheme.typography.bodyMedium.copy(color = DeepIndigoSecondary),
+            horizontalAlignment = Alignment.CenterHorizontally
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ModeCard(
+            selected = selectedMode == OnboardingMode.SOLO,
+            icon = Icons.Default.Person,
+            hindi = "मैं खुद कारीगर हूँ",
+            english = "I am the artisan (Solo)",
+            contentDesc = "मैं खुद कारीगर हूँ चुनें",
+            onClick = { onSelectMode(OnboardingMode.SOLO) }
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ModeCard(
+            selected = selectedMode == OnboardingMode.SHG,
+            icon = Icons.Default.Group,
+            hindi = "मैं SHG helper हूँ",
+            english = "I am an SHG helper",
+            contentDesc = "मैं एसएचजी हेल्पर हूँ चुनें",
+            onClick = { onSelectMode(OnboardingMode.SHG) }
+        )
+
+        if (selectedMode == OnboardingMode.SHG) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "SHG सहायक मोड: आप कारीगर की ओर से भर रहे हैं",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = DeepIndigoSecondary
+                    )
+                    Text(
+                        text = "SHG helper mode — filling on behalf of the artisan",
+                        fontSize = 12.sp,
+                        color = TextEnglishSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DesiButton(
+                        text = "खाता बदलें",
+                        subtext = "Switch account (stub)",
+                        onClick = { onSelectMode(OnboardingMode.SOLO) },
+                        variant = DesiButtonVariant.OUTLINE,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        DesiButton(
+            text = "आगे बढ़ें",
+            subtext = "Continue to Language",
+            onClick = onNext,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun ModeCard(
+    selected: Boolean,
+    icon: ImageVector,
+    hindi: String,
+    english: String,
+    contentDesc: String,
+    onClick: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) Color(0xFFFFEFE9) else CardSurface
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clickable(onClickLabel = contentDesc) { onClick() }
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) TerracottaPrimary else DeepIndigoSecondary.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(12.dp)
+            )
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(TerracottaPrimary.copy(alpha = 0.12f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = TerracottaPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = hindi,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = if (selected) TerracottaPrimary else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = english,
+                    fontSize = 13.sp,
+                    color = TextEnglishSecondary
+                )
+            }
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "चुना गया (Selected)",
+                    tint = TerracottaPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WelcomeLanguageStep(
+    selectedDialect: String,
+    onboardingMode: OnboardingMode,
+    spokenName: String,
+    showVoiceConfirm: Boolean,
+    onSelectDialect: (String) -> Unit,
+    onReadout: (String) -> Unit,
+    onSpeakName: (String) -> Unit,
+    onConfirmVoice: (Boolean) -> Unit,
+    onSwitchAccount: () -> Unit,
+    onNext: () -> Unit,
+    onBack: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        if (onboardingMode == OnboardingMode.SHG) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Group,
+                        contentDescription = null,
+                        tint = DeepIndigoSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "SHG सहायक मोड",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = DeepIndigoSecondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onSwitchAccount) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = "खाता बदलें (Switch account)",
+                            tint = TerracottaPrimary
+                        )
+                    }
+                }
+            }
+        }
+
         BilingualText(
             hindi = "अपनी भाषा और बोली चुनें",
             english = "Select Language & Dialect",
@@ -284,17 +499,8 @@ private fun WelcomeLanguageStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val dialects = listOf(
-            Triple("bhojpuri", "भोजपुरी", "Bhojpuri (पूर्वांचल / बनारस)"),
-            Triple("maithili", "मैथिली", "Maithili (मिथिला / मधुबनी)"),
-            Triple("awadhi", "अवधी", "Awadhi (अवध / लखनऊ)"),
-            Triple("marwari", "मारवाड़ी", "Marwari (राजस्थान / बाड़मेर)"),
-            Triple("hindi", "हिंदी", "Hindi (मानक खड़ी बोली)"),
-            Triple("english", "English", "English (Official)")
-        )
-
-        dialects.forEach { (code, regional, desc) ->
-            val isSelected = selectedDialect == code
+        SUPPORTED_DIALECTS.forEach { dialect ->
+            val isSelected = selectedDialect == dialect.code
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = if (isSelected) Color(0xFFFFEFE9) else CardSurface
@@ -302,8 +508,9 @@ private fun WelcomeLanguageStep(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 56.dp)
                     .padding(vertical = 4.dp)
-                    .clickable { onSelectDialect(code) }
+                    .clickable(onClickLabel = "${dialect.hindiLabel} चुनें") { onSelectDialect(dialect.code) }
                     .border(
                         width = if (isSelected) 2.dp else 1.dp,
                         color = if (isSelected) TerracottaPrimary else DeepIndigoSecondary.copy(alpha = 0.15f),
@@ -311,28 +518,97 @@ private fun WelcomeLanguageStep(
                     )
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = regional,
+                        text = dialect.hindiLabel,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         color = if (isSelected) TerracottaPrimary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.width(100.dp)
                     )
                     Text(
-                        text = desc,
+                        text = dialect.englishDesc,
                         fontSize = 13.sp,
                         color = TextEnglishSecondary,
                         modifier = Modifier.weight(1f)
                     )
+                    IconButton(onClick = { onReadout(dialect.code) }) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "${dialect.hindiLabel} सुनें (Hear prompt)",
+                            tint = DeepIndigoSecondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                     if (isSelected) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Selected",
+                            contentDescription = "चुना गया (Selected)",
                             tint = TerracottaPrimary,
                             modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Voice Bhasha entry: Mic button + Speak-name with Yes/No confirm card
+        OutlinedTextField(
+            value = spokenName,
+            onValueChange = onSpeakName,
+            label = { Text("बोलकर नाम बताएं (Speak your name)") },
+            singleLine = true,
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "माइक दबाकर नाम बोलें (Tap mic to speak name)",
+                    tint = TerracottaPrimary
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = TerracottaPrimary,
+                unfocusedBorderColor = DeepIndigoSecondary.copy(alpha = 0.3f)
+            )
+        )
+
+        if (showVoiceConfirm && spokenName.isNotBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE9)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "क्या आपका नाम \"$spokenName\" है?",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TerracottaPrimary
+                    )
+                    Text(
+                        text = "Is your name \"$spokenName\"? Confirm Yes / No",
+                        fontSize = 12.sp,
+                        color = TextEnglishSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DesiButton(
+                            text = "हाँ",
+                            subtext = "Yes",
+                            onClick = { onConfirmVoice(true) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        DesiButton(
+                            text = "नहीं",
+                            subtext = "No",
+                            onClick = { onConfirmVoice(false) },
+                            variant = DesiButtonVariant.OUTLINE,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
@@ -345,6 +621,16 @@ private fun WelcomeLanguageStep(
             text = "आगे बढ़ें",
             subtext = "Continue to Identity",
             onClick = onNext,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        DesiButton(
+            text = "पीछे जाएं",
+            subtext = "Back",
+            onClick = onBack,
+            variant = DesiButtonVariant.OUTLINE,
             modifier = Modifier.fillMaxWidth()
         )
     }

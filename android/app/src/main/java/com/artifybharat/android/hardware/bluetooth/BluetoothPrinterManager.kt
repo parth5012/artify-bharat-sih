@@ -138,7 +138,7 @@ class BluetoothPrinterManager(private val context: Context) {
             }
 
             activeSocket = socket
-            activeOutputStream = socket.outputStream
+            activeOutputStream = socket?.outputStream
             lastConnectedAddress = deviceAddress
 
             _printerState.value = PrinterStatusState(
