@@ -21,13 +21,14 @@ import { loginArtisan, registerOrLoginArtisan, type ArtisanSession } from '../ap
 import { createProductFromEvidence } from '../api/productApi';
 import type { ProductEvidenceResponse } from '../api/productApi';
 import { StudioEnhancement } from '../components/studio/StudioEnhancement';
+import { ArtisanOrdersTab } from '../components/market/ArtisanOrdersTab';
 
 interface ArtisanPortalPageProps {
   currentRole: ArtisanRole;
   onRoleChange: (role: ArtisanRole) => void;
 }
 
-type PortalStep = 'dashboard' | 'capture' | 'studio' | 'catalog' | 'voice' | 'profile' | 'pricing' | 'print' | 'drafts';
+type PortalStep = 'dashboard' | 'capture' | 'studio' | 'catalog' | 'voice' | 'profile' | 'pricing' | 'print' | 'drafts' | 'orders';
 
 interface WorkflowCheckpoint {
   activeStep: PortalStep;
