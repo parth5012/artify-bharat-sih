@@ -11,7 +11,10 @@ class PassportIssueRequest(BaseModel):
 class HeritagePassportResponse(BaseModel):
     product_id: str
     passport_hash: str
+    shortcode: Optional[str] = None
     qr_code_data_uri: str
+    qr_svg_data_uri: Optional[str] = None
+    escpos_b64: Optional[str] = None
     verification_url: str
     issued_at: datetime
 
@@ -34,3 +37,6 @@ class PublicPassportVerification(BaseModel):
     voice_story_url: Optional[str]
     cost_breakdown: CostBreakdown
     issued_at: datetime
+    qr_svg_data_uri: Optional[str] = None
+    escpos_b64: Optional[str] = None
+    verification_url: Optional[str] = None

@@ -129,6 +129,10 @@ async def test_public_passport_allowlist_fields_omits_sensitive_pii(client: Asyn
         "voice_story_url",
         "cost_breakdown",
         "issued_at",
+        # #99 public print assets (non-PII: QR image, thermal bytes, public URL).
+        "qr_svg_data_uri",
+        "escpos_b64",
+        "verification_url",
     }
 
     # All returned keys must be in the approved allowlist

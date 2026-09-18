@@ -17,10 +17,14 @@ async def issue_heritage_passport(payload: PassportIssueRequest, db: AsyncSessio
     """
     try:
         passport = await passport_service.issue_passport(db, payload.product_id)
+        snapshot = passport.payload_snapshot or {}
         return HeritagePassportResponse(
             product_id=passport.product_id,
             passport_hash=passport.passport_hash,
+            shortcode=passport.shortcode,
             qr_code_data_uri=passport.qr_code_data_uri,
+            qr_svg_data_uri=snapshot.get("qr_svg_data_uri"),
+            escpos_b64=snapshot.get("thermal_escpos_payload_base64"),
             verification_url=passport.verification_url,
             issued_at=passport.issued_at,
         )
