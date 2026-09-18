@@ -70,6 +70,25 @@ class Settings(BaseSettings):
     PASSPORT_VERIFICATION_BASE_URL: str = "https://verify.artifybharat.in/passport"
     ENABLE_DEMO_INVENTORY: bool = False  # Development-only flag to inject sample items if inventory is empty
 
+    # LangSmith Observability (LLM tracing for the Ask Dadi agent)
+    # Set LANGSMITH_TRACING=true + LANGSMITH_API_KEY to stream traces to smith.langchain.com
+    LANGSMITH_TRACING: bool = False
+    LANGSMITH_API_KEY: str = ""
+    LANGSMITH_PROJECT: str = "artify-bharat-ask-dadi"
+    LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
+
+    # Ask Dadi online agent (Groq).backend/.env is the single source of truth:
+    # GROQ_API_KEY=gsk_...   -> agent boots in ONLINE (LLM tool-calling) mode
+    # empty / missing        -> agent stays in OFFLINE knowledge-base mode
+    # NOTE: the model MUST support custom (local) tool calling. groq/compound
+    # and groq/compound-mini are built-in-tool systems and REJECT custom tools.
+    # Supported (per console.groq.com/docs/tool-use/overview):
+    #   openai/gpt-oss-120b (recommended), openai/gpt-oss-20b,
+    #   qwen/qwen3.6-27b, qwen/qwen3.8-27b
+    #   (llama-3.3-70b-versatile works but is Enterprise-only on Groq now)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
