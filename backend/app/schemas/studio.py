@@ -9,6 +9,10 @@ class StudioEnhanceResponse(BaseModel):
     enhanced_image_url: str
     visual_complexity_score: float
     auto_cropped_ratio: str = "1:1"
+    clahe_applied: bool = True
+    background_removed: bool = False
+    crop_applied: bool = True
+    rembg_used: bool = False
     status: str
     message: str
 

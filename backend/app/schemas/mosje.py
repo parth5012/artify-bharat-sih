@@ -2,10 +2,16 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, timezone
 
+
 class MoSJEAuthRequest(BaseModel):
     artisan_id: str = Field(..., description="Artisan identifier or user ID")
-    scheme_type: str = Field(..., description="Scheme name: PM-SURAJ, PM-DAKSH, e-Shram, or Pehchan")
-    scheme_registration_number: str = Field(..., description="Beneficiary registration ID or certificate number")
+    scheme_type: str = Field(
+        ..., description="Scheme name: PM-SURAJ, PM-DAKSH, e-Shram, or Pehchan"
+    )
+    scheme_registration_number: str = Field(
+        ..., description="Beneficiary registration ID or certificate number"
+    )
+
 
 class MoSJEAuthResponse(BaseModel):
     verified: bool
@@ -19,9 +25,15 @@ class MoSJEAuthResponse(BaseModel):
     verified_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     details: dict = Field(default_factory=dict)
 
+
 class EShramLookupRequest(BaseModel):
-    uan_number: str = Field(..., description="12-digit Universal Account Number (UAN) for e-Shram")
-    mobile_last_4: Optional[str] = Field(None, description="Last 4 digits of linked mobile number")
+    uan_number: str = Field(
+        ..., description="12-digit Universal Account Number (UAN) for e-Shram"
+    )
+    mobile_last_4: Optional[str] = Field(
+        None, description="Last 4 digits of linked mobile number"
+    )
+
 
 class EShramLookupResponse(BaseModel):
     valid: bool
@@ -34,8 +46,12 @@ class EShramLookupResponse(BaseModel):
     social_category: str
     pension_scheme_enrolled: bool
 
+
 class PMSurajLookupRequest(BaseModel):
-    application_id: str = Field(..., description="PM-SURAJ credit/subsidy application ID")
+    application_id: str = Field(
+        ..., description="PM-SURAJ credit/subsidy application ID"
+    )
+
 
 class PMSurajLookupResponse(BaseModel):
     verified: bool
@@ -45,3 +61,57 @@ class PMSurajLookupResponse(BaseModel):
     subsidy_percentage: float
     credit_status: str
     nodal_agency: str
+
+
+# Schemas for backend auth_service integration
+class ArtisanIdVerifyRequest(BaseModel):
+    pehchan_id: Optional[str] = Field(
+        None, description="DC Handicrafts Pehchan Card Number"
+    )
+    trifed_id: Optional[str] = Field(None, description="TRIFED ID")
+
+
+class ArtisanIdVerifyResponse(BaseModel):
+    pehchan_valid: bool = False
+    trifed_valid: bool = False
+    cluster_name: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None
+
+
+class MosjeVerifyRequest(BaseModel):
+    artisan_id: str
+    pehchan_id: Optional[str] = None
+    eshram_uan: Optional[str] = None
+
+
+class MosjeVerifyResponse(BaseModel):
+    pmdaksh_level: Optional[str] = Field(
+        None, description="Skill certification tier, e.g. 'L2'"
+    )
+    pmdaksh_certified: bool = False
+    pmsuraj_eligible: bool = False
+    pmsuraj_scheme_refs: List[str] = Field(default_factory=list)
+
+
+class PmSurajLookupRequest(BaseModel):
+    eshram_uan: Optional[str] = None
+    pehchan_id: Optional[str] = None
+
+
+class PmSurajLookupResponse(BaseModel):
+    eligible: bool = False
+    credit_limit: Optional[float] = None
+    loan_status: Optional[str] = None
+
+
+class EshramLookupRequest(BaseModel):
+    eshram_uan: str = Field(..., min_length=12, max_length=12)
+
+
+class EshramLookupResponse(BaseModel):
+    valid: bool = False
+    worker_name: Optional[str] = None
+    primary_occupation: Optional[str] = None
+    state: Optional[str] = None
+    district: Optional[str] = None

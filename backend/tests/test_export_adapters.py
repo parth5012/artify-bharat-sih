@@ -299,6 +299,7 @@ async def test_multi_channel_export(client: AsyncClient):
         },
     )
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     from tests.test_cv_enhancement import create_dummy_image_bytes
 
@@ -306,7 +307,12 @@ async def test_multi_channel_export(client: AsyncClient):
         "image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")
     }
     data = {"artisan_id": artisan_id, "product_title": "Madhubani Silk Dupatta"}
-    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     product_id = enhance_res.json()["product_id"]
 
     # Calculate pricing
@@ -349,11 +355,17 @@ async def test_end_to_end_all_channels_export(client: AsyncClient):
     )
     assert reg.status_code == 201
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     # Studio enhance
     files = {"image": ("saree.jpg", io.BytesIO(b"fake-image-bytes"), "image/jpeg")}
     data = {"artisan_id": artisan_id, "product_title": "Banarasi Brocade Saree"}
-    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     assert enhance_res.status_code == 200
     product_id = enhance_res.json()["product_id"]
 
@@ -431,10 +443,16 @@ async def test_multi_channel_inventory_lock_on_sale(client: AsyncClient, db_sess
         },
     )
     artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
 
     files = {"image": ("craft.jpg", io.BytesIO(b"dummy"), "image/jpeg")}
     data = {"artisan_id": artisan_id, "product_title": "Blue Pottery Vase"}
-    enhance_res = await client.post("/api/v1/studio/enhance", data=data, files=files)
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data=data,
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
     product_id = enhance_res.json()["product_id"]
 
     await client.post(

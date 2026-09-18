@@ -1,0 +1,16 @@
+{
+  "short_name": "Artifact",
+  "name": "ARTIFACT — Digital Heritage Passport",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FAF7F2",
+  "theme_color": "#C05621",
+  "display": "standalone",
+  "orientation": "portrait"
+}

@@ -2,7 +2,10 @@
 Central configuration for the Artify Bharat backend (Mayank's modules).
 Loaded from environment variables / .env at process start.
 """
+
 from functools import lru_cache
+from typing import Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,6 +47,23 @@ class Settings(BaseSettings):
 
     # Payouts
     PAYOUT_PLATFORM_FEE_PCT: float = 0.0  # 0% middleman commission, by design
+
+    # CORS
+    # Do NOT use wildcard here: "*" with allow_credentials=True is rejected by browsers,
+    # and will silently break the frontend's auth token flow.
+    # Override via env with comma-separated list, e.g.:
+    #   CORS_ORIGINS=https://artifybharat.app,http://localhost:3000
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "https://artifybharat.app",
+    ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _split_csv_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
 
 @lru_cache

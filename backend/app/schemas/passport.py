@@ -20,6 +20,7 @@ class HeritagePassportResponse(BaseModel):
 
 class PublicPassportVerification(BaseModel):
     passport_hash: str
+    shortcode: Optional[str] = None
     is_authentic: bool
     product_title: str
     craft_category: str

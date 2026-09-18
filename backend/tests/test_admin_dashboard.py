@@ -8,15 +8,40 @@ from app.models.payout import PayoutTransaction
 
 
 @pytest.mark.asyncio
-async def test_district_heatmap():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        res = await client.get("/api/v1/admin/district-heatmap")
-        assert res.status_code == 200
-        data = res.json()
-        assert data["total_districts_monitored"] >= 5
-        assert data["total_wages_disbursed_inr"] > 0
-        assert data["average_middleman_savings_percent"] > 30.0
+async def test_district_heatmap(client: AsyncClient, db_session: AsyncSession):
+    districts = [
+        ("Varanasi", "Uttar Pradesh"),
+        ("Madhubani", "Bihar"),
+        ("Srinagar", "Jammu & Kashmir"),
+        ("Kutch", "Gujarat"),
+        ("Nalgonda", "Telangana"),
+    ]
+    for i, (district, state) in enumerate(districts):
+        artisan = Artisan(
+            name=f"Heat Artisan {i}",
+            phone=f"999000010{i}",
+            pin_hash="test-hash",
+            district=district,
+            state=state,
+        )
+        db_session.add(artisan)
+        await db_session.flush()
+        db_session.add(
+            PayoutTransaction(
+                artisan_id=artisan.id,
+                amount=10000.0,
+                utr_number=f"HEATUTR000{i}",
+                status="SETTLED",
+            )
+        )
+    await db_session.commit()
+
+    res = await client.get("/api/v1/admin/district-heatmap")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total_districts_monitored"] >= 5
+    assert data["total_wages_disbursed_inr"] > 0
+    assert data["average_middleman_savings_percent"] > 30.0
 
 
 @pytest.mark.asyncio
