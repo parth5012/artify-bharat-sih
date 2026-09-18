@@ -29,6 +29,10 @@ interface BackendVerification {
   voice_story_url?: string | null;
   cost_breakdown?: BackendCostBreakdown | null;
   issued_at?: string;
+  /** #102: backend print assets (Optional until all backends upgraded). */
+  qr_svg_data_uri?: string | null;
+  escpos_b64?: string | null;
+  verification_url?: string | null;
 }
 
 const FALLBACK_IMAGE = '/hero.png';
@@ -84,6 +88,10 @@ function toCraftProduct(raw: BackendVerification, fallbackCode: string): CraftPr
     stockType: 'unique',
     isListed: true,
     reservedQty: 0,
+    // #102: carry backend print assets through when present.
+    ...(raw.qr_svg_data_uri ? { qrSvgDataUri: raw.qr_svg_data_uri } : {}),
+    ...(raw.escpos_b64 ? { escposB64: raw.escpos_b64 } : {}),
+    ...(raw.verification_url ? { verificationUrl: raw.verification_url } : {}),
   };
 }
 
