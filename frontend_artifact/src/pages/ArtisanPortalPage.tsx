@@ -708,6 +708,9 @@ export const ArtisanPortalPage: React.FC<ArtisanPortalPageProps> = ({
             shortcode={selectedProduct.shortcode}
             price={selectedProduct.pricing.retailPrice}
             craftCluster={`${selectedProduct.cluster} Cluster`}
+            qrSvgDataUri={selectedProduct.qrSvgDataUri}
+            escposB64={selectedProduct.escposB64}
+            verificationUrl={selectedProduct.verificationUrl}
           />
         </div>
       )}

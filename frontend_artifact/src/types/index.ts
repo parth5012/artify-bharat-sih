@@ -56,6 +56,10 @@ export interface CraftProduct {
   stockType: 'unique' | 'batch';
   isListed: boolean;
   reservedQty: number;
+  /** #102: backend print assets (POST /passport/issue, GET code/verify). */
+  qrSvgDataUri?: string;
+  escposB64?: string;
+  verificationUrl?: string;
 }
 
 export type ReservationStatus = 'pending' | 'confirmed' | 'declined' | 'expired';
