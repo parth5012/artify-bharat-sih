@@ -6,9 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.artifybharat.android.data.local.dao.DraftDao
 import com.artifybharat.android.data.local.dao.JuryDao
+import com.artifybharat.android.data.local.dao.OfflineRegistrationDao
 import com.artifybharat.android.data.local.dao.PhotoDao
 import com.artifybharat.android.data.local.entity.DraftEntity
 import com.artifybharat.android.data.local.entity.JuryEntity
+import com.artifybharat.android.data.local.entity.OfflineRegistrationEntity
 import com.artifybharat.android.data.local.entity.PhotoEntity
 import net.sqlcipher.database.SupportFactory
 
@@ -16,9 +18,10 @@ import net.sqlcipher.database.SupportFactory
     entities = [
         DraftEntity::class,
         PhotoEntity::class,
-        JuryEntity::class
+        JuryEntity::class,
+        OfflineRegistrationEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun draftDao(): DraftDao
     abstract fun photoDao(): PhotoDao
     abstract fun juryDao(): JuryDao
+    abstract fun offlineRegistrationDao(): OfflineRegistrationDao
 
     companion object {
         private const val DB_NAME = "artify_bharat_secure.db"

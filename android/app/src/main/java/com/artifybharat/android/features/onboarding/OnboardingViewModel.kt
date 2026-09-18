@@ -3,11 +3,13 @@ package com.artifybharat.android.features.onboarding
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.artifybharat.android.data.local.AppDatabase
 import com.artifybharat.android.data.network.NetworkClient
 import com.artifybharat.android.data.network.dto.VoiceRegisterRequestDto
 import com.artifybharat.android.data.preferences.UserPreferencesDataStore
 import com.artifybharat.android.data.repository.AuthRepository
 import com.artifybharat.android.data.repository.AuthRepositoryImpl
+import com.artifybharat.android.data.sync.SyncScheduler
 import com.artifybharat.android.hardware.location.LocationProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,6 +87,9 @@ data class OnboardingUiState(
     val isVerified: Boolean = false,
     val isOfflineMode: Boolean = false,
     val isServerUnreachable: Boolean = false,
+    val showSecondaryVerify: Boolean = false,
+    val queuedOffline: Boolean = false,
+    val pendingQueueCount: Int = 0,
     val errorMessage: String? = null,
     val isOnboardingComplete: Boolean = false
 )
@@ -99,6 +104,16 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
+
+    init {
+        refreshQueueCount()
+    }
+
+    private fun offlineRegDao() = try {
+        AppDatabase.getInstance(getApplication()).offlineRegistrationDao()
+    } catch (e: Exception) {
+        null
+    }
 
     fun selectOnboardingMode(mode: OnboardingMode) {
         _uiState.value = _uiState.value.copy(onboardingMode = mode)
@@ -128,7 +143,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun updatePhone(phone: String) {
-        _uiState.value = _uiState.value.copy(phone = phone)
+        // T2: phone-digits-only (10-digit numeric keyboard).
+        _uiState.value = _uiState.value.copy(phone = ProgressiveIdentity.filterPhoneDigits(phone))
     }
 
     fun updatePin(pin: String) {
@@ -155,6 +171,84 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     fun goToPreviousStep() {
         val prev = _uiState.value.currentStep.previous()
         _uiState.value = _uiState.value.copy(currentStep = prev, errorMessage = null)
+    }
+
+    /** T2: secondary Pehchan/e-Shram/TRIFED upgrade stays collapsed; verify only on demand. */
+    fun toggleSecondaryVerify() {
+        _uiState.value = _uiState.value.copy(showSecondaryVerify = !_uiState.value.showSecondaryVerify)
+    }
+
+    /** Build the Room-queued request from primary identity (phone + spoken name). Null if incomplete. */
+    fun buildCurrentRegisterRequest(): VoiceRegisterRequestDto? {
+        val s = _uiState.value
+        val phone = s.phone.trim()
+        val pin = s.pin.trim()
+        val name = s.artisanName.trim().ifBlank { s.spokenName.trim() }
+        if (!ProgressiveIdentity.isValidPhone(phone) || pin.length < 4 || name.isBlank()) return null
+        return VoiceRegisterRequestDto(
+            name = name,
+            phone = phone,
+            pin = pin,
+            primaryDialect = s.selectedDialect,
+            state = s.stateCode,
+            clusterName = s.clusterName,
+            craftCategory = s.craftCategory,
+            pehchanId = s.pehchanId.ifBlank { null }
+        )
+    }
+
+    /** Restore airplane-mode queue count on relaunch (Room is the source of truth). */
+    fun refreshQueueCount() {
+        viewModelScope.launch {
+            val dao = offlineRegDao() ?: return@launch
+            try {
+                val pending = dao.getPendingRegistrations()
+                _uiState.value = _uiState.value.copy(
+                    pendingQueueCount = pending.size,
+                    queuedOffline = pending.isNotEmpty() || _uiState.value.queuedOffline
+                )
+            } catch (e: Exception) {
+                // Old installs without the table: stay unqueued, never crash onboarding.
+            }
+        }
+    }
+
+    /**
+     * T2: real offline queue — persist VoiceRegisterRequestDto to Room on
+     * IOException, schedule WorkManager auto-retry, and let the artisan enter
+     * the app now (Pehchan verify stays optional, never blocking).
+     */
+    fun queueCurrentRegistrationOffline() {
+        val req = buildCurrentRegisterRequest()
+        if (req == null) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "पहले 10-अंकीय मोबाइल, नाम व 4-अंकीय पिन भरें (Enter phone, name & PIN first)"
+            )
+            return
+        }
+        viewModelScope.launch {
+            val dao = offlineRegDao()
+            var count = _uiState.value.pendingQueueCount
+            try {
+                if (dao != null) {
+                    dao.insert(ProgressiveIdentity.toEntity(req, _uiState.value.selectedDialect))
+                    count = dao.getPendingRegistrations().size
+                }
+            } catch (e: Exception) {
+                // Room unavailable: still let the artisan proceed offline.
+            }
+            try {
+                SyncScheduler.triggerImmediateSync(getApplication())
+            } catch (e: Exception) { /* WorkManager unavailable in tests */ }
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                isServerUnreachable = true,
+                queuedOffline = true,
+                pendingQueueCount = count.coerceAtLeast(1),
+                errorMessage = "${ProgressiveIdentity.SAVED_SAFELY_HINDI} • कतार $count (${ProgressiveIdentity.SAVED_SAFELY_ENGLISH})",
+                currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+            )
+        }
     }
 
     fun verifyPehchanAndProceed() {
@@ -206,7 +300,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         val phone = _uiState.value.phone.trim()
         val pin = _uiState.value.pin.trim()
 
-        if (phone.length < 10 || pin.length < 4) {
+        if (!ProgressiveIdentity.isValidPhone(phone) || pin.length < 4) {
             _uiState.value = _uiState.value.copy(errorMessage = "अमान्य फोन या पिन (Enter 10-digit phone & 4-digit PIN)")
             return
         }
@@ -221,7 +315,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                 authRepository.saveSession(
                     token = tokenResp.accessToken,
                     artisanId = tokenResp.artisanId,
-                    maskedPehchan = "PEH-***-" + phone.takeLast(4),
+                    maskedPehchan = ProgressiveIdentity.maskPhone(phone),
                     artisanName = tokenResp.name,
                     clusterName = _uiState.value.clusterName,
                     craftCategory = _uiState.value.craftCategory,
@@ -235,10 +329,14 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                 )
             } else {
                 val loginErr = loginResult.exceptionOrNull()?.message ?: ""
-                val isNetworkError = loginResult.exceptionOrNull() is java.io.IOException ||
-                        loginErr.contains("ConnectException") ||
-                        loginErr.contains("Failed to connect") ||
-                        loginErr.contains("Unable to resolve host")
+                val isNetworkError = ProgressiveIdentity.isNetworkError(loginResult.exceptionOrNull())
+
+                // T2: airplane-mode with a known name -> queue real registration, enter app now.
+                val queuedReq = buildCurrentRegisterRequest()
+                if (isNetworkError && queuedReq != null) {
+                    queueRegistrationAndEnter(queuedReq)
+                    return@launch
+                }
 
                 if (isNetworkError) {
                     _uiState.value = _uiState.value.copy(
@@ -246,10 +344,10 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                         isServerUnreachable = true,
                         errorMessage = "सर्वर से संपर्क नहीं हो पाया: $loginErr"
                     )
-                } else if (_uiState.value.artisanName.isNotBlank()) {
-                    // User provided a name, attempt registration
-                    val registerReq = VoiceRegisterRequestDto(
-                        name = _uiState.value.artisanName,
+                } else if (_uiState.value.artisanName.isNotBlank() || _uiState.value.spokenName.isNotBlank()) {
+                    // User provided a name, attempt registration (Pehchan stays optional).
+                    val registerReq = queuedReq ?: VoiceRegisterRequestDto(
+                        name = _uiState.value.artisanName.ifBlank { _uiState.value.spokenName.trim() },
                         phone = phone,
                         pin = pin,
                         primaryDialect = _uiState.value.selectedDialect,
@@ -264,7 +362,7 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                         authRepository.saveSession(
                             token = tokenResp.accessToken,
                             artisanId = tokenResp.artisanId,
-                            maskedPehchan = "PEH-***-" + phone.takeLast(4),
+                            maskedPehchan = ProgressiveIdentity.maskPhone(phone),
                             artisanName = tokenResp.name,
                             clusterName = _uiState.value.clusterName,
                             craftCategory = _uiState.value.craftCategory,
@@ -276,11 +374,14 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                             artisanName = tokenResp.name,
                             currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
                         )
+                    } else if (ProgressiveIdentity.isNetworkError(regResult.exceptionOrNull())) {
+                        // T2: register hit airplane-mode -> real Room queue, never fake demo.
+                        queueRegistrationAndEnter(registerReq)
                     } else {
                         val regErr = regResult.exceptionOrNull()?.message ?: "Registration failed"
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            isServerUnreachable = regResult.exceptionOrNull() is java.io.IOException,
+                            isServerUnreachable = false,
                             errorMessage = "पंजीकरण विफल: $regErr"
                         )
                     }
@@ -295,22 +396,35 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /** Persist to Room + schedule WorkManager retry, then enter app (Pehchan optional). */
+    private suspend fun queueRegistrationAndEnter(request: VoiceRegisterRequestDto) {
+        var count = _uiState.value.pendingQueueCount
+        try {
+            offlineRegDao()?.let { dao ->
+                dao.insert(ProgressiveIdentity.toEntity(request, _uiState.value.selectedDialect))
+                count = dao.getPendingRegistrations().size
+            }
+        } catch (e: Exception) {
+            // Room unavailable: still proceed offline.
+        }
+        try {
+            SyncScheduler.triggerImmediateSync(getApplication())
+        } catch (e: Exception) { /* WorkManager unavailable in tests */ }
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            isServerUnreachable = true,
+            queuedOffline = true,
+            pendingQueueCount = count.coerceAtLeast(1),
+            artisanName = request.name,
+            errorMessage = "${ProgressiveIdentity.SAVED_SAFELY_HINDI} • कतार $count (${ProgressiveIdentity.SAVED_SAFELY_ENGLISH})",
+            currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+        )
+    }
+
     fun completeOnboardingAndEnterApp() {
         viewModelScope.launch {
             preferences.setOnboarded(true)
             _uiState.value = _uiState.value.copy(isOnboardingComplete = true)
-        }
-    }
-
-    fun activateOfflineDemoMode() {
-        viewModelScope.launch {
-            authRepository.enableOfflineDemo()
-            _uiState.value = _uiState.value.copy(
-                isOfflineMode = true,
-                isVerified = false,
-                artisanName = "डेमो कारीगर (Demo Artisan)",
-                isOnboardingComplete = true
-            )
         }
     }
 }

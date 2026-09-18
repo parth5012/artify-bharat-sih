@@ -2,6 +2,7 @@ package com.artifybharat.android.data
 
 import com.artifybharat.android.data.local.entity.DraftEntity
 import com.artifybharat.android.data.local.entity.JuryEntity
+import com.artifybharat.android.data.local.entity.OfflineRegistrationEntity
 import com.artifybharat.android.data.local.entity.PhotoEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -95,5 +96,27 @@ class RoomDaoLogicTest {
         assertEquals(3, completed.votesReceived)
         assertEquals(JuryEntity.STATUS_QUORUM_REACHED, completed.status)
         assertEquals("authentic", completed.finalVerdict)
+    }
+
+    @Test
+    fun testOfflineRegistrationEntity_pendingDefaultsAndRetryCap() {
+        // Ticket #110 (T2): airplane-mode register queues a pending Room row.
+        val queued = OfflineRegistrationEntity(
+            id = "reg-9876543210-123",
+            fieldsJson = """{"name":"Gauri Devi","phone":"9876543210","pin":"1234"}""",
+            languageCode = "bhojpuri",
+            timestamp = 123L
+        )
+        assertEquals("reg-9876543210-123", queued.id)
+        assertEquals("bhojpuri", queued.languageCode)
+        assertFalse(queued.synced)
+        assertEquals(0, queued.retryCount)
+        assertEquals(5, OfflineRegistrationEntity.MAX_RETRY_ATTEMPTS)
+
+        // Synced + retry-bump transitions used by SyncWorker
+        val retrying = queued.copy(retryCount = 1, lastSyncError = "Failed to connect")
+        assertEquals(1, retrying.retryCount)
+        val synced = retrying.copy(synced = true)
+        assertTrue(synced.synced)
     }
 }

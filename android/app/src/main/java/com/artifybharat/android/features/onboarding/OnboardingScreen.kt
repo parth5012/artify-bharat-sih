@@ -169,7 +169,7 @@ fun OnboardingScreen(
             }
         }
 
-        // Offline / Unreachable Server Notice
+        // Offline / Unreachable Server Notice — T2: real Room queue, no fake demo.
         if (uiState.isServerUnreachable) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF08A)),
@@ -180,22 +180,24 @@ fun OnboardingScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "⚠️ बैकएंड सर्वर उपलब्ध नहीं है (Backend Unreachable)",
+                        text = if (uiState.queuedOffline)
+                            "✅ सुरक्षित सहेजा गया • कतार ${uiState.pendingQueueCount} (Saved safely • will verify)"
+                        else "⚠️ बैकएंड सर्वर उपलब्ध नहीं है (Backend Unreachable)",
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF713F12),
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "सर्वर (${NetworkClient.getEffectiveBaseUrl()}) से संपर्क नहीं हो पा रहा है। क्या आप ऑफ़लाइन डेमो मोड में आगे बढ़ना चाहते हैं?",
+                        text = "सर्वर (${NetworkClient.getEffectiveBaseUrl()}) से संपर्क नहीं हो पा रहा है। एयरप्लेन-मोड पंजीकरण Room कतार में सुरक्षित रहेगा और ऑनलाइन होते ही WorkManager से सिंक होगा।",
                         color = Color(0xFF854D0E),
                         fontSize = 12.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DesiButton(
-                        text = "ऑफ़लाइन डेमो मोड शुरू करें",
-                        subtext = "Launch in Offline Demo Mode",
-                        onClick = { viewModel.activateOfflineDemoMode() },
+                        text = "सुरक्षित ऑफ़लाइन सहेजें",
+                        subtext = "Save safely offline • queue ${uiState.pendingQueueCount}",
+                        onClick = { viewModel.queueCurrentRegistrationOffline() },
                         variant = DesiButtonVariant.OUTLINE,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -233,11 +235,16 @@ fun OnboardingScreen(
                     pin = uiState.pin,
                     pehchanId = uiState.pehchanId,
                     artisanName = uiState.artisanName,
+                    spokenName = uiState.spokenName,
                     isLoading = uiState.isLoading,
+                    showSecondaryVerify = uiState.showSecondaryVerify,
+                    queuedOffline = uiState.queuedOffline,
+                    pendingQueueCount = uiState.pendingQueueCount,
                     onPhoneChange = { viewModel.updatePhone(it) },
                     onPinChange = { viewModel.updatePin(it) },
                     onPehchanChange = { viewModel.updatePehchanId(it) },
                     onNameChange = { viewModel.updateArtisanName(it) },
+                    onToggleSecondary = { viewModel.toggleSecondaryVerify() },
                     onVerifyPehchan = { viewModel.verifyPehchanAndProceed() },
                     onAuthenticate = { viewModel.authenticateAndProceed() },
                     onBack = { viewModel.goToPreviousStep() }
@@ -642,19 +649,24 @@ private fun IdentityVerificationStep(
     pin: String,
     pehchanId: String,
     artisanName: String,
+    spokenName: String,
     isLoading: Boolean,
+    showSecondaryVerify: Boolean,
+    queuedOffline: Boolean,
+    pendingQueueCount: Int,
     onPhoneChange: (String) -> Unit,
     onPinChange: (String) -> Unit,
     onPehchanChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
+    onToggleSecondary: () -> Unit,
     onVerifyPehchan: () -> Unit,
     onAuthenticate: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         BilingualText(
-            hindi = "कारीगर पहचान सत्यापन",
-            english = "Artisan Identity Verification (MoSJE / Pehchan)",
+            hindi = "मोबाइल से प्रवेश करें",
+            english = "Enter with Mobile (Pehchan optional)",
             primaryStyle = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
                 color = TerracottaPrimary
@@ -665,50 +677,24 @@ private fun IdentityVerificationStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Pehchan Verification Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CardSurface),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+        if (queuedOffline) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text(
-                    text = "विकल्प 1: सरकारी पहचान संख्या (Pehchan ID)",
+                    text = "✅ सुरक्षित सहेजा गया • कतार $pendingQueueCount (Saved safely • will verify when online)",
                     fontWeight = FontWeight.Bold,
-                    color = TerracottaPrimary,
-                    fontSize = 15.sp
-                )
-                Text(
-                    text = "हथकरघा एवं हस्तशिल्प बोर्ड द्वारा जारी Pehchan Card दर्ज करें",
-                    fontSize = 12.sp,
-                    color = TextEnglishSecondary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = pehchanId,
-                    onValueChange = onPehchanChange,
-                    label = { Text("पहचान संख्या (उदा. PEH-IND-88320)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TerracottaPrimary,
-                        unfocusedBorderColor = DeepIndigoSecondary.copy(alpha = 0.3f)
-                    )
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                DesiButton(
-                    text = if (isLoading) "सत्यापित हो रहा है..." else "पहचान कार्ड सत्यापित करें",
-                    subtext = "Verify Government Pehchan Registry",
-                    onClick = onVerifyPehchan,
-                    enabled = !isLoading && pehchanId.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
+                    fontSize = 14.sp,
+                    color = Color(0xFF065F46),
+                    modifier = Modifier.padding(12.dp)
                 )
             }
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Phone + PIN Card
+        // Primary: phone (10-digit numeric only) + spoken name confirm -> Enter app now
         Card(
             colors = CardDefaults.cardColors(containerColor = CardSurface),
             shape = RoundedCornerShape(16.dp),
@@ -716,51 +702,119 @@ private fun IdentityVerificationStep(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "विकल्प 2: मोबाइल नंबर एवं 4-अंकीय पिन",
+                    text = "मोबाइल नंबर एवं नाम से प्रवेश",
                     fontWeight = FontWeight.Bold,
-                    color = DeepIndigoSecondary,
-                    fontSize = 15.sp
+                    color = TerracottaPrimary,
+                    fontSize = 20.sp
                 )
                 Text(
-                    text = "सीधे मोबाइल नंबर और सुरक्षित पिन द्वारा लॉगिन या नया खाता बनाएं",
+                    text = "10-digit mobile + spoken-name confirm — Pehchan never blocks",
                     fontSize = 12.sp,
                     color = TextEnglishSecondary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+                val confirmedName = artisanName.ifBlank { spokenName }
+                if (confirmedName.isNotBlank()) {
+                    Text(
+                        text = "कारीगर: $confirmedName (voice confirmed ✓)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = DeepIndigoSecondary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
                 OutlinedTextField(
                     value = artisanName,
                     onValueChange = onNameChange,
                     label = { Text("कारीगर का नाम (Artisan Full Name)") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = onPhoneChange,
+                    onValueChange = { onPhoneChange(it.filter { c -> c.isDigit() }.take(10)) },
                     label = { Text("मोबाइल नंबर (10-Digit Mobile)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = pin,
-                    onValueChange = onPinChange,
+                    onValueChange = { onPinChange(it.filter { c -> c.isDigit() }.take(6)) },
                     label = { Text("4-अंकीय सुरक्षा पिन (4-Digit Security PIN)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 DesiButton(
-                    text = if (isLoading) "प्रक्रिया जारी है..." else "लॉगिन / रजिस्टर करें",
-                    subtext = "Login or Register with PIN",
+                    text = if (isLoading) "प्रक्रिया जारी है..." else "ऐप में प्रवेश करें",
+                    subtext = "Enter app now — phone + name",
                     onClick = onAuthenticate,
-                    variant = DesiButtonVariant.SECONDARY,
-                    enabled = !isLoading && phone.length >= 10 && pin.length >= 4,
+                    enabled = !isLoading && phone.length == 10 && pin.length >= 4,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Secondary (collapsed): Pehchan/e-Shram/TRIFED Verified-Badge upgrade, on demand only
+        Card(
+            colors = CardDefaults.cardColors(containerColor = CardSurface),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClickLabel = "सत्यापित बैज विकल्प खोलें") { onToggleSecondary() },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (showSecondaryVerify) "▼ सत्यापित बैज पाएं (Verified Badge upgrade)" else "▶ सत्यापित बैज पाएं (Verified Badge upgrade)",
+                        fontWeight = FontWeight.Bold,
+                        color = DeepIndigoSecondary,
+                        fontSize = 15.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Text(
+                    text = "Pehchan / e-Shram / TRIFED — बाद में वेरीफाई करें, अभी वैकल्पिक",
+                    fontSize = 12.sp,
+                    color = TextEnglishSecondary
+                )
+                if (showSecondaryVerify) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = pehchanId,
+                        onValueChange = onPehchanChange,
+                        label = { Text("पहचान संख्या (उदा. PEH-IND-88320) — वैकल्पिक") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = DeepIndigoSecondary.copy(alpha = 0.3f)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    DesiButton(
+                        text = if (isLoading) "सत्यापित हो रहा है..." else "पहचान कार्ड सत्यापित करें",
+                        subtext = "Verify on demand — never blocks entry",
+                        onClick = onVerifyPehchan,
+                        enabled = !isLoading && pehchanId.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
 

@@ -1,9 +1,12 @@
 package com.artifybharat.android.data
 
 import com.artifybharat.android.data.local.entity.DraftEntity
+import com.artifybharat.android.data.local.entity.OfflineRegistrationEntity
 import com.artifybharat.android.data.network.dto.DraftItemDto
 import com.artifybharat.android.data.network.dto.DraftSyncRequestDto
+import com.artifybharat.android.data.network.dto.VoiceRegisterRequestDto
 import com.artifybharat.android.data.sync.SyncWorker
+import com.artifybharat.android.features.onboarding.ProgressiveIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -96,5 +99,28 @@ class SyncEngineLogicTest {
         assertEquals(2, request.drafts.size)
         assertEquals("id-1", request.drafts[0].localDraftId)
         assertEquals("id-2", request.drafts[1].localDraftId)
+    }
+
+    @Test
+    fun testOfflineRegistrationSyncPayload_roundTripsThroughQueue() {
+        // Ticket #110 (T2): queued VoiceRegisterRequestDto must survive Room + WorkManager retry.
+        val req = VoiceRegisterRequestDto(
+            name = "Gauri Devi",
+            phone = "9876543210",
+            pin = "1234",
+            primaryDialect = "bhojpuri",
+            state = "Uttar Pradesh",
+            clusterName = "Varanasi Handloom Cluster",
+            craftCategory = "handloom",
+            pehchanId = null
+        )
+        val entity = ProgressiveIdentity.toEntity(req, "bhojpuri", 456L)
+        assertEquals(false, entity.synced)
+        assertEquals("reg-9876543210-456", entity.id)
+
+        val replayed = ProgressiveIdentity.decodeRegistration(entity.fieldsJson)
+        assertEquals("Gauri Devi", replayed.name)
+        assertEquals("9876543210", replayed.phone)
+        assertEquals("bhojpuri", replayed.primaryDialect)
     }
 }
