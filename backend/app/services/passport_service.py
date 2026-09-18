@@ -364,7 +364,10 @@ class PassportService:
                 "total_suggested_price": final_price,
                 "final_price": final_price
             },
-            "issued_at": issue_timestamp
+            "issued_at": issue_timestamp,
+            "qr_svg_data_uri": qr_svg_data_uri,
+            "escpos_b64": escpos_b64,
+            "verification_url": verification_url,
         }
 
         if existing_passport:
@@ -438,6 +441,10 @@ class PassportService:
                 "final_price": data["pricing"]["final_price"]
             },
             "issued_at": passport.issued_at,
+            # Print assets (#99): snapshot carries svg + ESC/POS at issue time.
+            "qr_svg_data_uri": data.get("qr_svg_data_uri"),
+            "escpos_b64": data.get("thermal_escpos_payload_base64"),
+            "verification_url": passport.verification_url,
         }
 
     async def resolve_shortcode(
@@ -489,6 +496,14 @@ class PassportService:
                 "issued_at": row.issued_at
                 if not (isinstance(data, dict) and data.get("issued_at"))
                 else data.get("issued_at"),
+                # Print assets (#99): snapshot carries svg + ESC/POS at issue time.
+                "qr_svg_data_uri": data.get("qr_svg_data_uri")
+                if isinstance(data, dict)
+                else None,
+                "escpos_b64": data.get("thermal_escpos_payload_base64")
+                if isinstance(data, dict)
+                else None,
+                "verification_url": row.verification_url,
             }
 
         if db is not None:

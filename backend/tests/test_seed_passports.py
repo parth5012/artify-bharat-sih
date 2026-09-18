@@ -104,3 +104,63 @@ async def test_verify_response_exposes_shortcode(client):
     res = await client.get("/api/v1/passport/code/A7X-9B2")
     assert res.status_code == 200
     assert res.json()["shortcode"] == "A7X-9B2"
+
+
+@pytest.mark.asyncio
+async def test_issue_response_includes_print_assets(client):
+    """#99: single issue call must render QR + 58mm print preview (no 2nd fetch)."""
+    import io
+
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "name": "Print Asset Artisan",
+            "phone": "9845098400",
+            "pin": "9900",
+            "trifed_id": "TRIFED-BH-199",
+        },
+    )
+    assert reg.status_code in (200, 201)
+    artisan_id = reg.json()["artisan_id"]
+    access_token = reg.json()["access_token"]
+
+    from tests.test_cv_enhancement import create_dummy_image_bytes
+
+    files = {
+        "image": ("craft.jpg", io.BytesIO(create_dummy_image_bytes()), "image/jpeg")
+    }
+    enhance_res = await client.post(
+        "/api/v1/studio/enhance",
+        data={"artisan_id": artisan_id, "product_title": "Print Asset Dupatta"},
+        files=files,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    product_id = enhance_res.json()["product_id"]
+    await client.post(
+        "/api/v1/pricing/calculate",
+        json={"product_id": product_id, "raw_material_cost": 400.0, "labor_days": 8.0},
+    )
+
+    issue = await client.post("/api/v1/passport/issue", json={"product_id": product_id})
+    assert issue.status_code == 200
+    body = issue.json()
+    for field in (
+        "shortcode",
+        "qr_code_data_uri",
+        "qr_svg_data_uri",
+        "escpos_b64",
+        "verification_url",
+    ):
+        assert body.get(field), f"issue response missing printable {field}"
+    assert body["qr_svg_data_uri"].startswith("data:image/svg+xml;base64,")
+    assert body["verification_url"].endswith(body["shortcode"])
+
+    by_code = await client.get(f"/api/v1/passport/code/{body['shortcode']}")
+    assert by_code.status_code == 200
+    for field in ("qr_svg_data_uri", "escpos_b64", "verification_url"):
+        assert by_code.json().get(field), f"code view missing {field}"
+
+    by_hash = await client.get(f"/api/v1/passport/verify/{body['passport_hash']}")
+    assert by_hash.status_code == 200
+    for field in ("qr_svg_data_uri", "escpos_b64", "verification_url"):
+        assert by_hash.json().get(field), f"verify view missing {field}"
