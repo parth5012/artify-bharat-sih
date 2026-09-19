@@ -2,6 +2,12 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Voice-First Progressive Onboarding Stack (Map #108)
+
+1. **Stacked PR Discipline with CodeRabbit**: When babysitting a multi-PR stack (#115 through #120), review bots review each diff relative to its base. Fixing a review comment on an upper branch (e.g. #120) preserves the integrity of earlier PRs without requiring interactive rebases and force-push cascades that trigger multiple rounds of CI.
+2. **Cluster Auto-Suggest GI Preservation**: Auto-suggest resolution must copy over both `isGiCertified` and `giTagName` into UiState when suggestion is applied, ensuring verified cluster heritage isn't lost during 1-tap confirmation.
+3. **56dp Minimum Targets in Jetpack Compose**: For rural artisans with limited digital literacy or working hands, interactive text/links like "बदलें (Badlein)" must use `.defaultMinSize(minWidth = 56.dp, minHeight = 56.dp)` to satisfy accessibility scanners and prevent mis-taps.
+
 ## Marketplace E2E Reserve Flow (Map #86 T6)
 
 - **Single-test full chain beats scattered asserts**: one async test driving browse ->
