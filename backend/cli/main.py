@@ -98,7 +98,12 @@ def _print_status(service) -> None:
             print_info("Reason: GROQ_API_KEY is set but does not look valid (Groq keys start with 'gsk_')")
             print_info("Fix:     replace the placeholder/typo in backend/.env")
         else:
-            print_info("Reason: langchain-groq package not installed -> cd backend && uv add langchain-groq")
+            try:
+                import langchain_groq  # noqa: F401
+
+                print_info("Reason: online agent failed to initialize; check logs for details")
+            except ImportError:
+                print_info("Reason: langchain-groq package not installed -> cd backend && uv add langchain-groq")
 
     print_info(f"Registered tool backends ({len(TOOL_BACKENDS)}):")
     for name in TOOL_BACKENDS:
@@ -202,6 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  python -m cli demo\n"
         ),
     )
+    parser.add_argument("--debug", action="store_true", help="show the full traceback on failure")
     sub = parser.add_subparsers(dest="command")
 
     # chat (default when no command given)
@@ -366,6 +372,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 130
     except Exception as exc:  # surface a friendly message, not a traceback wall
         print_error(str(exc))
-        if "--debug" in (argv or []):
+        if getattr(args, "debug", False) or "--debug" in (argv or []):
             raise  # re-run with --debug to see the full traceback
         return 1

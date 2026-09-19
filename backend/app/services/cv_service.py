@@ -419,6 +419,12 @@ def analyze_craft_photo(image_bytes: bytes) -> Dict[str, Any]:
     {'status': 'error', ...} dict for corrupt/undecodable uploads.
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
+    if len(image_bytes) > settings.CV_MAX_UPLOAD_BYTES:
+        return {
+            "status": "error",
+            "error": f"Upload too large: {len(image_bytes):,} bytes.",
+            "tip": "Beta, chhoti file bhejiye.",
+        }
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     if img is None:
@@ -426,6 +432,13 @@ def analyze_craft_photo(image_bytes: bytes) -> Dict[str, Any]:
             "status": "error",
             "error": "Image could not be decoded (corrupt, empty, or unsupported format).",
             "tip": "Beta, photo dobara khicheen — file adhoori lag rahi hai.",
+        }
+
+    if max(img.shape[0], img.shape[1]) > settings.CV_MAX_IMAGE_SIDE_PX:
+        return {
+            "status": "error",
+            "error": "Image dimensions too large for analysis.",
+            "tip": "Beta, photo ka size kam karke bhejiye.",
         }
 
     h, w = img.shape[:2]

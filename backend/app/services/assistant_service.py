@@ -24,6 +24,7 @@ This module only wraps them as LangChain tools (single source of truth).
 import os
 import re
 import json
+import asyncio
 import base64
 import binascii
 import logging
@@ -477,7 +478,7 @@ class AskDadiService:
         from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
         messages: List[Any] = [SystemMessage(content=self.system_prompt)]
-        for msg in chat_history or []:
+        for msg in (chat_history or [])[-10:]:
             role, content = msg.get("role"), msg.get("content", "")
             if not content:
                 continue
@@ -657,11 +658,21 @@ class AskDadiService:
         if self.agent is not None:
             # Multi-turn memory: forward the client-supplied history so the LLM
             # sees prior turns; falls back to [] when the field is omitted.
-            answer_text = self._run_agent(
-                request.query_text,
-                chat_history=list(request.chat_history or []),
-                context_note=context_note,
-            )
+            # _run_agent is sync (blocking Groq HTTP) — run it off the event
+            # loop with a timeout so one slow model call cannot stall the worker.
+            try:
+                answer_text = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self._run_agent,
+                        request.query_text,
+                        chat_history=list(request.chat_history or []),
+                        context_note=context_note,
+                    ),
+                    timeout=settings.DADI_AGENT_TIMEOUT_SECONDS,
+                )
+            except Exception as exc:
+                logger.warning("Dadi agent timed out or failed (%s); offline mentor active.", exc)
+                answer_text = None
 
         if not answer_text:  # offline mode or agent failure
             answer_text = self._offline_answer(request, kb_entry)

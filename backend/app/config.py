@@ -98,6 +98,7 @@ class Settings(BaseSettings):
     #   (llama-3.3-70b-versatile works but is Enterprise-only on Groq now)
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"
+    DADI_AGENT_TIMEOUT_SECONDS: float = 30.0
 
     model_config = SettingsConfigDict(
         env_file=".env",

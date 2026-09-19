@@ -77,7 +77,9 @@ class ChatSession:
         if path is None:
             stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             path = os.path.join("media_storage", "transcripts", f"dadi_chat_{stamp}.json")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
         transcript = {
             "exported_at": datetime.now().isoformat(timespec="seconds"),
             "dialect": self.dialect,

@@ -14,9 +14,17 @@ STATE_WAGE_FLOOR: Dict[str, float] = {
 }
 
 
+_LEGACY_STATE_ALIASES = {"BIH": "BR", "RAJ": "RJ"}
+
+
 def get_skilled_wage_floor(state_code: str) -> float:
     """Returns the statutory hourly skilled wage floor based on state code."""
-    return STATE_WAGE_FLOOR.get((state_code or "DEFAULT").upper(), STATE_WAGE_FLOOR["DEFAULT"])
+    code = (state_code or "").strip().upper() or "DEFAULT"
+    code = _LEGACY_STATE_ALIASES.get(code, code)
+    entry = DynamicPricingService.STATE_HOURLY_WAGE_FLOORS.get(code)
+    if entry:
+        return float(entry["rate_per_hour"])
+    return float(STATE_WAGE_FLOOR.get(code, STATE_WAGE_FLOOR["DEFAULT"]))
 
 
 def calculate_artisan_pricing(
@@ -41,11 +49,12 @@ def calculate_artisan_pricing(
 
     market_adjusted_base = (base_cost * m_craft) * d_season
 
-    floor_price = round(base_cost, -1)
+    floor_price = math.ceil(base_cost / 10.0) * 10.0
     suggested_retail_price = round(market_adjusted_base + 320, -1)
-    bulk_purchase_price = round(suggested_retail_price * 0.85, -1)
+    bulk_purchase_price = max(floor_price, round(suggested_retail_price * 0.85, -1))
 
     total_price = suggested_retail_price
+    artisan_profit = round(total_price - base_cost, 2)
     breakdown = {
         "raw_materials": {
             "amount": float(material_cost),
@@ -56,8 +65,8 @@ def calculate_artisan_pricing(
             "percentage": round((labor_cost / total_price) * 100, 1) if total_price else 0.0,
         },
         "artisan_net_profit": {
-            "amount": 320.0,
-            "percentage": round((320.0 / total_price) * 100, 1) if total_price else 0.0,
+            "amount": artisan_profit,
+            "percentage": round((artisan_profit / total_price) * 100, 1) if total_price else 0.0,
         },
         "packaging_logistics": {
             "amount": c_overhead,
@@ -152,6 +161,7 @@ class DynamicPricingService:
         is_gi_tagged: bool = False,
         craft_category: str = "handloom",
         visual_complexity: float = 0.75,
+        is_festive_season: bool = False,
     ) -> Dict[str, Any]:
         """
         Calculates fair retail and bulk prices with input sanitization and zero-division protection.
@@ -215,7 +225,8 @@ class DynamicPricingService:
 
         benchmark_min = round(complexity_adjusted_base * 0.95 * category_mult, 2)
         benchmark_max = round(complexity_adjusted_base * 1.35 * category_mult, 2)
-        suggested_retail = round((benchmark_min + benchmark_max) / 2.0, 2)
+        festive_mult = 1.10 if is_festive_season else 1.0
+        suggested_retail = round(((benchmark_min + benchmark_max) / 2.0) * festive_mult, 2)
 
         # Ensure retail is never below statutory floor
         fair_retail_price = max(statutory_floor_cost, suggested_retail)
@@ -236,6 +247,7 @@ class DynamicPricingService:
             f"Labor ({sanitized_labor_hours} hrs @ ₹{effective_hourly_rate}/hr in {state_info['name']}) + "
             f"Logistics Overhead (₹{packaging_overhead}). "
             f"{'GI Tag Multiplier: 1.15x applied. ' if is_gi_tagged else ''}"
+            f"{'Festive demand surge: 1.10x applied. ' if is_festive_season else ''}"
             f"Retail = ₹{fair_retail_price} (Artisan Net Profit: ₹{artisan_net_profit})."
         )
 
@@ -416,6 +428,7 @@ def explain_fair_price(
         state_code=state_code,
         is_gi_tagged=has_gi_tag,
         craft_category=category,
+        is_festive_season=is_festive_season,
     )
     breakdown = result["cost_breakdown"]
     total = float(result["fair_retail_price"])
