@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from dataclasses import dataclass, field
-from typing import Tuple, List
+from typing import Any, Dict, Tuple, List
 from app.config import get_settings
 from app.core.anti_generative import non_generative
 
@@ -398,3 +398,127 @@ class ComputerVisionService:
 
 
 cv_service = ComputerVisionService()
+
+
+# ----------------------------------------------------------------------------
+# Ask Dadi (assistant_service) LangChain tool backend — Task 2.7
+# Wraps the REAL non-generative AI Studio pipeline so the conversational bot
+# can analyze an actual product photo (complexity, lighting, blur) instead of
+# giving generic advice. Reuses cv_service functions only — no new CV math here.
+# ----------------------------------------------------------------------------
+
+def analyze_craft_photo(image_bytes: bytes) -> Dict[str, Any]:
+    """
+    Tool backend: run the non-generative studio analysis on a raw product photo.
+
+    Uses the existing ComputerVisionService pipeline functions:
+      - calculate_visual_complexity (Canny edge density -> pricing engine input)
+      - equalize_lighting (CLAHE in LAB color space)
+
+    Returns a structured dict of metrics plus Dadi-style photo tips, or an
+    {'status': 'error', ...} dict for corrupt/undecodable uploads.
+    """
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    if len(image_bytes) > settings.CV_MAX_UPLOAD_BYTES:
+        return {
+            "status": "error",
+            "error": f"Upload too large: {len(image_bytes):,} bytes.",
+            "tip": "Beta, chhoti file bhejiye.",
+        }
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if img is None:
+        return {
+            "status": "error",
+            "error": "Image could not be decoded (corrupt, empty, or unsupported format).",
+            "tip": "Beta, photo dobara khicheen — file adhoori lag rahi hai.",
+        }
+
+    if max(img.shape[0], img.shape[1]) > settings.CV_MAX_IMAGE_SIDE_PX:
+        return {
+            "status": "error",
+            "error": "Image dimensions too large for analysis.",
+            "tip": "Beta, photo ka size kam karke bhejiye.",
+        }
+
+    h, w = img.shape[:2]
+
+    # Step 1: raw complexity (the exact score the Fair-Wage Pricing Engine consumes)
+    raw_complexity = ComputerVisionService.calculate_visual_complexity(img)
+
+    # Step 2: CLAHE lighting equalization (real studio pipeline step), then
+    # measure how much the score improves — a proxy for uneven village lighting.
+    clahe_applied = True
+    try:
+        enhanced = ComputerVisionService.equalize_lighting(img)
+        enhanced_complexity = ComputerVisionService.calculate_visual_complexity(enhanced)
+    except Exception:
+        clahe_applied = False
+        enhanced = img
+        enhanced_complexity = raw_complexity
+
+    # Step 3: simple quality diagnostics on the ORIGINAL photo
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    avg_brightness = round(float(np.mean(gray)), 1)          # 0=dark ... 255=bright
+    blur_variance = round(float(cv2.Laplacian(gray, cv2.CV_64F).var()), 1)  # low = blurry
+
+    is_too_dark = avg_brightness < 70.0
+    is_too_bright = avg_brightness > 200.0
+    is_likely_blurry = blur_variance < 60.0
+    is_square = h == w
+
+    # Dadi-style, metric-driven photo tips (camera advice responsibility)
+    tips: List[str] = []
+    if is_too_dark:
+        tips.append(
+            "Photo andheri hai (brightness {b}/255). Beta, din ke ujale me, khidki ke paas "
+            "khichein — flash bilkul nahi, woh rang uda deta hai.".format(b=avg_brightness)
+        )
+    elif is_too_bright:
+        tips.append(
+            "Photo zyada roshan hai (brightness {b}/255). Seedhi dhoop se hata kar "
+            "chhaya wali jagah par khichein.".format(b=avg_brightness)
+        )
+    else:
+        tips.append(
+            "Roshni sahi hai (brightness {b}/255) — shabaash! Aise hi natural daylight "
+            "me khichte rahiye.".format(b=avg_brightness)
+        )
+    if is_likely_blurry:
+        tips.append(
+            "Photo thodi dhundhli lag rahi hai (blur score {v}). Phone ko dono haathon se "
+            "thama kar, product ke theek saamne khade hokar khichein.".format(v=blur_variance)
+        )
+    if not is_square:
+        tips.append(
+            "Frame {w}x{h}px ka hai. App ka smart camera 1:1 chaukor frame lock karta hai — "
+            "usse hi khichein, AI Studio background khud saaf kar dega.".format(w=w, h=h)
+        )
+    if raw_complexity >= 0.6:
+        tips.append(
+            "Aapke kaam ki bareeqi (complexity {c}) bahut oonchi hai — iska Sahi fayda "
+            "pricing engine me zaroor milega. Kam se kam ek zari/nakkashi ka close-up "
+            "photo bhi lagaiye.".format(c=raw_complexity)
+        )
+
+    return {
+        "status": "success",
+        "image_width_px": int(w),
+        "image_height_px": int(h),
+        "complexity_score": raw_complexity,
+        "enhanced_complexity_score": enhanced_complexity,
+        "clahe_applied": clahe_applied,
+        "avg_brightness_0_to_255": avg_brightness,
+        "blur_score_laplacian_variance": blur_variance,
+        "is_square_1_to_1": is_square,
+        "diagnostics": {
+            "too_dark": is_too_dark,
+            "too_bright": is_too_bright,
+            "likely_blurry": is_likely_blurry,
+        },
+        "photo_tips": tips,
+        "authenticity_note": (
+            "Non-generative analysis only (CLAHE + Canny/Laplacian). No pixel was "
+            "hallucinated — artisan's authentic weave and dye colors are preserved."
+        ),
+    }

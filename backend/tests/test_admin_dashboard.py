@@ -78,6 +78,63 @@ async def test_admin_demand_forecast():
         assert data["confidence_score"] >= 0.9
 
 
+# ---------------------------------------------------------------------------
+# GET /api/v1/admin/demand-forecast — Predictive Festive Demand AI
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_demand_forecast_default_cluster(client: AsyncClient):
+    """No cluster param -> defaults to the Varanasi Handloom Cluster forecast."""
+    res = await client.get("/api/v1/admin/demand-forecast")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["cluster"] == "Varanasi Handloom Cluster"
+
+
+@pytest.mark.asyncio
+async def test_demand_forecast_echoes_requested_cluster(client: AsyncClient):
+    res = await client.get(
+        "/api/v1/admin/demand-forecast",
+        params={"cluster": "Kutch Embroidery Cluster"},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["cluster"] == "Kutch Embroidery Cluster"
+    assert data["actionable_cluster_advisory"].startswith("Increase raw silk yarn pre-orders")
+    assert "Kutch Embroidery Cluster" in data["actionable_cluster_advisory"]
+
+
+@pytest.mark.asyncio
+async def test_demand_forecast_items_structure(client: AsyncClient):
+    data = (await client.get("/api/v1/admin/demand-forecast")).json()
+    assert data["forecast_model"] == "Artify-Bharat-Prophet-Festival-AI"
+
+    items = data["forecast_items"]
+    assert len(items) >= 3
+    names = {item["festival_name"] for item in items}
+    assert "Diwali & Festive Wedding Season" in names
+    assert "Durga Puja & Navratri" in names
+
+    diwali = next(i for i in items if "Diwali" in i["festival_name"])
+    assert diwali["surge_multiplier"] == 3.8  # the documented Diwali surge
+    assert diwali["peak_month"] == "October - November"
+    assert diwali["recommended_stock_units"] == 4500
+    assert len(diwali["trending_crafts"]) >= 3
+
+    for item in items:
+        assert item["surge_multiplier"] > 1.0
+        assert item["recommended_stock_units"] > 0
+        assert isinstance(item["trending_crafts"], list) and item["trending_crafts"]
+
+
+@pytest.mark.asyncio
+async def test_demand_forecast_surges_sorted_descending(client: AsyncClient):
+    """Forecasts should lead with the biggest festive opportunity."""
+    data = (await client.get("/api/v1/admin/demand-forecast")).json()
+    multipliers = [item["surge_multiplier"] for item in data["forecast_items"]]
+    assert multipliers == sorted(multipliers, reverse=True)
+
+
 @pytest.mark.asyncio
 async def test_district_heatmap_db_aggregation(
     client: AsyncClient, db_session: AsyncSession

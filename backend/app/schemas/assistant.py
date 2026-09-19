@@ -1,10 +1,31 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, field_validator
 
 class DadiQueryRequest(BaseModel):
     query_text: str = Field(..., description="Voice transcript or text query from artisan in dialect or Hindi")
     dialect: Optional[str] = Field("bhojpuri", description="Artisan dialect (e.g. bhojpuri, maithili, hindi, english)")
     product_category: Optional[str] = Field("handloom", description="Craft category: handloom, handicraft, pottery, etc.")
+    chat_history: Optional[List[Dict[str, str]]] = Field(
+        None,
+        description=(
+            "Previous conversation turns for multi-turn chat, e.g. "
+            '[{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]. '
+            "Roles: user | assistant. Newest last; keep the last ~10 messages."
+        ),
+    )
+
+    @field_validator("chat_history")
+    @classmethod
+    def _validate_chat_history_roles(cls, v: Optional[List[Dict[str, str]]]) -> Optional[List[Dict[str, str]]]:
+        """Reject undocumented roles at the API boundary instead of silently dropping them."""
+        if v is None:
+            return v
+        allowed = {"user", "assistant"}
+        for entry in v:
+            role = entry.get("role") if isinstance(entry, dict) else None
+            if role not in allowed:
+                raise ValueError(f"chat_history role must be one of {sorted(allowed)}, got {role!r}")
+        return v
 
 class DadiQueryResponse(BaseModel):
     answer_text: str = Field(..., description="Response text in the artisan's dialect")
