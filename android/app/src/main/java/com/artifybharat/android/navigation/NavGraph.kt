@@ -33,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import com.artifybharat.android.features.market.DirectMarketplaceScreen
+import com.artifybharat.android.features.onboarding.OnboardingScreen
 import com.artifybharat.android.features.passport.DigitalPassportScreen
 import com.artifybharat.android.features.pricing.FairWagePricingScreen
 import com.artifybharat.android.features.print.ThermalPrintScreen
@@ -111,9 +112,13 @@ fun ArtifyBharatNavHost(
             startDestination = Screen.VoiceCatalog.route,
             modifier = modifier.padding(innerPadding)
         ) {
-            composable(Screen.VoiceCatalog.route) {
-                VoiceCatalogScreen(navController = navController)
-            }
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(navController = navController)
+        }
+
+        composable(Screen.VoiceCatalog.route) {
+            VoiceCatalogScreen(navController = navController)
+        }
             composable(
                 route = Screen.AuthenticityStudio.route,
                 arguments = listOf(navArgument("draftId") {
