@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.artifybharat.android.data.network.NetworkClient
+import com.artifybharat.android.hardware.location.ClusterAutoSuggest
 import com.artifybharat.android.hardware.location.LocationProvider
 import com.artifybharat.android.hardware.permissions.JitPermissions
 import com.artifybharat.android.navigation.Screen
@@ -255,7 +257,16 @@ fun OnboardingScreen(
                     craftCategory = uiState.craftCategory,
                     isGiCertified = uiState.isGiCertified,
                     giTagName = uiState.giTagName,
-                    onClusterChange = { viewModel.updateCluster(it) },
+                    isOffline = uiState.isOfflineMode || uiState.isServerUnreachable,
+                    onClusterChange = { newCluster ->
+                        val result = ClusterAutoSuggest.applyManualOverride(
+                            currentCraftCategory = uiState.craftCategory,
+                            currentGiCertified = uiState.isGiCertified,
+                            currentGiTagName = uiState.giTagName,
+                            newClusterName = newCluster
+                        )
+                        viewModel.applyClusterSuggestion(result.clusterName, result.stateCode)
+                    },
                     onNext = { viewModel.goToNextStep() },
                     onBack = { viewModel.goToPreviousStep() }
                 )
@@ -853,12 +864,15 @@ private fun ClusterConfirmationStep(
     craftCategory: String,
     isGiCertified: Boolean,
     giTagName: String?,
+    isOffline: Boolean = false,
     onClusterChange: (String) -> Unit,
     onNext: () -> Unit,
     onBack: () -> Unit
 ) {
-    // T4 (#112) JIT GPS: auto-suggest is optional; manual list never blocks.
+    // T4 (#112) JIT GPS: auto-suggest optional; manual list never blocks.
     var showLocationRationale by remember { mutableStateOf(false) }
+    var showFullList by remember { mutableStateOf(false) }
+    val hindiReadout = ClusterAutoSuggest.hindiReadout(clusterName, craftCategory)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         if (showLocationRationale) {
             PermissionRationaleDialog(
@@ -877,6 +891,58 @@ private fun ClusterConfirmationStep(
             secondaryStyle = MaterialTheme.typography.bodyMedium.copy(color = DeepIndigoSecondary),
             horizontalAlignment = Alignment.CenterHorizontally
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // #111 auto-suggest header card BEFORE scrolling list
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEFE9)),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = hindiReadout,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = TerracottaPrimary
+                )
+                if (isOffline) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "स्थान लंबित — ऑफ़लाइन (Location pending — offline, using registry value)",
+                        fontSize = 12.sp,
+                        color = DeepIndigoSecondary.copy(alpha = 0.85f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DesiButton(
+                        text = "हाँ",
+                        subtext = "Haan (Yes)",
+                        onClick = onNext,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 56.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (showFullList) "छुपाएं (Hide)" else "बदलें (Badlein)",
+                        color = TerracottaPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .defaultMinSize(minWidth = 56.dp, minHeight = 56.dp)
+                            .clickable { showFullList = !showFullList }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -921,41 +987,43 @@ private fun ClusterConfirmationStep(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = "चयनित क्लस्टर:",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp,
-                    color = TextEnglishSecondary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                if (showFullList) {
+                    Text(
+                        text = "चयनित क्लस्टर:",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        color = TextEnglishSecondary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                LocationProvider.FAMOUS_CLUSTERS.forEach { cluster ->
-                    val isSelected = clusterName == cluster.name
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable { onClusterChange(cluster.name) }
-                            .background(
-                                if (isSelected) Color(0xFFFFEFE9) else Color.Transparent,
-                                RoundedCornerShape(8.dp)
+                    LocationProvider.FAMOUS_CLUSTERS.forEach { cluster ->
+                        val isSelected = clusterName == cluster.name
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onClusterChange(cluster.name) }
+                                .background(
+                                    if (isSelected) Color(0xFFFFEFE9) else Color.Transparent,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = if (isSelected) TerracottaPrimary else DeepIndigoSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(18.dp)
                             )
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = if (isSelected) TerracottaPrimary else DeepIndigoSecondary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = cluster.name,
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) TerracottaPrimary else MaterialTheme.colorScheme.onSurface
-                        )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = cluster.name,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) TerracottaPrimary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }

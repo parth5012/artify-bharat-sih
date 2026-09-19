@@ -167,6 +167,27 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
         _uiState.value = _uiState.value.copy(clusterName = clusterName)
     }
 
+    fun applyClusterSuggestion(clusterName: String, stateCode: String) {
+        _uiState.value = _uiState.value.copy(clusterName = clusterName, stateCode = stateCode)
+    }
+
+    /** #111: GPS+registry auto-suggest entry point (GPS caller wires live fix; defaults keep offline safe). */
+    fun resolveClusterSuggestion(gpsCluster: String?, withinBounds: Boolean, isOffline: Boolean) {
+        val s = _uiState.value
+        val suggestion = com.artifybharat.android.hardware.location.ClusterAutoSuggest.suggest(
+            gpsClusterName = gpsCluster,
+            gpsWithinBounds = withinBounds,
+            registryClusterName = s.clusterName.takeIf { s.isVerified },
+            registryCraftCategory = s.craftCategory,
+            registryGiCertified = s.isGiCertified,
+            registryGiTagName = s.giTagName,
+            registryStateCode = s.stateCode,
+            lastKnownClusterName = s.clusterName,
+            isOffline = isOffline
+        )
+        _uiState.value = s.copy(clusterName = suggestion.clusterName, stateCode = suggestion.stateCode)
+    }
+
     fun goToNextStep() {
         val next = _uiState.value.currentStep.next()
         _uiState.value = _uiState.value.copy(currentStep = next, errorMessage = null)
