@@ -14,7 +14,33 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+enum class OnboardingMode(val storageValue: String) {
+    SOLO("solo"),
+    SHG("shg");
+
+    companion object {
+        fun fromStorage(value: String?): OnboardingMode =
+            if (value == "shg") SHG else SOLO
+    }
+}
+
+data class OnboardingDialect(
+    val code: String,
+    val hindiLabel: String,
+    val englishDesc: String
+)
+
+val SUPPORTED_DIALECTS = listOf(
+    OnboardingDialect("bhojpuri", "भोजपुरी", "Bhojpuri (पूर्वांचल / बनारस)"),
+    OnboardingDialect("maithili", "मैथिली", "Maithili (मिथिला / मधुबनी)"),
+    OnboardingDialect("awadhi", "अवधी", "Awadhi (अवध / लखनऊ)"),
+    OnboardingDialect("marwari", "मारवाड़ी", "Marwari (राजस्थान / बाड़मेर)"),
+    OnboardingDialect("hindi", "हिंदी", "Hindi (मानक खड़ी बोली)"),
+    OnboardingDialect("english", "English", "English (Official)")
+)
+
 enum class OnboardingStep {
+    MODE_SELECT,
     WELCOME_LANGUAGE,
     IDENTITY_VERIFICATION,
     CLUSTER_CONFIRMATION,
@@ -22,9 +48,30 @@ enum class OnboardingStep {
     COMPLETION
 }
 
+fun OnboardingStep.next(): OnboardingStep = when (this) {
+    OnboardingStep.MODE_SELECT -> OnboardingStep.WELCOME_LANGUAGE
+    OnboardingStep.WELCOME_LANGUAGE -> OnboardingStep.IDENTITY_VERIFICATION
+    OnboardingStep.IDENTITY_VERIFICATION -> OnboardingStep.CLUSTER_CONFIRMATION
+    OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.PERMISSIONS_OVERVIEW
+    OnboardingStep.PERMISSIONS_OVERVIEW -> OnboardingStep.COMPLETION
+    OnboardingStep.COMPLETION -> OnboardingStep.COMPLETION
+}
+
+fun OnboardingStep.previous(): OnboardingStep = when (this) {
+    OnboardingStep.MODE_SELECT -> OnboardingStep.MODE_SELECT
+    OnboardingStep.WELCOME_LANGUAGE -> OnboardingStep.MODE_SELECT
+    OnboardingStep.IDENTITY_VERIFICATION -> OnboardingStep.WELCOME_LANGUAGE
+    OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.IDENTITY_VERIFICATION
+    OnboardingStep.PERMISSIONS_OVERVIEW -> OnboardingStep.CLUSTER_CONFIRMATION
+    OnboardingStep.COMPLETION -> OnboardingStep.PERMISSIONS_OVERVIEW
+}
+
 data class OnboardingUiState(
-    val currentStep: OnboardingStep = OnboardingStep.WELCOME_LANGUAGE,
+    val currentStep: OnboardingStep = OnboardingStep.MODE_SELECT,
+    val onboardingMode: OnboardingMode = OnboardingMode.SOLO,
     val selectedDialect: String = "bhojpuri",
+    val spokenName: String = "",
+    val showVoiceConfirm: Boolean = false,
     val phone: String = "",
     val pin: String = "",
     val pehchanId: String = "",
@@ -53,8 +100,31 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
+    fun selectOnboardingMode(mode: OnboardingMode) {
+        _uiState.value = _uiState.value.copy(onboardingMode = mode)
+        viewModelScope.launch {
+            preferences.setOnboardingMode(mode.storageValue)
+        }
+    }
+
     fun selectDialect(dialect: String) {
         _uiState.value = _uiState.value.copy(selectedDialect = dialect)
+    }
+
+    fun setSpokenName(name: String) {
+        _uiState.value = _uiState.value.copy(spokenName = name, showVoiceConfirm = name.isNotBlank())
+    }
+
+    fun confirmSpokenName(accepted: Boolean) {
+        if (accepted) {
+            val name = _uiState.value.spokenName.trim()
+            _uiState.value = _uiState.value.copy(
+                artisanName = name.ifBlank { _uiState.value.artisanName },
+                showVoiceConfirm = false
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(spokenName = "", showVoiceConfirm = false)
+        }
     }
 
     fun updatePhone(phone: String) {
@@ -78,24 +148,12 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun goToNextStep() {
-        val next = when (_uiState.value.currentStep) {
-            OnboardingStep.WELCOME_LANGUAGE -> OnboardingStep.IDENTITY_VERIFICATION
-            OnboardingStep.IDENTITY_VERIFICATION -> OnboardingStep.CLUSTER_CONFIRMATION
-            OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.PERMISSIONS_OVERVIEW
-            OnboardingStep.PERMISSIONS_OVERVIEW -> OnboardingStep.COMPLETION
-            OnboardingStep.COMPLETION -> OnboardingStep.COMPLETION
-        }
+        val next = _uiState.value.currentStep.next()
         _uiState.value = _uiState.value.copy(currentStep = next, errorMessage = null)
     }
 
     fun goToPreviousStep() {
-        val prev = when (_uiState.value.currentStep) {
-            OnboardingStep.WELCOME_LANGUAGE -> OnboardingStep.WELCOME_LANGUAGE
-            OnboardingStep.IDENTITY_VERIFICATION -> OnboardingStep.WELCOME_LANGUAGE
-            OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.IDENTITY_VERIFICATION
-            OnboardingStep.PERMISSIONS_OVERVIEW -> OnboardingStep.CLUSTER_CONFIRMATION
-            OnboardingStep.COMPLETION -> OnboardingStep.PERMISSIONS_OVERVIEW
-        }
+        val prev = _uiState.value.currentStep.previous()
         _uiState.value = _uiState.value.copy(currentStep = prev, errorMessage = null)
     }
 

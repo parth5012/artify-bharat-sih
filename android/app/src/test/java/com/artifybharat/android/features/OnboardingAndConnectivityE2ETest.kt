@@ -8,6 +8,11 @@ import com.artifybharat.android.data.network.dto.PinLoginRequestDto
 import com.artifybharat.android.data.network.dto.TokenResponseDto
 import com.artifybharat.android.data.network.dto.VoiceRegisterRequestDto
 import com.artifybharat.android.data.preferences.UserSession
+import com.artifybharat.android.features.onboarding.OnboardingMode
+import com.artifybharat.android.features.onboarding.OnboardingStep
+import com.artifybharat.android.features.onboarding.OnboardingUiState
+import com.artifybharat.android.features.onboarding.SUPPORTED_DIALECTS
+import com.artifybharat.android.features.onboarding.next
 import com.artifybharat.android.features.passport.DigitalPassportUiState
 import com.artifybharat.android.features.pricing.FairWagePricingUiState
 import com.artifybharat.android.features.voice.VoiceCatalogUiState
@@ -291,5 +296,27 @@ class OnboardingAndConnectivityE2ETest {
         NetworkClient.setCustomBaseUrl(customUrl)
         assertEquals(customUrl, NetworkClient.getEffectiveBaseUrl())
         NetworkClient.setCustomBaseUrl(null)
+    }
+
+    @Test
+    fun testModeSelectStepZeroKeepsTwoTapLanguageDone() {
+        // Ticket #109: MODE_SELECT is Step 0; mode + language done in <3 taps.
+        assertEquals(OnboardingStep.MODE_SELECT, OnboardingStep.values()[0])
+        assertEquals(OnboardingStep.WELCOME_LANGUAGE, OnboardingStep.MODE_SELECT.next())
+        assertEquals(OnboardingStep.IDENTITY_VERIFICATION, OnboardingStep.WELCOME_LANGUAGE.next())
+        val state = OnboardingUiState(
+            currentStep = OnboardingStep.WELCOME_LANGUAGE,
+            onboardingMode = OnboardingMode.SHG,
+            selectedDialect = "maithili"
+        )
+        assertEquals(OnboardingMode.SHG, state.onboardingMode)
+        assertEquals("maithili", state.selectedDialect)
+    }
+
+    @Test
+    fun testOnboardingModeStorageValuesAndDialectCount() {
+        assertEquals("solo", OnboardingMode.SOLO.storageValue)
+        assertEquals("shg", OnboardingMode.SHG.storageValue)
+        assertEquals(6, SUPPORTED_DIALECTS.size)
     }
 }
