@@ -101,6 +101,27 @@ class LocationClusterVerificationTest {
     }
 
     @Test
+    fun testAutoSuggest_offlineUsesLastKnownWhenRegistryNull() {
+        val suggestion = ClusterAutoSuggest.suggest(
+            gpsClusterName = null,
+            gpsWithinBounds = false,
+            registryClusterName = null,
+            registryCraftCategory = "handloom",
+            registryGiCertified = true,
+            registryGiTagName = "Maheshwar Saree (GI #45)",
+            registryStateCode = "MP",
+            lastKnownClusterName = "Maheshwar Handloom Cluster",
+            isOffline = true
+        )
+
+        assertEquals("Maheshwar Handloom Cluster", suggestion.clusterName)
+        assertEquals(ClusterAutoSuggest.SuggestionSource.LAST_KNOWN, suggestion.source)
+        assertTrue(suggestion.isLocationPending)
+        assertTrue(suggestion.canComplete)
+        assertTrue(suggestion.locationNote.contains("last known", ignoreCase = true))
+    }
+
+    @Test
     fun testAutoSuggest_hindiReadoutMentionsClusterAndCraft() {
         val readout = ClusterAutoSuggest.hindiReadout(
             clusterName = "Varanasi Handloom Cluster",

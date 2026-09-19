@@ -185,7 +185,12 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             lastKnownClusterName = s.clusterName,
             isOffline = isOffline
         )
-        _uiState.value = s.copy(clusterName = suggestion.clusterName, stateCode = suggestion.stateCode)
+        _uiState.value = s.copy(
+            clusterName = suggestion.clusterName,
+            stateCode = suggestion.stateCode,
+            isGiCertified = suggestion.isGiCertified,
+            giTagName = suggestion.giTagName
+        )
     }
 
     fun goToNextStep() {
