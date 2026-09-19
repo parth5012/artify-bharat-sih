@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
@@ -51,6 +52,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -66,9 +70,11 @@ import com.artifybharat.android.ui.components.BilingualText
 import com.artifybharat.android.ui.components.DesiButton
 import com.artifybharat.android.ui.components.DesiButtonVariant
 import com.artifybharat.android.ui.components.GiTagBadge
+import com.artifybharat.android.ui.components.OfflineBanner
 import com.artifybharat.android.ui.components.QuorumSeal
 import com.artifybharat.android.ui.dialogs.PermissionRationaleDialog
 import com.artifybharat.android.ui.theme.CardSurface
+import com.artifybharat.android.ui.theme.CardSurfaceVariant
 import com.artifybharat.android.ui.theme.DeepIndigoSecondary
 import com.artifybharat.android.ui.theme.KhadiBackground
 import com.artifybharat.android.ui.theme.TerracottaPrimary
@@ -170,7 +176,21 @@ fun OnboardingScreen(
         }
 
         // Offline / Unreachable Server Notice — T2: real Room queue, no fake demo.
-        if (uiState.isServerUnreachable) {
+        // Offline / Unreachable Server Notice - OfflineBanner wired cleanly
+        OfflineBanner(
+            isOffline = uiState.isOfflineMode || uiState.isServerUnreachable || uiState.queuedOffline,
+            isOfflineDemo = false,
+            message = if (uiState.queuedOffline) {
+                "सुरक्षित ऑफ़लाइन सहेजा गया (${uiState.pendingQueueCount} कतार में) • Saved offline safely"
+            } else if (uiState.isServerUnreachable) {
+                "सर्वर अनुपलब्ध • ऑफ़लाइन मोड सक्रिय (Offline mode active)"
+            } else null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+        )
+
+        if (uiState.isServerUnreachable && !uiState.queuedOffline && uiState.currentStep == OnboardingStep.IDENTITY_VERIFICATION) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF08A)),
                 shape = RoundedCornerShape(12.dp),
@@ -278,6 +298,9 @@ fun OnboardingScreen(
                     clusterName = uiState.clusterName,
                     craftCategory = uiState.craftCategory,
                     isGiCertified = uiState.isGiCertified,
+                    isVerified = uiState.isVerified,
+                    queuedOffline = uiState.queuedOffline,
+                    pendingQueueCount = uiState.pendingQueueCount,
                     onEnterApp = { viewModel.completeOnboardingAndEnterApp() }
                 )
             }
@@ -287,6 +310,9 @@ fun OnboardingScreen(
                     clusterName = uiState.clusterName,
                     craftCategory = uiState.craftCategory,
                     isGiCertified = uiState.isGiCertified,
+                    isVerified = uiState.isVerified,
+                    queuedOffline = uiState.queuedOffline,
+                    pendingQueueCount = uiState.pendingQueueCount,
                     onEnterApp = { viewModel.completeOnboardingAndEnterApp() }
                 )
             }
@@ -306,6 +332,7 @@ private fun ModeSelectStep(
             english = "Who is using this phone? (Step 0)",
             primaryStyle = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
                 color = TerracottaPrimary
             ),
             secondaryStyle = MaterialTheme.typography.bodyMedium.copy(color = DeepIndigoSecondary),
@@ -509,6 +536,7 @@ private fun WelcomeLanguageStep(
             english = "Select Language & Dialect",
             primaryStyle = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
                 color = TerracottaPrimary
             ),
             secondaryStyle = MaterialTheme.typography.bodyMedium.copy(color = DeepIndigoSecondary),
@@ -1051,33 +1079,64 @@ private fun ClusterConfirmationStep(
 }
 
 @Composable
-private fun CompletionStep(
+fun CompletionStep(
     artisanName: String,
     clusterName: String,
     craftCategory: String,
     isGiCertified: Boolean,
+    isVerified: Boolean = false,
+    queuedOffline: Boolean = false,
+    pendingQueueCount: Int = 0,
+    onAskDadiReadout: (() -> Unit)? = null,
     onEnterApp: () -> Unit
 ) {
+    val sealState = CompletionSwagat.resolveMoSjeSealState(
+        isVerified = isVerified,
+        queuedOffline = queuedOffline
+    )
+    val sealContentDesc = CompletionSwagat.getSealContentDescription(sealState)
+    val cardContentDesc = CompletionSwagat.getCardContentDescription(
+        artisanName = artisanName,
+        clusterName = clusterName,
+        craftCategory = craftCategory
+    )
+    var dadiReadoutActive by remember { mutableStateOf(false) }
+    val voiceGreeting = remember(artisanName, clusterName, craftCategory, isVerified, queuedOffline) {
+        CompletionSwagat.generateSwagatVoiceReadout(
+            artisanName = artisanName,
+            clusterName = clusterName,
+            craftCategory = craftCategory,
+            isVerified = isVerified,
+            queuedOffline = queuedOffline
+        )
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(16.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
         QuorumSeal(
-            votesReceived = 3,
+            votesReceived = if (sealState == MoSjeSealState.VERIFIED) 3 else 0,
             quorumRequired = 3,
-            consensusLevel = "High",
-            isVerified = true,
-            modifier = Modifier.padding(12.dp)
+            consensusLevel = if (sealState == MoSjeSealState.VERIFIED) "High" else "Pending Sync",
+            isVerified = (sealState == MoSjeSealState.VERIFIED),
+            modifier = Modifier
+                .padding(12.dp)
+                .testTag(CompletionSwagat.SEAL_TAG)
+                .semantics { contentDescription = sealContentDesc }
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         BilingualText(
-            hindi = "सत्यापन संपन्न! स्वागत है",
-            english = "Onboarding Complete • MoSJE Verified",
-            primaryStyle = MaterialTheme.typography.headlineSmall.copy(
+            hindi = if (sealState == MoSjeSealState.VERIFIED) "सत्यापन संपन्न! स्वागत है" else "पंजीकरण संपन्न! स्वागत है",
+            english = if (sealState == MoSjeSealState.VERIFIED) "Onboarding Complete • MoSJE Verified" else "Onboarding Complete • Unverified-pending",
+            primaryStyle = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
                 color = TerracottaPrimary
             ),
             secondaryStyle = MaterialTheme.typography.bodyMedium.copy(color = DeepIndigoSecondary),
@@ -1086,41 +1145,147 @@ private fun CompletionStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Artisan, Cluster, Craft Category Identity Card
         Card(
             colors = CardDefaults.cardColors(containerColor = CardSurface),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(CompletionSwagat.ARTISAN_CARD_TAG)
+                .semantics { contentDescription = cardContentDesc }
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = artisanName,
+                    text = artisanName.ifBlank { "कारीगर (Artisan)" },
                     fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
+                    fontSize = 20.sp,
                     color = TerracottaPrimary
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = clusterName,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
                     color = DeepIndigoSecondary
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "हस्तशिल्प: $craftCategory • SIH PS 26090",
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = TextEnglishSecondary
                 )
+                if (isGiCertified) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GiTagBadge(giTagStatus = "certified", regNumber = null)
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        // Pending-sync badge: shown when offline queue is non-empty
+        if (CompletionSwagat.isPendingBadgeVisible(queuedOffline, pendingQueueCount)) {
+            Spacer(modifier = Modifier.height(12.dp))
+            val badgeText = CompletionSwagat.getPendingBadgeText(pendingQueueCount)
+            val badgeContentDesc = CompletionSwagat.getPendingBadgeContentDescription(pendingQueueCount)
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .testTag(CompletionSwagat.PENDING_BADGE_TAG)
+                    .semantics { contentDescription = badgeContentDesc }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = null,
+                        tint = Color(0xFF92400E),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = badgeText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF92400E)
+                    )
+                }
+            }
+        }
 
+        // Live voice readout Ask Dadi stub
+        Spacer(modifier = Modifier.height(14.dp))
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = if (dadiReadoutActive) Color(0xFFFFEFE9) else CardSurfaceVariant
+            ),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag(CompletionSwagat.ASK_DADI_READOUT_TAG)
+                .clickable(
+                    onClickLabel = CompletionSwagat.ASK_DADI_CONTENT_DESCRIPTION
+                ) {
+                    dadiReadoutActive = !dadiReadoutActive
+                    onAskDadiReadout?.invoke()
+                }
+                .semantics {
+                    contentDescription = CompletionSwagat.ASK_DADI_CONTENT_DESCRIPTION
+                }
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(TerracottaPrimary.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = TerracottaPrimary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = CompletionSwagat.ASK_DADI_STUB_TEXT,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = TerracottaPrimary
+                    )
+                    Text(
+                        text = if (dadiReadoutActive) voiceGreeting else "दादी की आवाज़ में स्वागत संदेश सुनें (Tap to listen)",
+                        fontSize = 12.sp,
+                        color = DeepIndigoSecondary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Single CTA: Artify Bharat pravesh karein with 56dp minimum height
         DesiButton(
-            text = "आर्टिफ़ाई भारत में प्रवेश करें",
-            subtext = "Enter Artisan Workplace",
+            text = CompletionSwagat.CTA_TEXT_HINDI,
+            subtext = "Enter Artisan Workplace (Artify Bharat pravesh karein)",
             onClick = onEnterApp,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 56.dp)
+                .testTag(CompletionSwagat.CTA_BUTTON_TAG)
+                .semantics {
+                    contentDescription = CompletionSwagat.getCtaContentDescription()
+                }
         )
     }
 }
