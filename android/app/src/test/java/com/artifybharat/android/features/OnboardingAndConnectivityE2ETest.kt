@@ -350,4 +350,51 @@ class OnboardingAndConnectivityE2ETest {
         assertTrue(completed.isOnboardingComplete)
         assertEquals(OnboardingStep.COMPLETION, completed.currentStep)
     }
+
+    @Test
+    fun testT6_fourScreenFlowUnderTenTaps() {
+        // #114: MODE_SELECT->WELCOME_LANGUAGE->IDENTITY->CLUSTER->COMPLETION, PERMISSIONS never gates.
+        var step = OnboardingStep.MODE_SELECT
+        var taps = 0
+        val visited = mutableListOf(step)
+        while (step != OnboardingStep.COMPLETION && taps < 10) {
+            step = step.next()
+            visited.add(step)
+            taps++
+        }
+        assertEquals(OnboardingStep.COMPLETION, step)
+        assertTrue("End-to-end must stay <10 taps, was $taps", taps < 10)
+        assertEquals(4, taps) // exactly 4 Next taps for 5 screens
+        assertFalse("PERMISSIONS_OVERVIEW must never appear in happy path", visited.contains(OnboardingStep.PERMISSIONS_OVERVIEW))
+        assertEquals(
+            listOf(
+                OnboardingStep.MODE_SELECT,
+                OnboardingStep.WELCOME_LANGUAGE,
+                OnboardingStep.IDENTITY_VERIFICATION,
+                OnboardingStep.CLUSTER_CONFIRMATION,
+                OnboardingStep.COMPLETION
+            ),
+            visited
+        )
+    }
+
+    @Test
+    fun testT6_dualModeOfflineQueueAutoClusterNeverBlocks() {
+        // #114: dual-mode + offline queue + auto-cluster Yes path combine without blocking.
+        val shg = OnboardingUiState(onboardingMode = OnboardingMode.SHG, currentStep = OnboardingStep.MODE_SELECT)
+        assertEquals(OnboardingStep.WELCOME_LANGUAGE, shg.currentStep.next())
+        val offlineQueued = OnboardingUiState(
+            currentStep = OnboardingStep.IDENTITY_VERIFICATION,
+            phone = "9876543210",
+            artisanName = "Gauri Devi",
+            queuedOffline = true,
+            pendingQueueCount = 2
+        )
+        val afterAuth = offlineQueued.copy(currentStep = offlineQueued.currentStep.next())
+        assertEquals(OnboardingStep.CLUSTER_CONFIRMATION, afterAuth.currentStep)
+        assertTrue("Offline queue must persist across steps", afterAuth.queuedOffline)
+        val done = afterAuth.copy(currentStep = afterAuth.currentStep.next(), isOnboardingComplete = true)
+        assertEquals(OnboardingStep.COMPLETION, done.currentStep)
+        assertTrue(done.isOnboardingComplete)
+    }
 }

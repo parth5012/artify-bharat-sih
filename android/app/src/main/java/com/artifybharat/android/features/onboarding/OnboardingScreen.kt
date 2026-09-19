@@ -112,7 +112,7 @@ fun OnboardingScreen(
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Step Indicator Dots
+        // Step Indicator Dots (#114: 5-screen flow, legacy PERMISSIONS_OVERVIEW hidden)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -120,7 +120,8 @@ fun OnboardingScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OnboardingStep.values().forEachIndexed { index, step ->
+            val visibleSteps = OnboardingStep.values().filter { it != OnboardingStep.PERMISSIONS_OVERVIEW }
+            visibleSteps.forEachIndexed { index, step ->
                 val isActive = step.ordinal <= uiState.currentStep.ordinal
                 val isCurrent = step == uiState.currentStep
                 Box(
@@ -131,7 +132,7 @@ fun OnboardingScreen(
                             if (isActive) TerracottaPrimary else DeepIndigoSecondary.copy(alpha = 0.25f)
                         )
                 )
-                if (index < OnboardingStep.values().size - 1) {
+                if (index < visibleSteps.size - 1) {
                     Box(
                         modifier = Modifier
                             .width(28.dp)
