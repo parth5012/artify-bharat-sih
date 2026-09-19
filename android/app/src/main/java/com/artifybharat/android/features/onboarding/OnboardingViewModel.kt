@@ -46,6 +46,7 @@ enum class OnboardingStep {
     WELCOME_LANGUAGE,
     IDENTITY_VERIFICATION,
     CLUSTER_CONFIRMATION,
+    // T4 (#112): legacy blocker — kept for back-compat, never used as gate.
     PERMISSIONS_OVERVIEW,
     COMPLETION
 }
@@ -54,7 +55,9 @@ fun OnboardingStep.next(): OnboardingStep = when (this) {
     OnboardingStep.MODE_SELECT -> OnboardingStep.WELCOME_LANGUAGE
     OnboardingStep.WELCOME_LANGUAGE -> OnboardingStep.IDENTITY_VERIFICATION
     OnboardingStep.IDENTITY_VERIFICATION -> OnboardingStep.CLUSTER_CONFIRMATION
-    OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.PERMISSIONS_OVERVIEW
+    // T4 (#112) JIT: no permissions gate — cluster confirms straight to completion.
+    OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.COMPLETION
+    // Legacy persisted state: old blocker step always passes through to completion.
     OnboardingStep.PERMISSIONS_OVERVIEW -> OnboardingStep.COMPLETION
     OnboardingStep.COMPLETION -> OnboardingStep.COMPLETION
 }
@@ -64,8 +67,9 @@ fun OnboardingStep.previous(): OnboardingStep = when (this) {
     OnboardingStep.WELCOME_LANGUAGE -> OnboardingStep.MODE_SELECT
     OnboardingStep.IDENTITY_VERIFICATION -> OnboardingStep.WELCOME_LANGUAGE
     OnboardingStep.CLUSTER_CONFIRMATION -> OnboardingStep.IDENTITY_VERIFICATION
+    // T4 (#112) JIT: legacy blocker steps back to cluster, completion backs to cluster.
     OnboardingStep.PERMISSIONS_OVERVIEW -> OnboardingStep.CLUSTER_CONFIRMATION
-    OnboardingStep.COMPLETION -> OnboardingStep.PERMISSIONS_OVERVIEW
+    OnboardingStep.COMPLETION -> OnboardingStep.CLUSTER_CONFIRMATION
 }
 
 data class OnboardingUiState(
@@ -246,7 +250,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                 queuedOffline = true,
                 pendingQueueCount = count.coerceAtLeast(1),
                 errorMessage = "${ProgressiveIdentity.SAVED_SAFELY_HINDI} • कतार $count (${ProgressiveIdentity.SAVED_SAFELY_ENGLISH})",
-                currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+                // T4 (#112) JIT: offline queue lands straight on completion, never a permissions gate.
+                currentStep = OnboardingStep.COMPLETION
             )
         }
     }
@@ -325,7 +330,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                     isLoading = false,
                     isVerified = true,
                     artisanName = tokenResp.name,
-                    currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+                    // T4 (#112) JIT: login lands straight on completion.
+                    currentStep = OnboardingStep.COMPLETION
                 )
             } else {
                 val loginErr = loginResult.exceptionOrNull()?.message ?: ""
@@ -372,7 +378,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
                             isLoading = false,
                             isVerified = true,
                             artisanName = tokenResp.name,
-                            currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+                            // T4 (#112) JIT: register lands straight on completion.
+                            currentStep = OnboardingStep.COMPLETION
                         )
                     } else if (ProgressiveIdentity.isNetworkError(regResult.exceptionOrNull())) {
                         // T2: register hit airplane-mode -> real Room queue, never fake demo.
@@ -417,7 +424,8 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             pendingQueueCount = count.coerceAtLeast(1),
             artisanName = request.name,
             errorMessage = "${ProgressiveIdentity.SAVED_SAFELY_HINDI} • कतार $count (${ProgressiveIdentity.SAVED_SAFELY_ENGLISH})",
-            currentStep = OnboardingStep.PERMISSIONS_OVERVIEW
+            // T4 (#112) JIT: airplane-mode queue lands straight on completion.
+            currentStep = OnboardingStep.COMPLETION
         )
     }
 

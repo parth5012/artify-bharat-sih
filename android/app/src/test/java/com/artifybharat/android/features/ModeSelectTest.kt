@@ -37,14 +37,15 @@ class ModeSelectTest {
     fun testFullStepChainHasNoRegression() {
         assertEquals(OnboardingStep.IDENTITY_VERIFICATION, OnboardingStep.WELCOME_LANGUAGE.next())
         assertEquals(OnboardingStep.CLUSTER_CONFIRMATION, OnboardingStep.IDENTITY_VERIFICATION.next())
-        assertEquals(OnboardingStep.PERMISSIONS_OVERVIEW, OnboardingStep.CLUSTER_CONFIRMATION.next())
+        // T4 (#112) JIT: cluster goes straight to completion; blocker kept as legacy passthrough.
+        assertEquals(OnboardingStep.COMPLETION, OnboardingStep.CLUSTER_CONFIRMATION.next())
         assertEquals(OnboardingStep.COMPLETION, OnboardingStep.PERMISSIONS_OVERVIEW.next())
         assertEquals(OnboardingStep.COMPLETION, OnboardingStep.COMPLETION.next())
 
         assertEquals(OnboardingStep.WELCOME_LANGUAGE, OnboardingStep.IDENTITY_VERIFICATION.previous())
         assertEquals(OnboardingStep.IDENTITY_VERIFICATION, OnboardingStep.CLUSTER_CONFIRMATION.previous())
         assertEquals(OnboardingStep.CLUSTER_CONFIRMATION, OnboardingStep.PERMISSIONS_OVERVIEW.previous())
-        assertEquals(OnboardingStep.PERMISSIONS_OVERVIEW, OnboardingStep.COMPLETION.previous())
+        assertEquals(OnboardingStep.CLUSTER_CONFIRMATION, OnboardingStep.COMPLETION.previous())
         assertEquals(OnboardingStep.MODE_SELECT, OnboardingStep.MODE_SELECT.previous())
     }
 
