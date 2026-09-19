@@ -116,6 +116,12 @@ fun VoiceCatalogScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // T2 (#110): Unverified nudge — Pehchan verify stays optional, badge upgrade later.
+            UnverifiedBadgeNudge(
+                isVerified = false,
+                onVerifyClick = { navController.navigate(Screen.Onboarding.route) }
+            )
+
             // 1. Dialect Selection Chips
             Text(
                 text = "अपनी भाषा / बोली चुनें (Select Dialect):",
@@ -372,6 +378,42 @@ fun VoiceCatalogScreen(
                 modifier = Modifier.fillMaxWidth(),
                 variant = DesiButtonVariant.PRIMARY,
                 subtext = "Step 2: Authenticity Studio Photography"
+            )
+        }
+    }
+}
+
+/**
+ * T2 (#110): dashboard Unverified nudge. Pehchan/e-Shram/TRIFED verify is an
+ * optional Verified-Badge upgrade — shown when [isVerified] is false, hidden after.
+ */
+@Composable
+fun UnverifiedBadgeNudge(
+    isVerified: Boolean,
+    onVerifyClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (isVerified) return
+    Surface(
+        shape = ShapeMedium,
+        color = Color(0xFFFFFBEB),
+        border = BorderStroke(1.dp, Color(0xFFF59E0B)),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable(onClickLabel = "सत्यापित बैज पाएं") { onVerifyClick() }
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "🔶 असत्यापित • Unverified — सत्यापित बैज पाएं",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color(0xFF92400E)
+            )
+            Text(
+                text = "Pehchan / e-Shram / TRIFED से बाद में वेरीफाई करें (Verify later, optional)",
+                fontSize = 12.sp,
+                color = DeepIndigoSecondary
             )
         }
     }

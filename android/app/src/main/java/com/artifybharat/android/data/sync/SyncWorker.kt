@@ -8,11 +8,13 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.artifybharat.android.data.local.AppDatabase
 import com.artifybharat.android.data.local.entity.DraftEntity
+import com.artifybharat.android.data.local.entity.OfflineRegistrationEntity
 import com.artifybharat.android.data.network.NetworkClient
 import com.artifybharat.android.data.network.dto.DraftItemDto
 import com.artifybharat.android.data.network.dto.DraftSyncRequestDto
 import com.artifybharat.android.data.network.dto.PassportIssueRequestDto
 import com.artifybharat.android.data.preferences.UserPreferencesDataStore
+import com.artifybharat.android.features.onboarding.ProgressiveIdentity
 import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -71,24 +73,88 @@ class SyncWorker(
     override suspend fun doWork(): Result {
         val database = AppDatabase.getInstance(applicationContext)
         val draftDao = database.draftDao()
+        val regDao = database.offlineRegistrationDao()
         val preferences = UserPreferencesDataStore(applicationContext)
 
         val pendingDrafts = draftDao.getPendingSyncDrafts()
-        if (pendingDrafts.isEmpty()) {
-            Log.d(TAG, "No pending drafts to sync.")
+        val pendingRegs = try {
+            regDao.getPendingRegistrations()
+        } catch (e: Exception) {
+            Log.w(TAG, "Offline-registration table unavailable: ${e.localizedMessage}")
+            emptyList()
+        }
+        if (pendingDrafts.isEmpty() && pendingRegs.isEmpty()) {
+            Log.d(TAG, "No pending drafts or registrations to sync.")
             return Result.success()
         }
 
         val session = preferences.userSessionFlow.firstOrNull()
         val artisanId = session?.artisanId
-        if (artisanId.isNullOrBlank()) {
-            Log.w(TAG, "No authenticated artisan session found; deferring sync.")
-            return Result.retry()
-        }
 
         val apiService = NetworkClient.createApiService(
             okHttpClient = NetworkClient.createOkHttpClient(preferences)
         )
+
+        // T2 (#110): flush airplane-mode queued registrations first — no session needed.
+        if (pendingRegs.isNotEmpty()) {
+            Log.i(TAG, "Syncing ${pendingRegs.size} queued offline registrations.")
+            var regFailed = false
+            for (reg in pendingRegs) {
+                if (reg.retryCount >= OfflineRegistrationEntity.MAX_RETRY_ATTEMPTS) continue
+                try {
+                    val req = ProgressiveIdentity.decodeRegistration(reg.fieldsJson)
+                    val resp = apiService.registerArtisan(req)
+                    if (resp.isSuccessful && resp.body() != null) {
+                        val body = resp.body()!!
+                        regDao.markAsSynced(reg.id, System.currentTimeMillis())
+                        // Promote queued artisan to a verified local session (DPDP-masked).
+                        try {
+                            preferences.saveAuthSession(
+                                token = body.accessToken,
+                                artisanId = body.artisanId,
+                                maskedPehchan = ProgressiveIdentity.maskPhone(body.phone),
+                                artisanName = body.name,
+                                clusterName = session?.clusterName
+                                    ?: "Varanasi Handloom Cluster",
+                                craftCategory = session?.craftCategory ?: "handloom",
+                                stateCode = session?.stateCode ?: "UP"
+                            )
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Session promote skipped: ${e.localizedMessage}")
+                        }
+                        Log.i(TAG, "Registration ${reg.id} synced.")
+                    } else {
+                        regDao.updateSyncAttempt(
+                            reg.id, reg.retryCount + 1,
+                            "HTTP ${resp.code()}", System.currentTimeMillis()
+                        )
+                        regFailed = true
+                    }
+                } catch (e: Exception) {
+                    // Never log raw identifiers (DPDP) — id only.
+                    Log.w(TAG, "Registration ${reg.id} deferred: ${e.javaClass.simpleName}")
+                    try {
+                        regDao.updateSyncAttempt(
+                            reg.id, reg.retryCount + 1,
+                            e.javaClass.simpleName, System.currentTimeMillis()
+                        )
+                    } catch (ignored: Exception) { /* table missing on old installs */ }
+                    regFailed = true
+                }
+            }
+            if (pendingDrafts.isEmpty()) {
+                return if (regFailed && runAttemptCount < MAX_RETRIES) Result.retry() else Result.success()
+            }
+        }
+
+        if (artisanId.isNullOrBlank()) {
+            Log.w(TAG, "No authenticated artisan session found; deferring draft sync.")
+            return Result.retry()
+        }
+
+        if (pendingDrafts.isEmpty()) {
+            return Result.success()
+        }
 
         Log.i(TAG, "Starting sync for ${pendingDrafts.size} drafts for artisan: $artisanId")
 
