@@ -134,3 +134,5 @@ scratch/
 
 .tmp
 .ruff_cache/
+.freebuff/
+.codebuff/
