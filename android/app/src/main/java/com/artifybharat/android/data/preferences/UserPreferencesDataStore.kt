@@ -43,6 +43,23 @@ class UserPreferencesDataStore(private val context: Context) {
         val KEY_OFFLINE_DEMO = booleanPreferencesKey("offline_demo")
         val KEY_CUSTOM_BASE_URL = stringPreferencesKey("custom_base_url")
         val KEY_ONBOARDING_MODE = stringPreferencesKey("onboarding_mode")
+        val KEY_PREFERRED_DIALECT = stringPreferencesKey("preferred_dialect")
+        val KEY_PAYOUT_UPI_MASKED = stringPreferencesKey("payout_upi_masked")
+
+        const val DEFAULT_PREFERRED_DIALECT = "bhojpuri"
+
+        /**
+         * DPDP: derive the storable masked form of a UPI ID. Only the handle
+         * domain is retained (e.g. "gauri.devi@okhdfc" -> "***@okhdfc");
+         * handle-less input is fully masked. Never persist or log the raw value.
+         */
+        fun maskPayoutUpi(rawUpi: String): String {
+            val trimmed = rawUpi.trim()
+            if (trimmed.isEmpty()) return ""
+            val atIndex = trimmed.indexOf('@')
+            if (atIndex <= 0 || atIndex == trimmed.length - 1) return "***"
+            return "***@" + trimmed.substring(atIndex + 1)
+        }
     }
 
     val userSessionFlow: Flow<UserSession> = context.userDataStore.data.map { prefs ->
@@ -77,6 +94,43 @@ class UserPreferencesDataStore(private val context: Context) {
 
     val onboardingModeFlow: Flow<String> = context.userDataStore.data.map { prefs ->
         prefs[KEY_ONBOARDING_MODE] ?: "solo"
+    }
+
+    val preferredDialectFlow: Flow<String> = context.userDataStore.data.map { prefs ->
+        prefs[KEY_PREFERRED_DIALECT] ?: DEFAULT_PREFERRED_DIALECT
+    }
+
+    val payoutUpiMaskedFlow: Flow<String?> = context.userDataStore.data.map { prefs ->
+        prefs[KEY_PAYOUT_UPI_MASKED]
+    }
+
+    suspend fun setClusterName(clusterName: String) {
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_CLUSTER_NAME] = clusterName
+        }
+    }
+
+    suspend fun setCraftCategory(craftCategory: String) {
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_CRAFT_CATEGORY] = craftCategory
+        }
+    }
+
+    suspend fun setPreferredDialect(dialect: String) {
+        val normalized = dialect.trim().lowercase().ifBlank { DEFAULT_PREFERRED_DIALECT }
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_PREFERRED_DIALECT] = normalized
+        }
+    }
+
+    /**
+     * DPDP: stores only [maskPayoutUpi] output, never the raw UPI ID.
+     * Callers must not log [rawUpi].
+     */
+    suspend fun setPayoutUpi(rawUpi: String) {
+        context.userDataStore.edit { prefs ->
+            prefs[KEY_PAYOUT_UPI_MASKED] = maskPayoutUpi(rawUpi)
+        }
     }
 
     suspend fun setOnboardingMode(mode: String) {
