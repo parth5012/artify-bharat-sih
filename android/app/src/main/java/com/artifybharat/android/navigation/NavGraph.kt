@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CurrencyRupee
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,11 +33,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.artifybharat.android.features.home.ArtisanHomeScreen
 import com.artifybharat.android.features.market.DirectMarketplaceScreen
 import com.artifybharat.android.features.onboarding.OnboardingScreen
 import com.artifybharat.android.features.passport.DigitalPassportScreen
 import com.artifybharat.android.features.pricing.FairWagePricingScreen
 import com.artifybharat.android.features.print.ThermalPrintScreen
+import com.artifybharat.android.features.products.ProductManagementScreen
+import com.artifybharat.android.features.profile.ArtisanProfileScreen
 import com.artifybharat.android.features.queue.OfflineSyncQueueScreen
 import com.artifybharat.android.features.shg.ShgCoordinatorHubScreen
 import com.artifybharat.android.features.studio.AuthenticityStudioScreen
@@ -54,23 +58,36 @@ data class BottomNavItem(
 )
 
 val BottomNavItems = listOf(
-    BottomNavItem(Screen.VoiceCatalog.route, "आवाज़", "Voice", Icons.Default.Mic),
-    BottomNavItem(Screen.AuthenticityStudio.route, "स्टूडियो", "Studio", Icons.Default.CameraAlt),
+    BottomNavItem(Screen.ArtisanHome.route, "होम", "Home", Icons.Default.Home),
+    BottomNavItem(Screen.ProductManagement.route, "उत्पाद", "Products", Icons.Default.Inventory2),
+    BottomNavItem(Screen.VoiceCatalog.route, "नया", "Catalog", Icons.Default.AddCircle),
     BottomNavItem(Screen.FairWagePricing.route, "मूल्य", "Price", Icons.Default.CurrencyRupee),
-    BottomNavItem(Screen.DigitalPassport.createRoute("sample"), "पासपोर्ट", "Passport", Icons.Default.QrCode),
-    BottomNavItem(Screen.OfflineSyncQueue.route, "सिंक", "Queue", Icons.Default.Sync)
+    BottomNavItem(Screen.ArtisanProfile.route, "प्रोफ़ाइल", "Profile", Icons.Default.Person)
 )
+
+/**
+ * [Artisan App T5] Start at ArtisanHome once onboarded, else fall back to Onboarding.
+ * Pure function of [UserPreferencesDataStore.isOnboardedFlow] value — unit-testable.
+ */
+fun resolveStartDestination(isOnboarded: Boolean): String =
+    if (isOnboarded) Screen.ArtisanHome.route else Screen.Onboarding.route
 
 @Composable
 fun ArtifyBharatNavHost(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    startDestination: String = Screen.ArtisanHome.route
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val bottomTabBaseRoutes = BottomNavItems.map { it.route.substringBefore("?") }.toSet()
+    val showBottomBar = bottomTabBaseRoutes.any { base ->
+        currentRoute?.startsWith(base) == true
+    }
 
     Scaffold(
         bottomBar = {
+            if (showBottomBar) {
             NavigationBar(
                 containerColor = Color.White,
                 tonalElevation = 8.dp
@@ -81,7 +98,7 @@ fun ArtifyBharatNavHost(
                         selected = selected,
                         onClick = {
                             navController.navigate(item.route) {
-                                popUpTo(Screen.VoiceCatalog.route) { saveState = true }
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
                             }
@@ -89,7 +106,7 @@ fun ArtifyBharatNavHost(
                         icon = {
                             Icon(
                                 imageVector = item.icon,
-                                contentDescription = item.english
+                                contentDescription = "${item.hindi} ${item.english}"
                             )
                         },
                         label = {
@@ -105,13 +122,30 @@ fun ArtifyBharatNavHost(
                     )
                 }
             }
+            }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.VoiceCatalog.route,
+            startDestination = startDestination,
             modifier = modifier.padding(innerPadding)
         ) {
+        composable(Screen.ArtisanHome.route) {
+            ArtisanHomeScreen(navController = navController)
+        }
+        composable(Screen.ProductManagement.route) {
+            ProductManagementScreen(navController = navController)
+        }
+        composable(Screen.ArtisanProfile.route) {
+            ArtisanProfileScreen(
+                onLoggedOut = {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(Screen.ArtisanHome.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
         composable(Screen.Onboarding.route) {
             OnboardingScreen(navController = navController)
         }
