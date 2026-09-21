@@ -23,12 +23,13 @@ class ScaffoldSanityTest {
 
     @Test
     fun verifyBottomNavItemsCount() {
+        // T5 (#126): 5-tab BottomNav is Home / Products / Catalog / Price / Profile.
         assertEquals(5, BottomNavItems.size)
-        assertEquals("आवाज़", BottomNavItems[0].hindi)
-        assertEquals("स्टूडियो", BottomNavItems[1].hindi)
-        assertEquals("मूल्य", BottomNavItems[2].hindi)
-        assertEquals("पासपोर्ट", BottomNavItems[3].hindi)
-        assertEquals("सिंक", BottomNavItems[4].hindi)
+        assertEquals("होम", BottomNavItems[0].hindi)
+        assertEquals("उत्पाद", BottomNavItems[1].hindi)
+        assertEquals("नया", BottomNavItems[2].hindi)
+        assertEquals("मूल्य", BottomNavItems[3].hindi)
+        assertEquals("प्रोफ़ाइल", BottomNavItems[4].hindi)
     }
 
     @Test
