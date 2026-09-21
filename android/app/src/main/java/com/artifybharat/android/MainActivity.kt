@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.artifybharat.android.data.preferences.UserPreferencesDataStore
 import com.artifybharat.android.navigation.ArtifyBharatNavHost
+import com.artifybharat.android.navigation.resolveStartDestination
 import com.artifybharat.android.ui.components.OfflineBanner
 import com.artifybharat.android.ui.theme.ArtifyBharatTheme
 import com.artifybharat.android.ui.theme.KhadiBackground
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val preferences = remember { UserPreferencesDataStore(applicationContext) }
                     val session by preferences.userSessionFlow.collectAsState(initial = null)
+                    val isOnboarded by preferences.isOnboardedFlow.collectAsState(initial = null)
                     val navController = rememberNavController()
 
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -38,7 +40,8 @@ class MainActivity : ComponentActivity() {
                         )
                         ArtifyBharatNavHost(
                             navController = navController,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            startDestination = resolveStartDestination(isOnboarded = isOnboarded == true)
                         )
                     }
                 }

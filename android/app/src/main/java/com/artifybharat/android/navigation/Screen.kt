@@ -101,4 +101,22 @@ sealed class Screen(
         hindiTitle = "जानकारी की समीक्षा करें",
         englishTitle = "Review Information"
     )
+
+    object ArtisanHome : Screen(
+        route = "artisan_home",
+        hindiTitle = "होम",
+        englishTitle = "Home"
+    )
+
+    object ArtisanProfile : Screen(
+        route = "artisan_profile",
+        hindiTitle = "प्रोफ़ाइल",
+        englishTitle = "Profile"
+    )
+
+    object ProductManagement : Screen(
+        route = "product_management",
+        hindiTitle = "उत्पाद",
+        englishTitle = "Products"
+    )
 }
