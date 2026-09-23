@@ -8,7 +8,7 @@ import {EnhanceView} from '@/components/EnhanceView';
 import {useStore} from '@/lib/store';
 export default function Capture(){
  const r=useRouter();const {s,set}=useStore();const [step,setStep]=useState<'camera'|'review'|'enhance'>('camera');const [shot,setShot]=useState<Shot|null>(null);
- const save=()=>{if(shot)set({photos:[...s.photos,{id:Date.now().toString(36),...shot}]});setShot(null);setStep('camera')};
+ const save=(enhancedSrc?:string)=>{if(shot)set({photos:[...s.photos,{id:Date.now().toString(36),...shot,src:enhancedSrc||shot.src,rawSrc:shot.src}]});setShot(null);setStep('camera')};
  if(step==='enhance'&&shot)return <Screen step={3} onBack={()=>setStep('review')}><EnhanceView src={shot.src} onAccept={save} onRetake={()=>{setShot(null);setStep('camera')}}/></Screen>;
  if(step==='review'&&shot)return <Screen step={3} onBack={()=>setStep('camera')}><div className="flex min-h-full flex-col gap-4">
   <div className="relative aspect-[3/4] overflow-hidden rounded-3xl border-4 border-white shadow-lg"><img src={shot.src} alt="Captured craft" className="h-full w-full object-cover"/>
