@@ -2,6 +2,13 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Bhashini Server-Side Voice & Translation Pipeline (Map #1 #139)
+
+1. **Server-Side Credential Isolation**: Keeping Bhashini API keys (`BHASHINI_API_KEY`, `BHASHINI_USER_ID`, `BHASHINI_INFERENCE_API_KEY`) strictly in server-side Next.js route handlers (`app/api/voice/route.ts` and `backend/bhashini.ts`) guarantees zero exposure in client bundles or network responses.
+2. **Missing ASR Confidence & Accept-with-Flag**: Bhashini Dhruva ASR does not return confidence scores for transcribed regional speech. Instead of failing or guessing, setting `confidence: null` with `lowConfidence: true`, `flag: 'confidence_missing'`, and `acceptedWithFlag: true` allows the voice UI to present transcripts for artisan confirmation without blocking the flow.
+3. **Retry Exhaustion Graceful Degradation**: When network retries (up to 3 attempts with <=60s timeouts) are exhausted, returning an accept-with-flag result rather than an HTTP 500 error enables resilient UI handling in intermittent rural 2G/3G connectivity.
+4. **Dhruva Single Compute Pipeline**: Sending combined ASR + translation tasks in a single POST request to `/services/inference/pipeline` minimizes round trips over high-latency networks.
+
 ## Voice-First Progressive Onboarding Stack (Map #108)
 
 1. **Stacked PR Discipline with CodeRabbit**: When babysitting a multi-PR stack (#115 through #120), review bots review each diff relative to its base. Fixing a review comment on an upper branch (e.g. #120) preserves the integrity of earlier PRs without requiring interactive rebases and force-push cascades that trigger multiple rounds of CI.

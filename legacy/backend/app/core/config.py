@@ -37,7 +37,9 @@ class Settings(BaseSettings):
     # IVR (Bhashini)
     BHASHINI_API_KEY: str = "your_bhashini_api_key_here"
     BHASHINI_USER_ID: str = "your_bhashini_user_id"
-    BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543d6"
+    BHASHINI_PIPELINE_ID: str = "64392f96daac500b55c543cd"
+    BHASHINI_ASR_MODEL_ID: str = "bhashini/ai4bharat/conformer-multilingual-asr"
+    BHASHINI_TRANSLATION_MODEL_ID: str = "ai4bharat/indictrans-v2-all-gpu--t4"
 
     # Anti-corruption tuning
     JURY_QUORUM_SIZE: int = 3
