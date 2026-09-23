@@ -2,6 +2,12 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Voice-to-Form Entity Extraction & Confirmation Synchronization (Map #135)
+
+1. **Zero Demo Values Invariant**: Real speech extraction must return `null` and explicit `missing` flags rather than injecting synthetic sample profiles (e.g. "Ramesh Kumar" or "Dhokra Elephant"). This ensures an honest reflection of speech recognition accuracy and allows users to manually fill in missing fields without having to delete fake data.
+2. **Warn + Allow Manual Fill (Option 1)**: For rural artisans and SHG facilitators, soft visual warning indicators (amber badges) and direct inline tap-to-edit fields prevent drop-offs compared to hard blocking or frustrating sequential voice re-prompt loops.
+3. **Local State vs Parent Handoff Synchronization**: In multi-step confirmation screens (`VoiceScreen.tsx`), inline corrections made to presentation items (`fieldItems`) must be explicitly synced into the `heard` and `onResult` callback payload; otherwise, parent pages (like `onboarding` and `describe`) continue saving stale pre-edit transcripts.
+
 ## Bhashini Server-Side Voice & Translation Pipeline (Map #1 #139)
 
 1. **Server-Side Credential Isolation**: Keeping Bhashini API keys (`BHASHINI_API_KEY`, `BHASHINI_USER_ID`, `BHASHINI_INFERENCE_API_KEY`) strictly in server-side Next.js route handlers (`app/api/voice/route.ts` and `backend/bhashini.ts`) guarantees zero exposure in client bundles or network responses.
