@@ -1,5 +1,5 @@
 @tailwind base;@tailwind components;@tailwind utilities;
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highlight-color:transparent}
-.enhanced{filter:contrast(1.08) saturate(1.12) brightness(1.05)}
+.enhanced{/* Authentic craft colors preserved - zero generative or saturation color shift */}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
 @media print{body *{visibility:hidden}#report,#report *{visibility:visible}#report{position:absolute;left:0;top:0;width:100%;box-shadow:none!important}}

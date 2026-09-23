@@ -1,7 +1,7 @@
 'use client';
 import {createContext,useContext,useEffect,useState,ReactNode} from 'react';
 export type Lang={code:string;name:string;native:string;tts:string};
-export type Photo={id:string;src:string;lat:number|null;lng:number|null;ts:number};
+export type Photo={id:string;src:string;rawSrc?:string;lat:number|null;lng:number|null;ts:number};
 export type Profile={name:string;artisanId:string;phone:string;place?:string;craft?:string};
 export type Product={localName:string;recognizedAs:string;description:string;howMade:string;usedFor:string;materials:string[];time:string;craft:string;price:number};
 export type RecordIdentity={id:string;hash:string;parentHash:string;childHash:string;serialNumber:string;ts:number};

@@ -2,6 +2,14 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Non-Generative Studio Enhancement & Color Fidelity (MoSJE SIH PS 26090)
+1. **Zero Color Distortion Guarantee**: Traditional handloom & handicraft verification strictly prohibits generative recoloring, synthetic AI inpainting, or CSS saturation filters (`saturate(...)`). Dyes must retain their exact authentic wavelength and weave texture.
+2. **Client-Side Studio Compositing**: Removing cluttered backgrounds via perimeter boundary sampling, perceptual color clustering, and alpha feathering isolates the craft cleanly. Placing the isolated craft onto a standardized Raw Silk studio canvas (#FDFBF7) with a soft ground contact shadow provides an instant e-commerce studio look without altering a single foreground pixel.
+3. **Next.js Webpack Compatibility**: Heavy neural packages with ES module `import.meta` bundles (such as raw onnxruntime-web bundles) cause Terser parse errors during `next build`. Lightweight, self-contained CV segmentation runs with zero network overhead and 100% offline reliability.
+4. **rembg U²-Net Python IPC with Next.js**: Using a dedicated Python 3.12 worker in `frontend/backend/studio` running `rembg` (U²-Net ONNX) and OpenCV delivers pixel-perfect salient object segmentation without altering craft dyes or colors. To avoid Windows child process 64KB pipe buffer limits on high-resolution camera photos, file-backed I/O (`os.tmpdir()`) ensures reliable IPC between the Next.js API route `/api/studio/enhance` and the Python worker.
+5. **Canvas DataURL Base64 & PIL Truncation Safety**: Browser `canvas.toDataURL()` payloads often contain URL-encoding, whitespaces, or truncated progressive stream buffers on mobile devices. In Python, pairing `urllib.parse.unquote`, base64 padding normalization, and setting `PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True` prevents `cv2.imdecode` `Inconsistent progression sequence` failures and `OSError` crashes.
+6. **@imgly/background-removal CDN publicPath**: Models are NOT distributed on unpkg — `resources.json` is empty (`{}`). The library's built-in default CDN is `https://staticimgly.com/@imgly/background-removal-data/{version}/dist/`. Never override `publicPath` with unpkg. `onnxruntime-web` must be installed as a peer dep at the exact version specified in `peerDependencies`.
+
 ## Voice-to-Form Entity Extraction & Confirmation Synchronization (Map #135)
 
 1. **Zero Demo Values Invariant**: Real speech extraction must return `null` and explicit `missing` flags rather than injecting synthetic sample profiles (e.g. "Ramesh Kumar" or "Dhokra Elephant"). This ensures an honest reflection of speech recognition accuracy and allows users to manually fill in missing fields without having to delete fake data.
@@ -14,6 +22,7 @@
 2. **Missing ASR Confidence & Accept-with-Flag**: Bhashini Dhruva ASR does not return confidence scores for transcribed regional speech. Instead of failing or guessing, setting `confidence: null` with `lowConfidence: true`, `flag: 'confidence_missing'`, and `acceptedWithFlag: true` allows the voice UI to present transcripts for artisan confirmation without blocking the flow.
 3. **Retry Exhaustion Graceful Degradation**: When network retries (up to 3 attempts with <=60s timeouts) are exhausted, returning an accept-with-flag result rather than an HTTP 500 error enables resilient UI handling in intermittent rural 2G/3G connectivity.
 4. **Dhruva Single Compute Pipeline**: Sending combined ASR + translation tasks in a single POST request to `/services/inference/pipeline` minimizes round trips over high-latency networks.
+
 
 ## Voice-First Progressive Onboarding Stack (Map #108)
 
