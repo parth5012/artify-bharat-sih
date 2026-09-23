@@ -429,7 +429,9 @@ S3_ENDPOINT_URL=http://localhost:9000
 # Bhashini AI (Speech-to-Text & Text-to-Speech)
 BHASHINI_API_KEY=your_bhashini_api_key_here
 BHASHINI_USER_ID=your_bhashini_user_id
-BHASHINI_PIPELINE_ID=64392f96daac500b55c543d6
+BHASHINI_PIPELINE_ID=64392f96daac500b55c543cd
+BHASHINI_ASR_MODEL_ID=bhashini/ai4bharat/conformer-multilingual-asr
+BHASHINI_TRANSLATION_MODEL_ID=ai4bharat/indictrans-v2-all-gpu--t4
 
 # Government e-KYC & MoSJE Sandbox Endpoints
 MOSJE_PMDAKSH_API_URL=https://pmdaksh.dosje.gov.in/api/v1/verify

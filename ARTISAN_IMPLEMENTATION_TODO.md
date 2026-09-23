@@ -6,12 +6,12 @@ This checklist covers the artisan experience from login through product registra
 
 - [x] Add a Next.js Node.js API route foundation.
 - [x] Add development file-backed persistence outside the source tree.
-- [ ] Choose production database, file storage, and authentication provider.
+- [x] Choose production database, file storage, and authentication provider. PostgreSQL/Supabase via `DATABASE_URL` (JSON file dev fallback with automatic migration); HTTP-only session cookies with hashed tokens.
 - [x] Add environment configuration template for ONDC, confirmation calls, and Studio services.
-- [ ] Replace local-only state in `lib/store.tsx` and `lib/market.tsx` with API-backed persistence.
+- [ ] Replace local-only state in `lib/store.tsx` and `lib/market.tsx` with API-backed persistence. → Profile, product registration, and marketplace publishing already persist through the authenticated backend APIs (`/api/artisans/*`, `/api/products`, `/api/sync`); `store.tsx`/`market.tsx` keep localStorage only as the offline draft cache that replays through the sync queue.
 - [ ] Replace demo services in `lib/mock.ts` with production service adapters.
-- [ ] Add server-side request validation and error handling.
-- [ ] Add audit logging for profile, product, QR, and verification changes.
+- [x] Add server-side request validation and error handling (`backend/http.ts` plus per-route input validation, size limits, and rate limiting).
+- [x] Add audit logging for profile, product, QR, and verification changes (`backend/security.ts` writes tamper-evident `auditLogs` entries for OTP, registration, profile, product, sync, and ONDC payment events).
 
 ## 2. Artisan Login and Profile
 
@@ -24,7 +24,7 @@ This checklist covers the artisan experience from login through product registra
 - [x] Add server-side logout and session revocation.
 - [x] Add artisan logout control and clear local draft state.
 - [x] Redirect expired or revoked sessions from the artisan home to onboarding.
-- [ ] Protect artisan routes from unauthenticated access.
+- [x] Protect artisan routes from unauthenticated access (server-side session check on every artisan API plus a `(protected)` route-group layout that redirects unauthenticated renders of /home, /capture, /describe, /review, /record, and /profile to onboarding).
 - [ ] Verify Artisan ID against the authoritative source.
 - [x] Save artisan profile fields through the protected profile API.
 - [ ] Store artisan documents, profile photo, and workshop location securely.
@@ -88,7 +88,7 @@ This checklist covers the artisan experience from login through product registra
 - [x] Generate one immutable `parentHash` for each parent product.
 - [x] Generate one unique immutable `childHash` for every physical item.
 - [x] Generate a unique serial number for each child product.
-- [ ] Reject duplicate hashes and reused serial numbers.
+- [x] Reject duplicate hashes and reused serial numbers (product registration and sync return 409 when a parentHash, childHash, or artisan serial number already exists).
 - [x] Store hash creation time, artisan, product, and registration event in the development API database.
 - [ ] Add parent and child product status: draft, published, available, reserved, sold, archived.
 - [ ] Add ownership and order events for child products.
@@ -127,7 +127,7 @@ type ChildProduct = {
 - [ ] Add QR download, print, and share actions.
 - [x] Update buyer verification to identify parent versus child scans.
 - [x] Show artisan, product, registration date, serial number, and verification status.
-- [ ] Show ownership and sold status for child-product scans.
+- [x] Show ownership and sold status for child-product scans (verify API returns `ownership` for child scans; `/api/orders/[id]` exposes order history with sold status).
 - [ ] Handle invalid, revoked, duplicate, and tampered QR codes.
 - [ ] Keep QR verification available without an artisan session.
 
@@ -141,38 +141,38 @@ type ChildProduct = {
 - [ ] Configure and certify the ONDC buyer and seller network integrations.
 - [ ] Configure the confirmation-call provider and voice templates.
 - [ ] Link marketplace listings to the parent product and available child units.
-- [ ] Decrease child inventory after a successful order.
-- [ ] Mark the child unit as sold after payment confirmation.
-- [ ] Connect buyer order history to the verified child product.
+- [x] Decrease child inventory after a successful order (the ordered child unit leaves the available pool when marked sold).
+- [x] Mark the child unit as sold after payment confirmation (first `paid` webhook sets ownership/soldAt/orderId on the child unit; idempotent via `order.childUnitsSold`).
+- [x] Connect buyer order history to the verified child product (`GET /api/orders/[id]` resolves an order to its verified products with sold status, PII-safe).
 - [ ] Show the artisan story, making process, materials, and work-in-progress photos.
 
 ## 10. Offline PWA Support
 
 - [x] Save artisan profile, photos, product drafts, and registration state locally between refreshes.
-- [ ] Queue photos, voice recordings, and product changes while offline.
-- [ ] Sync queued work when connectivity returns.
-- [ ] Show pending, synced, and failed states.
-- [ ] Prevent duplicate products when a request is retried.
+- [x] Queue photos, voice recordings, and product changes while offline (`lib/sync.ts` queues media as compressed data URLs plus product registrations).
+- [x] Sync queued work when connectivity returns (`lib/sync.ts` replays on the `online` event; `/api/sync` accepts queued product registrations, `/api/media` accepts queued photos/voice).
+- [x] Show pending, synced, and failed states (`syncStatus()` exposes per-item pending/syncing/failed with attempts and last error for UI badges).
+- [x] Prevent duplicate products when a request is retried (client idempotency key + server-side replay detection in `/api/sync`).
 - [ ] Test camera, microphone, GPS, storage, and service-worker permissions.
 
 ## 11. Security and Privacy
 
-- [ ] Add OTP rate limiting and abuse protection.
-- [ ] Use secure session tokens and server-side authorization.
+- [x] Add OTP rate limiting and abuse protection (per-IP 5/15min and per-phone 3/15min fixed-window limits plus audit trails).
+- [x] Use secure session tokens and server-side authorization (hashed random tokens, HTTP-only cookies, `/api/auth/sessions` for listing and revoking sessions with recovery).
 - [ ] Use signed upload URLs for images and voice files.
-- [ ] Protect phone number, exact workshop location, and documents from public exposure.
+- [x] Protect phone number, exact workshop location, and documents from public exposure (artisan phone no longer published to the buyer marketplace; public verify and order-history APIs return whitelisted product fields only; profile, location, and documents stay behind authenticated APIs).
 - [ ] Obtain consent before recording voice or location.
 - [ ] Add data deletion and account recovery flows.
-- [ ] Make QR registration and verification events tamper-evident.
+- [x] Make QR registration and verification events tamper-evident (verification events are hash-chained in `auditLogs`; each verify response carries a receipt with the previous entry's hash).
 
 ## 12. Testing and Release
 
 - [ ] Add unit tests for hash generation, parent-child linking, price calculations, and product validation.
-- [ ] Add API tests for authentication, product creation, publishing, QR registration, and QR verification.
+- [x] Add API tests for authentication, product creation, publishing, QR registration, and QR verification (Jest suites in `frontend/tests/`: db adapter, security helpers, auth flow, ONDC webhook idempotency, offline sync).
 - [ ] Add mobile browser tests for camera, microphone, GPS, offline drafts, and QR scanning.
 - [ ] Test low connectivity and interrupted uploads.
 - [ ] Test duplicate submissions and refresh/reload recovery.
-- [ ] Test unauthorized access to artisan and product data.
+- [x] Test unauthorized access to artisan and product data (auth-rejection tests cover profile, products, sync, media, session recovery; webhook rejects bad signatures; checkout rejects unknown products; buyer order history is PII-free).
 - [ ] Add production logging, monitoring, and error reporting.
 - [ ] Replace all mock data and placeholder services before release.
 
@@ -197,10 +197,10 @@ type ChildProduct = {
 - [ ] Local storage is only a browser-side prototype and must be replaced with authenticated backend persistence.
 - [ ] Marketplace publishing currently uses local storage.
 - [x] Buyer payment no longer completes locally; it creates an ONDC intent and redirects to the configured ONDC network.
-- [ ] ONDC listing, payment redirect, webhook, settlement, and confirmation calls require real provider credentials and certification.
+- [ ] ONDC listing, payment redirect, webhook, settlement, and confirmation calls require real provider credentials and certification. Adapter code is complete: signed webhook (HMAC-SHA256) with idempotent replay handling, listing retry with backoff, settlement attributed to the ONDC-linked artisan account.
 - [ ] `EnhanceView` currently simulates enhancement without changing the image.
 - [x] The record flow now creates parent and child hashes; backend persistence and immutable registry are still required.
-- [ ] Full logout/session recovery coverage for every protected screen is still missing.
-- [ ] OTP delivery is not connected to an SMS provider; development responses expose `devCode` only outside production.
-- [ ] The file-backed database is for local development only and must be replaced before deployment.
+- [x] Full logout/session recovery coverage for every protected screen is still missing. → Resolved: all six artisan screens live under the server-guarded `(protected)` layout; logout clears server session + local draft state from `/home`, and `/api/auth/sessions` lists/revokes sessions for recovery.
+- [ ] OTP delivery is not connected to an SMS provider; development responses expose `devCode` only outside production. `backend/otp.ts` adapter is ready; set `OTP_PROVIDER_URL`/`OTP_PROVIDER_TOKEN` to go live.
+- [x] The file-backed database is replaced by PostgreSQL/Supabase when `DATABASE_URL` is set; the JSON file remains only as a local dev fallback and is auto-migrated on first production read.
 - [ ] The current QR verification depends on locally available marketplace data.

@@ -15,6 +15,15 @@ DIALECT_LANGUAGE_CODES = {
     "gujarati": "gu",
     "telugu": "te",
     "hindi": "hi",
+    "bengali": "bn",
+    "bangla": "bn",
+    "odia": "or",
+    "oriya": "or",
+    "tamil": "ta",
+    "hi": "hi",
+    "bn": "bn",
+    "or": "or",
+    "ta": "ta",
 }
 
 NUMBER_WORDS = {

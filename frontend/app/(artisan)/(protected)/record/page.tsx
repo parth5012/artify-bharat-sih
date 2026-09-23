@@ -6,6 +6,7 @@ import {QRCodeSVG} from 'qrcode.react';
 import {Btn,Screen} from '@/components/ui';
 import {Processing} from '@/components/Processing';
 import {createRecord,shrink} from '@/lib/mock';
+import {enqueueProduct} from '@/lib/sync';
 import {qrUrl,useMarket} from '@/lib/market';
 import {useStore} from '@/lib/store';
 export default function Record(){
@@ -15,8 +16,13 @@ export default function Record(){
   const rec=s.record,p=s.product;if(!rec||!p||s.productId==='u-'+rec.id)return;
   (async()=>{try{const api=await fetch('/api/products',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:p.localName,craft:p.craft,price:p.price,description:p.description,materials:p.materials})});const data=await api.json();if(!api.ok)throw new Error(data.error);const remote=data.product;const imgs=await Promise.all(s.photos.map(x=>shrink(x.src)));const id='u-'+rec.id;
    publish({id,name:p.localName,craft:p.craft,price:p.price,artisanId:s.profile.artisanId,images:imgs,wip:[],short:p.recognizedAs+'.',description:p.description,madeHow:p.howMade,usedFor:p.usedFor,materials:p.materials,time:p.time,hash:remote.childHash,parentHash:remote.parentHash,childHash:remote.childHash,serialNumber:remote.serialNumber,added:Date.now()},
-    {id:s.profile.artisanId,name:s.profile.name,craft:p.recognizedAs,region:s.profile.place??'India',since:new Date().getFullYear(),story:'New on Artifact.',quote:'Made by hand, with care.',phone:s.profile.phone});
-   set({productId:id,record:{...rec,hash:remote.parentHash,parentHash:remote.parentHash,childHash:remote.childHash,serialNumber:remote.serialNumber}})}catch(e){setError(e instanceof Error?e.message:'Unable to register product')}})();
+    // Privacy: the artisan's phone number is never published to the buyer marketplace.
+    {id:s.profile.artisanId,name:s.profile.name,craft:p.recognizedAs,region:s.profile.place??'India',since:new Date().getFullYear(),story:'New on Artifact.',quote:'Made by hand, with care.'});
+   set({productId:id,record:{...rec,hash:remote.parentHash,parentHash:remote.parentHash,childHash:remote.childHash,serialNumber:remote.serialNumber}})}catch(e){
+   // Offline handling: queue the registration for retry when connectivity
+   // returns. The client idempotency key keeps replays duplicate-free.
+   if(p&&rec){enqueueProduct({name:p.localName,craft:p.craft,description:p.description,price:p.price,materials:p.materials,queuedAtSeed:rec.id})}
+   setError(e instanceof Error?e.message:'Unable to register product')}})();
  },[s.record]); // eslint-disable-line
  if(error)return <Screen step={6}><div className="flex min-h-full flex-col items-center justify-center gap-4 text-center"><h2 className="text-2xl font-bold">Could not register product</h2><p className="text-stone-600">{error}</p><Btn onClick={()=>{setError('');set({productId:null})}}>Try again</Btn></div></Screen>;
  if(!ready||!s.record||!s.productId)return <Processing step={6} title="Registering your product" sub="Almost ready" steps={['Saving your photos & place','Recording who made it','Getting it ready for the market']} onDone={()=>setReady(true)}/>;
