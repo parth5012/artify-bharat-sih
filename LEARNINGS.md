@@ -2,6 +2,13 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Non-Generative Studio Enhancement & Color Fidelity (MoSJE SIH PS 26090)
+1. **Zero Color Distortion Guarantee**: Traditional handloom & handicraft verification strictly prohibits generative recoloring, synthetic AI inpainting, or CSS saturation filters (`saturate(...)`). Dyes must retain their exact authentic wavelength and weave texture.
+2. **Client-Side Studio Compositing**: Removing cluttered backgrounds via perimeter boundary sampling, perceptual color clustering, and alpha feathering isolates the craft cleanly. Placing the isolated craft onto a standardized Raw Silk studio canvas (#FDFBF7) with a soft ground contact shadow provides an instant e-commerce studio look without altering a single foreground pixel.
+3. **Next.js Webpack Compatibility**: Heavy neural packages with ES module `import.meta` bundles (such as raw onnxruntime-web bundles) cause Terser parse errors during `next build`. Lightweight, self-contained CV segmentation runs with zero network overhead and 100% offline reliability.
+4. **rembg U²-Net Python IPC with Next.js**: Using a dedicated Python 3.12 worker in `frontend/backend/studio` running `rembg` (U²-Net ONNX) and OpenCV delivers pixel-perfect salient object segmentation without altering craft dyes or colors. To avoid Windows child process 64KB pipe buffer limits on high-resolution camera photos, file-backed I/O (`os.tmpdir()`) ensures reliable IPC between the Next.js API route `/api/studio/enhance` and the Python worker.
+5. **Canvas DataURL Base64 & PIL Truncation Safety**: Browser `canvas.toDataURL()` payloads often contain URL-encoding, whitespaces, or truncated progressive stream buffers on mobile devices. In Python, pairing `urllib.parse.unquote`, base64 padding normalization, and setting `PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True` prevents `cv2.imdecode` `Inconsistent progression sequence` failures and `OSError` crashes.
+
 ## Voice-First Progressive Onboarding Stack (Map #108)
 
 1. **Stacked PR Discipline with CodeRabbit**: When babysitting a multi-PR stack (#115 through #120), review bots review each diff relative to its base. Fixing a review comment on an upper branch (e.g. #120) preserves the integrity of earlier PRs without requiring interactive rebases and force-push cascades that trigger multiple rounds of CI.
