@@ -13,11 +13,34 @@ export function useVoice() {
   const raf = useRef(0);
   const ctx = useRef<AudioContext | null>(null);
   const stream = useRef<MediaStream | null>(null);
+  const liveTranscript = useRef('');
+  const srRef = useRef<any>(null);
 
   const start = useCallback(async () => {
     setMicError(null);
     setL(true);
+    liveTranscript.current = '';
     let an: AnalyserNode | null = null;
+
+    const SpeechRec = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
+    if (SpeechRec) {
+      try {
+        const sr = new SpeechRec();
+        sr.continuous = true;
+        sr.interimResults = true;
+        sr.onresult = (e: any) => {
+          let s = '';
+          for (let i = 0; i < e.results.length; ++i) {
+            s += e.results[i][0].transcript + ' ';
+          }
+          liveTranscript.current = s.trim();
+        };
+        sr.start();
+        srRef.current = sr;
+      } catch (e) {
+        console.warn('[useVoice] SpeechRecognition could not start:', e);
+      }
+    }
 
     try {
       if (!navigator?.mediaDevices?.getUserMedia) {
@@ -111,6 +134,11 @@ export function useVoice() {
         setL(false);
         setLv(Array(N).fill(4));
 
+        if (srRef.current) {
+          try { srRef.current.stop(); } catch {}
+          srRef.current = null;
+        }
+
         const r = rec.current;
         const clean = () => {
           stream.current?.getTracks().forEach((t) => t.stop());
@@ -151,5 +179,5 @@ export function useVoice() {
     []
   );
 
-  return { listening, levels, micError, start, stop };
+  return { listening, levels, micError, liveTranscript, start, stop };
 }

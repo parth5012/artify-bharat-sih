@@ -53,6 +53,8 @@ export interface VoiceInput {
   language?: string;
   targetLanguage?: string;
   isDigitOnly?: boolean;
+  kind?: 'identity' | 'product';
+  clientTranscript?: string;
 }
 
 interface BhashiniTaskOutput {
@@ -185,7 +187,48 @@ function buildHeaders(): Record<string, string> {
  * Mock responses for simulation / offline / dev environments.
  * Follows the playbook sample in nlp_service.py.
  */
-function getMockVoiceResult(language: string): VoiceResult {
+function getMockVoiceResult(language: string, kind: 'identity' | 'product' = 'product'): VoiceResult {
+  if (kind === 'identity') {
+    const identitySamples: Record<string, { transcript: string; translation: string }> = {
+      hi: {
+        transcript:
+          'मेरा नाम रमेश कुमार है, आर्टिज़न आईडी ART-2041 और फ़ोन 9876543210 है। मैं बस्तर छत्तीसगढ़ से हूँ और हथकरघा बुनाई करता हूँ।',
+        translation:
+          'My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. I am from Bastar, Chhattisgarh practicing traditional handloom weaving.',
+      },
+      bn: {
+        transcript:
+          'আমার নাম সুবীর মণ্ডল, কারিগর আইডি ART-3104 এবং ফোন নম্বর 9831234567। আমি শান্তিনিকেতন থেকে ঐতিহ্যবাহী কাঁথা সেলাই করি।',
+        translation:
+          'My name is Subir Mondal. My artisan ID is ART-3104 and phone number is 9831234567. I am from Shantiniketan practicing traditional Kantha embroidery.',
+      },
+      or: {
+        transcript:
+          'ମୋର ନାମ ଦିଲ୍ଲୀପ ମେହେର, କାରିଗର ଆଇଡି ART-4209 ଏବଂ ଫୋନ୍ 9861234567। ମୁଁ ସମ୍ବଲପୁର ଓଡ଼ିଶାରୁ ଆସିଛି ଏବଂ ହାତବୁଣା ଶାଢ଼ୀ ବୁଣେ।',
+        translation:
+          'My name is Dillip Meher. My artisan ID is ART-4209 and phone number is 9861234567. I am from Sambalpur, Odisha practicing handloom weaving.',
+      },
+      ta: {
+        transcript:
+          'என் பெயர் சுந்தரம், கைவினைஞர் ஐடி ART-5512 மற்றும் தொலைபேசி 9840123456. நான் காஞ்சிபுரம் பகுதியிலிருந்து பாரம்பரிய பட்டு நெசவு செய்கிறேன்.',
+        translation:
+          'My name is Sundaram. My artisan ID is ART-5512 and phone number is 9840123456. I am from Kanchipuram practicing traditional silk weaving.',
+      },
+    };
+
+    const sample = identitySamples[language] || identitySamples.hi;
+    return {
+      transcript: sample.transcript,
+      translation: sample.translation,
+      language,
+      confidence: 0.95,
+      lowConfidence: false,
+      flag: null,
+      acceptedWithFlag: false,
+      attempts: 1,
+    };
+  }
+
   const samples: Record<string, { transcript: string; translation: string }> = {
     hi: {
       transcript:
@@ -240,6 +283,21 @@ export async function processVoiceWithBhashini(input: VoiceInput): Promise<Voice
   const targetLanguage = input.targetLanguage?.trim() || 'en';
   const cleanBase64 = cleanBase64Audio(input.audioBase64);
 
+  // If client provided a recognized transcript directly (e.g. browser speech recognition fallback or test input)
+  if (input.clientTranscript && input.clientTranscript.trim()) {
+    const text = input.clientTranscript.trim();
+    return {
+      transcript: text,
+      translation: text,
+      language: sourceLanguage,
+      confidence: 0.95,
+      lowConfidence: false,
+      flag: null,
+      acceptedWithFlag: false,
+      attempts: 1,
+    };
+  }
+
   // Check for mock mode or unconfigured dev environment
   const useMock = process.env.USE_MOCK_AI === 'true' || process.env.USE_MOCK_VOICE === 'true';
   const apiKey = process.env.BHASHINI_API_KEY || process.env.BHASHINI_ULCA_API_KEY;
@@ -250,7 +308,7 @@ export async function processVoiceWithBhashini(input: VoiceInput): Promise<Voice
     console.warn(
       `[bhashini] WARNING: Unconfigured environment (useMock=${useMock}, apiKey=${!!apiKey}, userId=${!!userId}, authKey=${!!authKey}). Falling back to static mock data.`
     );
-    return getMockVoiceResult(sourceLanguage);
+    return getMockVoiceResult(sourceLanguage, input.kind || 'product');
   }
 
   console.log(`[bhashini] Calling live Dhruva endpoint: ${endpoint()} (userId=${userId}, authKey=${authKey ? 'configured' : 'missing'})`);

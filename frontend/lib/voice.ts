@@ -4,6 +4,8 @@ export interface ProcessVoiceOptions {
   language?: string;
   targetLanguage?: string;
   isDigitOnly?: boolean;
+  kind?: 'identity' | 'product';
+  clientTranscript?: string;
 }
 
 /**
@@ -24,6 +26,8 @@ export async function processVoiceAudio(
       language: options.language || 'hi',
       targetLanguage: options.targetLanguage || 'en',
       isDigitOnly: options.isDigitOnly,
+      kind: options.kind,
+      clientTranscript: options.clientTranscript,
     });
   } else {
     const formData = new FormData();
@@ -31,6 +35,8 @@ export async function processVoiceAudio(
     if (options.language) formData.append('language', options.language);
     if (options.targetLanguage) formData.append('targetLanguage', options.targetLanguage);
     if (options.isDigitOnly) formData.append('isDigitOnly', 'true');
+    if (options.kind) formData.append('kind', options.kind);
+    if (options.clientTranscript) formData.append('clientTranscript', options.clientTranscript);
     body = formData;
   }
 

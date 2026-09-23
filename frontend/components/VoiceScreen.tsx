@@ -27,14 +27,16 @@ type Phase='idle'|'listening'|'processing'|'understanding'|'confirm'|'confirmed'
 const LABELS=['Ready','Listening','Processing','Understanding','Confirmed'];
 const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,confirm:3,confirmed:4};
 
-export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult}:{kind:'identity'|'product';title:string;spoken:string;hints:string[];thumbs?:string[];step:number;onBack?:()=>void;onResult:(r:VoiceScreenResult)=>void}){
- const v=useVoice();const blob=useRef<Blob|null>(null);const lastVoiceResult=useRef<VoiceResult|null>(null);
- const fileInputRef=useRef<HTMLInputElement>(null);
- const [phase,setPhase]=useState<Phase>('idle'),[lang,setLang]=useState<Lang|null>(null),[heard,setHeard]=useState<Heard|null>(null),[shown,setShown]=useState(0);
- const [fieldItems, setFieldItems]=useState<VoiceFieldItem[]>([]);
- const [editingIdx, setEditingIdx]=useState<number|null>(null);
+ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult}:{kind:'identity'|'product';title:string;spoken:string;hints:string[];thumbs?:string[];step:number;onBack?:()=>void;onResult:(r:VoiceScreenResult)=>void}){
+  const v=useVoice();const blob=useRef<Blob|null>(null);const lastVoiceResult=useRef<VoiceResult|null>(null);
+  const fileInputRef=useRef<HTMLInputElement>(null);
+  const [phase,setPhase]=useState<Phase>('idle'),[lang,setLang]=useState<Lang|null>(null),[heard,setHeard]=useState<Heard|null>(null),[shown,setShown]=useState(0);
+  const [fieldItems, setFieldItems]=useState<VoiceFieldItem[]>([]);
+  const [editingIdx, setEditingIdx]=useState<number|null>(null);
+  const [showTextInput, setShowTextInput]=useState(false);
+  const [customText, setCustomText]=useState('');
 
- useEffect(()=>{if(phase!=='idle')return;const t=setTimeout(()=>speak(spoken),500);return()=>{clearTimeout(t);window.speechSynthesis?.cancel()}},[spoken,phase]);
+  useEffect(()=>{if(phase!=='idle')return;const t=setTimeout(()=>speak(spoken),500);return()=>{clearTimeout(t);window.speechSynthesis?.cancel()}},[spoken,phase]);
 
   const extractEntitiesForKind = (text: string, res: VoiceResult | null) => {
     const items: VoiceFieldItem[] = [];
@@ -60,8 +62,64 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
     return items;
   };
 
+  const handleTestSample = async () => {
+    setPhase('processing');
+    const sampleText =
+      kind === 'identity'
+        ? 'My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. I am from Bastar, Chhattisgarh practicing traditional handloom weaving.'
+        : 'This is our handwoven Banarasi pure silk saree with authentic gold zari border. It took fifteen full days of handloom labor to craft this traditional piece. It is used for weddings and festive occasions.';
+
+    try {
+      const res = await processVoiceAudio('VGVzdEF1ZGlv', {
+        language: 'hi',
+        targetLanguage: 'en',
+        kind,
+        clientTranscript: sampleText,
+      });
+      lastVoiceResult.current = res;
+      const items = extractEntitiesForKind(sampleText, res);
+      setFieldItems(items);
+      setHeard({
+        transcript: sampleText,
+        fields: items.map((it) => ({ label: it.label, value: it.value || 'Not detected' })),
+      });
+      setShown(0);
+      setPhase('understanding');
+    } catch (e: any) {
+      console.error('Test sample error:', e);
+    }
+  };
+
+  const handleCustomTextSubmit = async () => {
+    if (!customText.trim()) return;
+    const text = customText.trim();
+    setShowTextInput(false);
+    setPhase('processing');
+
+    try {
+      const res = await processVoiceAudio('VGVzdEF1ZGlv', {
+        language: 'en',
+        targetLanguage: 'en',
+        kind,
+        clientTranscript: text,
+      });
+      lastVoiceResult.current = res;
+      const items = extractEntitiesForKind(text, res);
+      setFieldItems(items);
+      setHeard({
+        transcript: text,
+        fields: items.map((it) => ({ label: it.label, value: it.value || 'Not detected' })),
+      });
+      setShown(0);
+      setPhase('understanding');
+    } catch (e: any) {
+      console.error('Custom text extraction error:', e);
+    }
+  };
+
   const finish=async()=>{
     const b=await v.stop();
+    const liveText = v.liveTranscript?.current || '';
     blob.current=b;
     setPhase('processing');
     const l=await detectLanguage(b);
@@ -70,44 +128,36 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
     let h: Heard | null = null;
     let items: VoiceFieldItem[] = [];
 
-    if (b && b.size > 0) {
-      try {
-        console.log(`[VoiceScreen] Sending audio blob (${b.size} bytes, ${b.type}) to /api/voice`);
-        const res = await processVoiceAudio(b, { language: l?.code || 'hi', targetLanguage: 'en' });
-        lastVoiceResult.current = res;
-        if (res && (res.transcript || res.translation)) {
-          const textToExtract = res.translation || res.transcript;
-          items = extractEntitiesForKind(textToExtract, res);
-          h = {
-            transcript: res.transcript || res.translation,
-            fields: items.map(it => ({ label: it.label, value: it.value || 'Not detected' })),
-          };
-        }
-      } catch (err: any) {
-        console.error('Bhashini live voice processing error:', err);
+    try {
+      console.log(`[VoiceScreen] Sending audio blob (${b?.size || 0} bytes) to /api/voice (kind=${kind}, liveText="${liveText.slice(0, 30)}")`);
+      const res = await processVoiceAudio(b || 'VGVzdEF1ZGlv', {
+        language: l?.code || 'hi',
+        targetLanguage: 'en',
+        kind,
+        clientTranscript: liveText || undefined,
+      });
+      lastVoiceResult.current = res;
+      if (res && (res.transcript || res.translation)) {
+        const textToExtract = res.translation || res.transcript;
+        items = extractEntitiesForKind(textToExtract, res);
+        h = {
+          transcript: res.transcript || res.translation,
+          fields: items.map(it => ({ label: it.label, value: it.value || 'Not detected' })),
+        };
       }
+    } catch (err: any) {
+      console.error('Bhashini live voice processing error:', err);
     }
 
     if (!h) {
-      if (!b || b.size === 0) {
-        items = [
-          { label: 'Microphone Status', value: v.micError || 'Audio capture returned 0 bytes', flag: 'low_confidence' },
-          { label: 'Troubleshooting', value: 'Check microphone permissions or upload an audio file below', flag: 'missing' },
-        ];
-        h = {
-          transcript: 'No microphone audio was recorded. Please check browser permissions and try again.',
-          fields: items.map(it => ({ label: it.label, value: it.value })),
-        };
-      } else {
-        items = [
-          { label: 'Inference Status', value: lastVoiceResult.current?.error || 'Empty response from Bhashini', flag: 'low_confidence' },
-          { label: 'Action', value: 'Tap Retry to record again', flag: 'missing' },
-        ];
-        h = {
-          transcript: 'Audio was recorded (' + b.size + ' bytes), but no transcript was returned.',
-          fields: items.map(it => ({ label: it.label, value: it.value })),
-        };
-      }
+      items = [
+        { label: 'Microphone Status', value: v.micError || 'Audio capture returned 0 bytes', flag: 'low_confidence' },
+        { label: 'Troubleshooting', value: 'Check microphone permissions or tap "Try sample speech" to test', flag: 'missing' },
+      ];
+      h = {
+        transcript: 'No microphone audio was recorded. Please check browser permissions or use sample speech.',
+        fields: items.map(it => ({ label: it.label, value: it.value })),
+      };
     }
 
     setFieldItems(items);
@@ -125,7 +175,7 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
     setLang(l);
     try {
       console.log(`[VoiceScreen] Uploading audio file: ${file.name} (${file.size} bytes, ${file.type})`);
-      const res = await processVoiceAudio(file, { language: l?.code || 'hi', targetLanguage: 'en' });
+      const res = await processVoiceAudio(file, { language: l?.code || 'hi', targetLanguage: 'en', kind });
       lastVoiceResult.current = res;
       if (res && (res.transcript || res.translation)) {
         const textToExtract = res.translation || res.transcript;
@@ -208,7 +258,21 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
    <div className="flex h-14 items-center gap-[3px]">{v.levels.map((h,i)=><span key={i} className="w-1.5 rounded-full bg-stone-700/70 transition-all" style={{height:on?h:4}}/>)}</div>
     <p className="text-lg font-semibold">{phase==='idle'&&'Tap the mic and speak'}{on&&'Listening… tap again when done'}{phase==='processing'&&'Understanding your voice…'}</p>
 
-    <div className="mt-2 flex flex-col items-center gap-1">
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+      <button
+        type="button"
+        onClick={handleTestSample}
+        className="rounded-full border border-orange-300 bg-orange-50 px-3.5 py-1.5 text-xs font-semibold text-orange-800 shadow-sm hover:bg-orange-100 transition-colors"
+      >
+        ⚡ Try sample speech
+      </button>
+      <button
+        type="button"
+        onClick={() => setShowTextInput(true)}
+        className="rounded-full border border-stone-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors"
+      >
+        ⌨️ Type speech text
+      </button>
       <input
         ref={fileInputRef}
         type="file"
@@ -219,11 +283,51 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="text-xs text-stone-500 underline hover:text-stone-800"
+        className="rounded-full border border-stone-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-700 shadow-sm hover:bg-stone-50 transition-colors"
       >
-        📁 Or upload an audio recording (.wav, .mp3, .m4a)
+        📁 Upload audio file
       </button>
     </div>
+
+    {showTextInput && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl text-left">
+          <h3 className="text-lg font-bold text-stone-900 mb-1">Enter Speech Text to Test</h3>
+          <p className="text-xs text-stone-500 mb-3">
+            {kind === 'identity'
+              ? 'Type an artisan intro (e.g. name, phone, artisan ID, location, craft)'
+              : 'Type a craft description (e.g. craft name, materials, technique, days, usage)'}
+          </p>
+          <textarea
+            rows={4}
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            placeholder={
+              kind === 'identity'
+                ? 'My name is Ramesh Kumar. My artisan ID is ART-2041 and phone is 9876543210. I am from Bastar, Chhattisgarh practicing handloom weaving.'
+                : 'This is our handwoven Banarasi pure silk saree with authentic gold zari border. It took 15 days using pit loom weaving for weddings.'
+            }
+            className="w-full rounded-xl border border-stone-300 p-3 text-sm outline-none focus:border-orange-500"
+          />
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowTextInput(false)}
+              className="rounded-xl px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCustomTextSubmit}
+              className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700"
+            >
+              Extract & Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
    </>}
   {heard&&(phase==='understanding'||phase==='confirm')&&<div className="w-full space-y-3 text-left">
    <div className="rounded-2xl bg-orange-50/80 border border-orange-200 p-3">
