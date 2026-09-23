@@ -22,6 +22,18 @@ export interface ArtisanExtractionResult {
   overallConfidence: number;
 }
 
+export interface ProductExtractionResult {
+  productName: ExtractedField<string>;
+  materials: ExtractedField<string[]>;
+  makingProcess: ExtractedField<string>;
+  usage: ExtractedField<string>;
+  timeRequired: ExtractedField<string>;
+  craftCategory: ExtractedField<string>;
+  description: ExtractedField<string>;
+  rawTranscript: string;
+  overallConfidence: number;
+}
+
 const CRAFT_HUBS_EN = [
   'Varanasi', 'Banaras', 'Kashi', 'Bastar', 'Chanderi', 'Madhubani', 'Kutch', 'Bhuj',
   'Jaipur', 'Jodhpur', 'Udaipur', 'Pochampally', 'Sambalpur', 'Kotpad', 'Bhagalpur',
@@ -203,6 +215,205 @@ export function extractArtisanFromTranscript(transcript: string): ArtisanExtract
     artisanId: idField,
     location: locField,
     craft: craftField,
+    rawTranscript: transcript,
+    overallConfidence,
+  };
+}
+
+const NUMBER_WORDS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
+  thirty: 30, forty: 40, fifty: 50, sixty: 60,
+  एक: 1, दो: 2, तीन: 3, चार: 4, पांच: 5, छह: 6, सात: 7, आठ: 8, नौ: 9, दस: 10, पंद्रह: 15
+};
+
+const MATERIALS_DICTIONARY: { keywords: string[]; label: string }[] = [
+  { keywords: ['silk', 'pure silk', 'mulberry silk', 'kosa silk', 'tussar silk', 'रेशम', 'सिल्क'], label: 'Silk' },
+  { keywords: ['gold zari', 'silver zari', 'zari', 'जरी'], label: 'Zari' },
+  { keywords: ['brass', 'पीतल'], label: 'Brass' },
+  { keywords: ['beeswax', 'wax', 'मोम'], label: 'Beeswax' },
+  { keywords: ['river clay', 'clay', 'terracotta', 'मिट्टी'], label: 'River clay' },
+  { keywords: ['pashmina', 'cashmere', 'wool', 'ऊन'], label: 'Pashmina wool' },
+  { keywords: ['cotton', 'khadi', 'कपास', 'खादी'], label: 'Cotton' },
+  { keywords: ['wood', 'teak', 'sheesham', 'लकड़ी'], label: 'Wood' },
+  { keywords: ['bell metal', 'bronze', 'कांसा'], label: 'Bell metal' },
+  { keywords: ['jute', 'पटसन'], label: 'Jute' },
+  { keywords: ['bamboo', 'cane', 'बांस'], label: 'Bamboo' },
+];
+
+/**
+ * Extract product entities from English or Hindi transcript.
+ */
+export function extractProductFromTranscript(transcript: string): ProductExtractionResult {
+  const text = transcript.trim();
+  if (!text) {
+    return {
+      productName: makeField<string>(null, 0),
+      materials: makeField<string[]>(null, 0),
+      makingProcess: makeField<string>(null, 0),
+      usage: makeField<string>(null, 0),
+      timeRequired: makeField<string>(null, 0),
+      craftCategory: makeField<string>(null, 0),
+      description: makeField<string>(null, 0),
+      rawTranscript: transcript,
+      overallConfidence: 0,
+    };
+  }
+
+  const lowerText = text.toLowerCase();
+
+  // 1. Time Required extraction
+  let timeVal: string | null = null;
+  let timeConf = 0;
+
+  const digitTimeMatch = text.match(/(?:took|takes|spent|need|needs|time|समय|लगते)?\s*(\d+(?:\.\d+)?)\s*(?:full\s*)?(days?|hours?|दिन|घंटे|din|ghante)\b/i);
+  if (digitTimeMatch) {
+    const qty = digitTimeMatch[1];
+    const rawUnit = digitTimeMatch[2].toLowerCase();
+    const unit = (rawUnit.startsWith('hour') || rawUnit.includes('घंटे') || rawUnit.includes('ghante')) ? 'hours' : 'days';
+    timeVal = `${qty} ${unit}`;
+    timeConf = 0.95;
+  } else {
+    const wordKeys = Object.keys(NUMBER_WORDS).join('|');
+    const wordTimeRegex = new RegExp(`(?:took|takes|spent|need|needs|time|समय|लगते)?\\s*(${wordKeys})\\s*(?:full\\s*)?(days?|hours?|दिन|घंटे|din|ghante)\\b`, 'i');
+    const wordTimeMatch = text.match(wordTimeRegex);
+    if (wordTimeMatch) {
+      const num = NUMBER_WORDS[wordTimeMatch[1].toLowerCase()] || wordTimeMatch[1];
+      const rawUnit = wordTimeMatch[2].toLowerCase();
+      const unit = (rawUnit.startsWith('hour') || rawUnit.includes('घंटे') || rawUnit.includes('ghante')) ? 'hours' : 'days';
+      timeVal = `${num} ${unit}`;
+      timeConf = 0.90;
+    }
+  }
+
+  // 2. Materials extraction
+  const detectedMaterials: string[] = [];
+  for (const item of MATERIALS_DICTIONARY) {
+    if (item.keywords.some(kw => lowerText.includes(kw))) {
+      detectedMaterials.push(item.label);
+    }
+  }
+  const matsVal = detectedMaterials.length > 0 ? detectedMaterials : null;
+  const matsConf = detectedMaterials.length > 0 ? 0.88 : 0;
+
+  // 3. Making Process extraction
+  let processVal: string | null = null;
+  let processConf = 0;
+
+  if (lowerText.includes('lost-wax') || lowerText.includes('lost wax') || lowerText.includes('मोम और मिट्टी')) {
+    processVal = 'Lost-wax casting, hand-finished';
+    processConf = 0.92;
+  } else if (lowerText.includes('jacquard') || lowerText.includes('pit loom') || (lowerText.includes('loom') && lowerText.includes('weaving'))) {
+    processVal = 'Pit loom jacquard weaving';
+    processConf = 0.90;
+  } else if (lowerText.includes('handloom') || lowerText.includes('हाथ से बुनाई') || lowerText.includes('weaving')) {
+    processVal = 'Handloom weaving';
+    processConf = 0.85;
+  } else if (lowerText.includes('hand-painted') || lowerText.includes('चित्रकला')) {
+    processVal = 'Hand-painted with natural pigments';
+    processConf = 0.85;
+  } else if (lowerText.includes('carving') || lowerText.includes('नक्काशी')) {
+    processVal = 'Hand-carved woodwork';
+    processConf = 0.85;
+  } else {
+    const processMatch = text.match(/(?:made by|crafted by|technique|विधि|तरीका)[\s:]*([^,\.]+)/i);
+    if (processMatch && processMatch[1].trim().length > 3) {
+      processVal = processMatch[1].trim();
+      processConf = 0.75;
+    }
+  }
+
+  // 4. Usage extraction
+  let usageVal: string | null = null;
+  let usageConf = 0;
+
+  if (lowerText.includes('décor') || lowerText.includes('decor') || lowerText.includes('gifting') || lowerText.includes('सजावट')) {
+    usageVal = 'Home décor & gifting';
+    usageConf = 0.90;
+  } else if (lowerText.includes('wedding') || lowerText.includes('festive') || lowerText.includes('celebration') || lowerText.includes('शादी') || lowerText.includes('त्योहार')) {
+    usageVal = 'Weddings & festive occasions';
+    usageConf = 0.90;
+  } else if (lowerText.includes('puja') || lowerText.includes('prayer') || lowerText.includes('पूजा')) {
+    usageVal = 'Puja & spiritual ceremonies';
+    usageConf = 0.88;
+  } else if (lowerText.includes('daily wear') || lowerText.includes('रोजाना')) {
+    usageVal = 'Daily apparel wear';
+    usageConf = 0.85;
+  } else {
+    const usageMatch = text.match(/(?:used for|ideal for|उपयोग|काम आता है)[\s:]*([^,\.]+)/i);
+    if (usageMatch && usageMatch[1].trim().length > 3) {
+      usageVal = usageMatch[1].trim();
+      usageConf = 0.75;
+    }
+  }
+
+  // 5. Product Name extraction
+  let nameVal: string | null = null;
+  let nameConf = 0;
+
+  if (lowerText.includes('banarasi') && (lowerText.includes('saree') || lowerText.includes('sari') || lowerText.includes('साड़ी'))) {
+    nameVal = 'Handwoven Banarasi Silk Saree';
+    nameConf = 0.92;
+  } else if (lowerText.includes('dhokra') && (lowerText.includes('elephant') || lowerText.includes('हाथी'))) {
+    nameVal = 'Dhokra Brass Elephant Figurine';
+    nameConf = 0.92;
+  } else if (lowerText.includes('dhokra')) {
+    nameVal = 'Dhokra Brass Figurine';
+    nameConf = 0.88;
+  } else if (lowerText.includes('pashmina')) {
+    nameVal = 'Handcrafted Pashmina Stole';
+    nameConf = 0.90;
+  } else if (lowerText.includes('madhubani')) {
+    nameVal = 'Handmade Madhubani Painting';
+    nameConf = 0.90;
+  } else {
+    const isAMatch = text.match(/(?:this\s+is\s+(?:a|an)|craft\s+is\s+(?:a|an)?)\s+([A-Za-z\s]+?)(?=\s+(?:made|with|using|crafted|that|which|and)|\.|\,|$)/i);
+    if (isAMatch && isAMatch[1].trim().length > 2) {
+      const cand = isAMatch[1].trim();
+      const blacklist = ['artisan', 'master', 'traditional', 'handmade', 'piece', 'item'];
+      if (!blacklist.includes(cand.toLowerCase())) {
+        nameVal = cand;
+        nameConf = 0.80;
+      }
+    }
+  }
+
+  // 6. Craft Category
+  let craftCat: string | null = null;
+  let craftCatConf = 0;
+  for (const entry of CRAFT_TYPES) {
+    const hit = entry.keywords.some(kw => lowerText.includes(kw.toLowerCase()));
+    if (hit) {
+      craftCat = entry.label;
+      craftCatConf = 0.88;
+      break;
+    }
+  }
+
+  const nameField = makeField(nameVal, nameConf);
+  const matsField = makeField(matsVal, matsConf);
+  const processField = makeField(processVal, processConf);
+  const usageField = makeField(usageVal, usageConf);
+  const timeField = makeField(timeVal, timeConf);
+  const craftField = makeField(craftCat, craftCatConf);
+  const descField = makeField(text.length > 5 ? text : null, text.length > 5 ? 0.90 : 0);
+
+  const checkFields = [nameField, matsField, processField, usageField, timeField, craftField];
+  const populated = checkFields.filter(f => f.value !== null);
+  const overallConfidence = populated.length > 0
+    ? Number((populated.reduce((acc, f) => acc + f.confidence, 0) / populated.length).toFixed(2))
+    : 0;
+
+  return {
+    productName: nameField,
+    materials: matsField,
+    makingProcess: processField,
+    usage: usageField,
+    timeRequired: timeField,
+    craftCategory: craftField,
+    description: descField,
     rawTranscript: transcript,
     overallConfidence,
   };

@@ -1,4 +1,4 @@
-import { extractArtisanFromTranscript } from './nlp';
+import { extractArtisanFromTranscript, extractProductFromTranscript } from './nlp';
 
 async function runTests() {
   const results: { name: string; passed: boolean; error?: string }[] = [];
@@ -67,6 +67,65 @@ async function runTests() {
     if (res.phone.value !== '9812345670') throw new Error(`Expected phone 9812345670, got ${res.phone.value}`);
     if (res.artisanId.value !== 'ART-5521') throw new Error(`Expected artisanId ART-5521, got ${res.artisanId.value}`);
     if (!res.location.value?.includes('मधुबनी')) throw new Error(`Expected location मधुबनी, got ${res.location.value}`);
+  });
+
+  test('extracts product entities from English transcript', () => {
+    const text = 'This is a handwoven Banarasi pure silk saree with authentic gold zari border. It is made using pit loom jacquard weaving and took 15 full days to craft. It is used for weddings and festive ceremonies.';
+    const res = extractProductFromTranscript(text);
+
+    if (!res.productName.value?.toLowerCase().includes('saree') && !res.productName.value?.toLowerCase().includes('banarasi')) {
+      throw new Error(`Expected product name containing Saree/Banarasi, got ${res.productName.value}`);
+    }
+    if (res.productName.confidence < 0.8) throw new Error(`Expected high confidence for product name, got ${res.productName.confidence}`);
+
+    const mats = res.materials.value || [];
+    if (!mats.some(m => m.toLowerCase().includes('silk'))) throw new Error(`Expected materials to include silk, got ${mats.join(', ')}`);
+    if (!mats.some(m => m.toLowerCase().includes('zari'))) throw new Error(`Expected materials to include zari, got ${mats.join(', ')}`);
+
+    if (!res.makingProcess.value?.toLowerCase().includes('weaving') && !res.makingProcess.value?.toLowerCase().includes('loom')) {
+      throw new Error(`Expected making process to include weaving/loom, got ${res.makingProcess.value}`);
+    }
+
+    if (!res.usage.value?.toLowerCase().includes('wedding') && !res.usage.value?.toLowerCase().includes('festive')) {
+      throw new Error(`Expected usage to include wedding/festive, got ${res.usage.value}`);
+    }
+
+    if (res.timeRequired.value !== '15 days') {
+      throw new Error(`Expected timeRequired 15 days, got ${res.timeRequired.value}`);
+    }
+  });
+
+  test('extracts Dhokra metal craft with multi-materials and word numbers', () => {
+    const text = 'This is a Dhokra brass elephant made by lost-wax casting using brass, beeswax, and river clay. It is used for home décor and gifting, and took five days to make.';
+    const res = extractProductFromTranscript(text);
+
+    if (!res.productName.value?.toLowerCase().includes('dhokra') && !res.productName.value?.toLowerCase().includes('elephant')) {
+      throw new Error(`Expected Dhokra/Elephant product name, got ${res.productName.value}`);
+    }
+    const mats = res.materials.value || [];
+    if (!mats.some(m => m.toLowerCase().includes('brass'))) throw new Error(`Expected brass in materials`);
+    if (!mats.some(m => m.toLowerCase().includes('beeswax'))) throw new Error(`Expected beeswax in materials`);
+    if (!mats.some(m => m.toLowerCase().includes('clay'))) throw new Error(`Expected clay in materials`);
+
+    if (!res.makingProcess.value?.toLowerCase().includes('lost-wax')) {
+      throw new Error(`Expected lost-wax making process, got ${res.makingProcess.value}`);
+    }
+    if (!res.usage.value?.toLowerCase().includes('décor') && !res.usage.value?.toLowerCase().includes('decor') && !res.usage.value?.toLowerCase().includes('gifting')) {
+      throw new Error(`Expected home decor/gifting usage, got ${res.usage.value}`);
+    }
+    if (res.timeRequired.value !== '5 days') {
+      throw new Error(`Expected 5 days timeRequired, got ${res.timeRequired.value}`);
+    }
+  });
+
+  test('missing product fields return null without demo fallback', () => {
+    const text = 'Handmade item.';
+    const res = extractProductFromTranscript(text);
+
+    if (res.materials.value !== null) throw new Error(`Expected materials null, got ${res.materials.value}`);
+    if (res.materials.flag !== 'missing') throw new Error(`Expected missing flag for materials`);
+    if (res.timeRequired.value !== null) throw new Error(`Expected timeRequired null, got ${res.timeRequired.value}`);
+    if (res.timeRequired.flag !== 'missing') throw new Error(`Expected missing flag for timeRequired`);
   });
 
   const failed = results.filter(r => !r.passed);
