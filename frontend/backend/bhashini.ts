@@ -119,6 +119,46 @@ function cleanBase64Audio(raw: string): string {
 }
 
 /**
+ * Normalizes browser audio (WebM from Chrome/Android, MP4 from Safari/iOS)
+ * into standard 16kHz mono WAV for Bhashini Dhruva ASR.
+ */
+async function normalizeAudioToWav(rawBase64: string): Promise<string> {
+  try {
+    const inputBuffer = Buffer.from(rawBase64, 'base64');
+    if (inputBuffer.length >= 12 && inputBuffer.toString('ascii', 0, 4) === 'RIFF' && inputBuffer.toString('ascii', 8, 12) === 'WAVE') {
+      return rawBase64;
+    }
+
+    const { spawn } = await import('child_process');
+    const ffmpeg = spawn('ffmpeg', [
+      '-y',
+      '-i', 'pipe:0',
+      '-ar', '16000',
+      '-ac', '1',
+      '-f', 'wav',
+      'pipe:1'
+    ]);
+
+    const chunks: Buffer[] = [];
+    return await new Promise<string>((resolve) => {
+      ffmpeg.stdout.on('data', (chunk) => chunks.push(chunk));
+      ffmpeg.on('close', (code) => {
+        if (code === 0 && chunks.length > 0) {
+          resolve(Buffer.concat(chunks).toString('base64'));
+        } else {
+          resolve(rawBase64);
+        }
+      });
+      ffmpeg.on('error', () => resolve(rawBase64));
+      ffmpeg.stdin.write(inputBuffer);
+      ffmpeg.stdin.end();
+    });
+  } catch {
+    return rawBase64;
+  }
+}
+
+/**
  * Checks whether content is primarily numeric digits (for phone, pin, ID).
  */
 function isDigitContent(text: string, explicitHint?: boolean): boolean {
@@ -202,13 +242,20 @@ export async function processVoiceWithBhashini(input: VoiceInput): Promise<Voice
 
   // Check for mock mode or unconfigured dev environment
   const useMock = process.env.USE_MOCK_AI === 'true' || process.env.USE_MOCK_VOICE === 'true';
-  const apiKey = process.env.BHASHINI_API_KEY;
+  const apiKey = process.env.BHASHINI_API_KEY || process.env.BHASHINI_ULCA_API_KEY;
   const userId = process.env.BHASHINI_USER_ID;
   const authKey = inferenceKey();
 
   if (useMock || (!apiKey && !userId && !authKey)) {
+    console.warn(
+      `[bhashini] WARNING: Unconfigured environment (useMock=${useMock}, apiKey=${!!apiKey}, userId=${!!userId}, authKey=${!!authKey}). Falling back to static mock data.`
+    );
     return getMockVoiceResult(sourceLanguage);
   }
+
+  console.log(`[bhashini] Calling live Dhruva endpoint: ${endpoint()} (userId=${userId}, authKey=${authKey ? 'configured' : 'missing'})`);
+
+  const normalizedWavBase64 = await normalizeAudioToWav(cleanBase64);
 
   const asrServiceId =
     process.env.BHASHINI_ASR_SERVICE_ID ||
@@ -230,6 +277,8 @@ export async function processVoiceWithBhashini(input: VoiceInput): Promise<Voice
         config: {
           language: { sourceLanguage },
           serviceId: asrServiceId,
+          audioFormat: 'wav',
+          samplingRate: 16000,
         },
       },
       {
@@ -243,7 +292,7 @@ export async function processVoiceWithBhashini(input: VoiceInput): Promise<Voice
     inputData: {
       audio: [
         {
-          audioContent: cleanBase64,
+          audioContent: normalizedWavBase64,
         },
       ],
     },
