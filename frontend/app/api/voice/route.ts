@@ -77,8 +77,11 @@ export async function POST(request: Request) {
     }
 
     if (!audioBase64) {
+      console.warn('[POST /api/voice] Rejected: Audio data missing.');
       return jsonError('Audio data is required.');
     }
+
+    console.log(`[POST /api/voice] Processing audio: length=${audioBase64.length} chars, language=${language}, targetLanguage=${targetLanguage}`);
 
     const result: VoiceResult = await processVoiceWithBhashini({
       audioBase64,
@@ -86,6 +89,8 @@ export async function POST(request: Request) {
       targetLanguage,
       isDigitOnly,
     });
+
+    console.log(`[POST /api/voice] Result: transcript="${result.transcript?.slice(0, 40)}...", translation="${result.translation?.slice(0, 40)}...", flag=${result.flag}`);
 
     return NextResponse.json(result);
   } catch (error: any) {
