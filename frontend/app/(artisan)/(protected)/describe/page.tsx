@@ -34,20 +34,37 @@ export default function Describe(){
   return <VoiceScreen kind="product" step={4} title="Tell us about your craft" spoken="अपने हस्तशिल्प का स्थानीय नाम बताइए। इसे कैसे बनाते हैं, किस काम आता है, कौन सा कच्चा माल लगता है, और कितना समय लगता है — दिन या घंटे।"
    hints={['Name of your craft','How you make it & what it is used for','Raw materials','Time to make (days or hours)','Anything else you want to say']}
    thumbs={s.photos.map(p=>p.src)} onBack={()=>r.push('/capture')}
-   onResult={({blob,voiceResult})=>{
+   onResult={({blob,voiceResult,editedFields})=>{
      const transcriptText = voiceResult?.translation || voiceResult?.transcript || '';
      const extracted = extractProductFromTranscript(transcriptText);
 
+     const getField = (label: string) => {
+       const val = editedFields?.find(f => f.label === label)?.value;
+       return val && val !== 'Not detected' ? val : undefined;
+     };
+
+     const prodName = getField('Product Name');
+     const matsStr = getField('Materials');
+     const howMade = getField('How it is made');
+     const usedFor = getField('Used for');
+     const timeReq = getField('Time required');
+
+     const materials = matsStr
+       ? matsStr.split(',').map(m => m.trim()).filter(Boolean)
+       : (extracted.materials.value || []);
+
+     const timeVal = timeReq || (extracted.timeRequired.value || '1 day');
+
      const p: Product = {
-       localName: extracted.productName.value || voiceResult?.transcript || 'Handcrafted Heritage Item',
+       localName: prodName || (extracted.productName.value || voiceResult?.transcript || 'Handcrafted Heritage Item'),
        recognizedAs: extracted.craftCategory.value || 'Artisan Handcraft',
        description: extracted.description.value || voiceResult?.translation || voiceResult?.transcript || 'Handcrafted traditional artisan product.',
-       howMade: extracted.makingProcess.value || 'Traditional handcrafted method',
-       usedFor: extracted.usage.value || 'Traditional décor & gifting',
-       materials: extracted.materials.value || [],
-       time: extracted.timeRequired.value || '1 day',
+       howMade: howMade || (extracted.makingProcess.value || 'Traditional handcrafted method'),
+       usedFor: usedFor || (extracted.usage.value || 'Traditional décor & gifting'),
+       materials,
+       time: timeVal,
        craft: determineCraftSlug(extracted.craftCategory.value),
-       price: calculateEstimatedPrice(extracted.timeRequired.value, extracted.materials.value),
+       price: calculateEstimatedPrice(timeVal, materials),
      };
 
      set({product: p});
