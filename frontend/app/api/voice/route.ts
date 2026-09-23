@@ -19,6 +19,8 @@ export async function POST(request: Request) {
     let language = 'hi';
     let targetLanguage = 'en';
     let isDigitOnly = false;
+    let kind: 'identity' | 'product' | undefined;
+    let clientTranscript: string | undefined;
 
     const contentType = request.headers.get('content-type') || '';
 
@@ -50,6 +52,16 @@ export async function POST(request: Request) {
       if (digitEntry === 'true' || digitEntry === '1') {
         isDigitOnly = true;
       }
+
+      const kindEntry = formData.get('kind');
+      if (kindEntry === 'identity' || kindEntry === 'product') {
+        kind = kindEntry;
+      }
+
+      const transcriptEntry = formData.get('clientTranscript');
+      if (typeof transcriptEntry === 'string' && transcriptEntry.trim()) {
+        clientTranscript = transcriptEntry.trim();
+      }
     } else {
       const body = asObject(await request.json().catch(() => null));
       if (!body) {
@@ -74,20 +86,30 @@ export async function POST(request: Request) {
       if (typeof body.isDigitOnly === 'boolean') {
         isDigitOnly = body.isDigitOnly;
       }
+
+      if (body.kind === 'identity' || body.kind === 'product') {
+        kind = body.kind;
+      }
+
+      if (typeof body.clientTranscript === 'string' && body.clientTranscript.trim()) {
+        clientTranscript = body.clientTranscript.trim();
+      }
     }
 
-    if (!audioBase64) {
-      console.warn('[POST /api/voice] Rejected: Audio data missing.');
-      return jsonError('Audio data is required.');
+    if (!audioBase64 && !clientTranscript) {
+      console.warn('[POST /api/voice] Rejected: Audio data and clientTranscript missing.');
+      return jsonError('Audio data or transcript is required.');
     }
 
-    console.log(`[POST /api/voice] Processing audio: length=${audioBase64.length} chars, language=${language}, targetLanguage=${targetLanguage}`);
+    console.log(`[POST /api/voice] Processing audio: length=${audioBase64.length} chars, language=${language}, targetLanguage=${targetLanguage}, kind=${kind || 'default'}`);
 
     const result: VoiceResult = await processVoiceWithBhashini({
-      audioBase64,
+      audioBase64: audioBase64 || 'VGVzdEF1ZGlv',
       language,
       targetLanguage,
       isDigitOnly,
+      kind,
+      clientTranscript,
     });
 
     console.log(`[POST /api/voice] Result: transcript="${result.transcript?.slice(0, 40)}...", translation="${result.translation?.slice(0, 40)}...", flag=${result.flag}`);
