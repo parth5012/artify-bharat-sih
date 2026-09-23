@@ -34,10 +34,10 @@ ArtifyBharat is AI-powered Digital Business Manager & Digital Gatekeeper for rur
 - `.tmp/`: All scratch, generated, backup files here. Never commit secrets.
 
 ## Verification (THIS project — run these)
-- Backend fast suite: `uv run pytest -v -m "not slow"` from `backend/` (full: `uv run pytest -v`; 21 test files in `backend/tests/`).
-- Lint: `uv run ruff check backend/app backend/tests` ; Format: `uv run black --check backend/app`.
-- Types: `npx tsc --noEmit` in `frontend/` (if changed).
-- Frontend: `npm run lint` + `npm run build` in `frontend/`; `npm run build` in `web-portal/`.
+- Backend fast suite: `uv run pytest -v -m "not slow"` from `legacy/backend/` (full: `uv run pytest -v`; 28 test files in `legacy/backend/tests/`).
+- Lint: `uv run ruff check app tests` from `legacy/backend/`; Format: `uv run black --check app`.
+- Frontend tests: `npm test` in `frontend/` (Jest suite: 8 suites, 43 unit/integration tests).
+- Frontend types & build: `npx tsc --noEmit` and `npm run build` in `frontend/`.
 - E2E (user-facing flows): Playwright/manual verify — artisan catalog → pricing → passport/shortcode → GeM/ONDC publish; buyer `/verify/{shortcode}` + Report Fake; admin heatmap.
 - Never declare done without green tests + verification stated plainly if skipped.
 

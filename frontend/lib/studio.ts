@@ -225,45 +225,32 @@ async function removeBackgroundSmart(
   img: HTMLImageElement,
   src: string
 ): Promise<{ canvas: HTMLCanvasElement; engine: 'rembg-u2net' | 'canvas-cv' }> {
-  try {
-    const { removeBackground } = await import('@imgly/background-removal');
-
-    // Convert img src → Blob so the library can process it
-    let blob: Blob;
-    if (src.startsWith('data:')) {
-      const [header, b64] = src.split(',');
-      const mime = header.split(':')[1].split(';')[0];
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      blob = new Blob([bytes], { type: mime });
-    } else {
-      const r = await fetch(src);
-      blob = await r.blob();
+  if (typeof window !== 'undefined' && src.startsWith('data:')) {
+    try {
+      const resp = await fetch('/api/studio/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: src }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.studioSrc) {
+          const sImg = await loadImage(data.studioSrc);
+          const c = document.createElement('canvas');
+          c.width = sImg.naturalWidth || sImg.width;
+          c.height = sImg.naturalHeight || sImg.height;
+          const ctx = c.getContext('2d')!;
+          ctx.drawImage(sImg, 0, 0);
+          return { canvas: c, engine: 'rembg-u2net' };
+        }
+      }
+    } catch {
+      // Fall through to client canvas CV
     }
-
-    // Neural background removal — use library's built-in CDN default:
-    // https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/
-    // 'small' = isnet_quint8 (~4 MB), cached by browser after first load.
-    const resultBlob: Blob = await removeBackground(blob, {
-      model: 'small',
-    });
-
-    const resultUrl = URL.createObjectURL(resultBlob);
-    const resultImg = await loadImage(resultUrl);
-    URL.revokeObjectURL(resultUrl);
-
-    const outCanvas = document.createElement('canvas');
-    outCanvas.width = resultImg.naturalWidth || resultImg.width;
-    outCanvas.height = resultImg.naturalHeight || resultImg.height;
-    const outCtx = outCanvas.getContext('2d')!;
-    outCtx.drawImage(resultImg, 0, 0);
-    return { canvas: outCanvas, engine: 'rembg-u2net' };
-  } catch (err) {
-    console.warn('[studio] @imgly/background-removal failed, using CV fallback:', err);
-    const cvCanvas = cvSegmentForeground(img);
-    return { canvas: cvCanvas, engine: 'canvas-cv' };
   }
+
+  const cvCanvas = cvSegmentForeground(img);
+  return { canvas: cvCanvas, engine: 'canvas-cv' };
 }
 
 /**
