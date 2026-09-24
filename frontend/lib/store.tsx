@@ -5,8 +5,8 @@ export type Photo={id:string;src:string;rawSrc?:string;lat:number|null;lng:numbe
 export type Profile={name:string;artisanId:string;phone:string;place?:string;craft?:string};
 export type Product={localName:string;recognizedAs:string;description:string;howMade:string;usedFor:string;materials:string[];time:string;craft:string;price:number};
 export type RecordIdentity={id:string;hash:string;parentHash:string;childHash:string;serialNumber:string;ts:number};
-export type State={lang:Lang|null;profile:Profile;photos:Photo[];product:Product|null;record:RecordIdentity|null;productId:string|null};
-const init:State={lang:null,profile:{name:'',artisanId:'',phone:''},photos:[],product:null,record:null,productId:null};
+export type State={lang:Lang|null;profile:Profile;photos:Photo[];product:Product|null;record:RecordIdentity|null;productId:string|null;catalogProductId:string|null};
+const init:State={lang:null,profile:{name:'',artisanId:'',phone:''},photos:[],product:null,record:null,productId:null,catalogProductId:null};
 const Ctx=createContext<{s:State;set:(p:Partial<State>)=>void}>(null!);
 const KEY='artifact-artisan-draft-v1';
 export function StoreProvider({children}:{children:ReactNode}){
