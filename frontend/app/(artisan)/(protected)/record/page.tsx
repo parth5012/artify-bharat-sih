@@ -158,7 +158,7 @@ export default function Record(){
        productId={productId}
        productName={s.product?.localName || 'Your Product'}
        productHash={productHash}
-       onViewProducts={() => r.push('/home')}
+       onViewProducts={() => {set({photos:[],product:null,record:null,productId:null,catalogProductId:null});r.push('/home')}}
        onViewMarketplace={() => r.push('/buyer/product/'+s.productId)}
        ondcUrl="https://ondc.org/"
        gemUrl={`https://gem.gov.in/product/${productId}`}

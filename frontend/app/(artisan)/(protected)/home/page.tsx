@@ -25,7 +25,7 @@ export default function Home(){
    }
   }).catch(()=>r.replace('/login'))
  },[r,set]);
- const logout=async()=>{await fetch('/api/auth/logout',{method:'POST'});set({lang:null,profile:{name:'',artisanId:'',phone:''},photos:[],product:null,record:null,productId:null});r.replace('/login')};
+ const logout=async()=>{await fetch('/api/auth/logout',{method:'POST'});try{globalThis.localStorage?.removeItem('artify-auth-token')}catch{};set({lang:null,profile:{name:'',artisanId:'',phone:''},photos:[],product:null,record:null,productId:null,catalogProductId:null});r.replace('/login')};
  const mine=products.filter(x=>x.id.startsWith('u-')&&x.artisanId===p.artisanId);
  
  return <Screen><div className="flex min-h-full flex-col items-center gap-5 pb-8">

@@ -19,6 +19,7 @@ from app.schemas.catalog import (
     DraftSyncRequest,
     DraftSyncResponse,
     ProductCatalogUpdate,
+    ProductDraftCreate,
 )
 
 router = APIRouter(prefix="/catalog", tags=["Multilingual Voice Auto-Cataloger & Inventory"])
@@ -247,6 +248,40 @@ async def get_public_catalog_listings(db: AsyncSession = Depends(get_db)):
             )
             for product in products
         ],
+    )
+
+
+@router.post(
+    "/drafts",
+    response_model=InventoryItemResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_product_draft(
+    payload: ProductDraftCreate = Body(...),
+    current_artisan: AuthenticatedPrincipal = Depends(get_current_artisan),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Client Layer: create a draft Product row so the frontend has a product_id
+    before Studio enhancement or catalog PATCH.
+    """
+    product = Product(
+        artisan_id=current_artisan.id,
+        title=payload.title,
+        craft_category=payload.craft_category,
+        status="draft",
+    )
+    db.add(product)
+    await db.commit()
+    await db.refresh(product)
+    return InventoryItemResponse(
+        product_id=product.id,
+        title=product.title,
+        craft_category=product.craft_category,
+        status=product.status,
+        enhanced_image_url=_enhanced_media_url(product.enhanced_image_path),
+        published_channels=["Draft"],
+        created_at=product.created_at,
     )
 
 

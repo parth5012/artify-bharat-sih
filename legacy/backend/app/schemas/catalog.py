@@ -41,6 +41,11 @@ class ProductCatalogUpdate(BaseModel):
     enhanced_image_url: Optional[str] = None
 
 
+class ProductDraftCreate(BaseModel):
+    title: str
+    craft_category: str = "handloom"
+
+
 class InventoryItemResponse(BaseModel):
     product_id: str
     title: str
