@@ -2,6 +2,14 @@
 
 > Key learnings, edge cases, and concepts worth remembering for this project.
 
+## Pure Voice State Machine Extraction (`lib/voiceStates.ts`)
+
+1. **Node-jest purity boundary**: jest runs with `testEnvironment:'node'` and `roots:['<rootDir>/tests']`, so everything extracted for unit tests (phase reducer, derived flags, mime pick, mic-error map, level math) must be DOM-free — React components and `useVoice` stay thin adapters over the pure module.
+2. **Illegal action = no-op, never throw**: `transitionVoicePhase` returns the current phase for unmapped action/phase pairs. UI callers (timers racing user taps, double-taps on "Try sample speech") stay resilient without defensive try/catch.
+3. **`processing + failed → idle` fixes the wedged spinner**: sample-speech and typed-text handlers previously `catch`ed API errors and logged only, leaving the screen stuck on "Understanding your voice…". Routing `failed` back to `idle` re-enables the mic path; recording-finish and file-upload keep their existing fallback-field review flow via `understood`.
+4. **Submit-while-listening must stop the recorder**: sample/text/file buttons render during `listening` (controls are visible pre-review). Transitioning straight to `processing` without `v.stop()` leaked the MediaRecorder + rAF level loop. Stop first, then `submit`.
+5. **One `getByteFrequencyData` per frame**: the old meter called it inside the per-bar `Array.from` callback (N times/frame). Read once, then `computeVoiceLevels(buf, N)` maps bars — same 4..60 range, cheaper.
+
 ## Save Profile + Product via Backend API (Map #147)
 
 1. **No product_id without Studio upload**: frontend had no way to obtain a `product_id` to PATCH — solved by authenticated `POST /api/v1/catalog/drafts` creating `Product(status="draft")` before catalog save. PATCH alone cannot invent a row (404 detail is intentional Studio-enhancement guidance).

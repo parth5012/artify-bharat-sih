@@ -1,7 +1,13 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  VOICE_LEVEL_COUNT,
+  computeVoiceLevels,
+  micErrorMessage,
+  pickRecorderMimeType,
+} from '@/lib/voiceStates';
 
-const N = 28;
+const N = VOICE_LEVEL_COUNT;
 
 export function useVoice() {
   const [listening, setL] = useState(false);
@@ -57,23 +63,9 @@ export function useVoice() {
       });
       stream.current = s;
 
-      // Determine supported mimeType
-      let mimeType = '';
-      if (typeof MediaRecorder !== 'undefined') {
-        const types = [
-          'audio/webm;codecs=opus',
-          'audio/webm',
-          'audio/mp4',
-          'audio/aac',
-          'audio/ogg',
-        ];
-        for (const t of types) {
-          if (MediaRecorder.isTypeSupported(t)) {
-            mimeType = t;
-            break;
-          }
-        }
-      }
+      const mimeType = pickRecorderMimeType(
+        (t) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t)
+      );
 
       const r = mimeType ? new MediaRecorder(s, { mimeType }) : new MediaRecorder(s);
       chunks.current = [];
@@ -101,27 +93,16 @@ export function useVoice() {
       } catch (audioCtxErr) {
         console.warn('[useVoice] AudioContext analyser init error (recording still works):', audioCtxErr);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[useVoice] Microphone access failed:', err);
-      const msg =
-        err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError'
-          ? 'Microphone permission denied. Please allow microphone access in your browser settings.'
-          : err?.message || 'Could not access microphone.';
-      setMicError(msg);
+      setMicError(micErrorMessage(err));
       an = null;
     }
 
     const buf = new Uint8Array(32);
     const tick = () => {
-      setLv(
-        Array.from({ length: N }, (_, i) => {
-          if (an) {
-            an.getByteFrequencyData(buf);
-            return 4 + (buf[i % 32] / 255) * 56;
-          }
-          return 4; // Flat line if no real mic audio
-        })
-      );
+      if (an) an.getByteFrequencyData(buf);
+      setLv(computeVoiceLevels(an ? buf : null, N));
       raf.current = requestAnimationFrame(tick);
     };
     tick();

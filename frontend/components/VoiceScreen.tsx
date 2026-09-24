@@ -8,6 +8,16 @@ import {processVoiceAudio} from '@/lib/voice';
 import {Lang} from '@/lib/store';
 import {extractArtisanFromTranscript, extractProductFromTranscript} from '@/lib/nlp';
 import type {VoiceResult} from '@/backend/bhashini';
+import {
+  VOICE_PHASE_LABELS,
+  VOICE_PHASE_STEP,
+  canEditFields,
+  isListening,
+  isVoiceControlsVisible,
+  showsTranscript,
+  transitionVoicePhase,
+  type VoicePhase,
+} from '@/lib/voiceStates';
 
 export interface VoiceFieldItem {
   label: string;
@@ -23,14 +33,10 @@ export interface VoiceScreenResult {
   editedFields?: VoiceFieldItem[];
 }
 
-type Phase='idle'|'listening'|'processing'|'understanding'|'confirm'|'confirmed';
-const LABELS=['Ready','Listening','Processing','Understanding','Confirmed'];
-const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,confirm:3,confirmed:4};
-
- export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult}:{kind:'identity'|'product';title:string;spoken:string;hints:string[];thumbs?:string[];step:number;onBack?:()=>void;onResult:(r:VoiceScreenResult)=>void}){
+export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult}:{kind:'identity'|'product';title:string;spoken:string;hints:string[];thumbs?:string[];step:number;onBack?:()=>void;onResult:(r:VoiceScreenResult)=>void}){
   const v=useVoice();const blob=useRef<Blob|null>(null);const lastVoiceResult=useRef<VoiceResult|null>(null);
   const fileInputRef=useRef<HTMLInputElement>(null);
-  const [phase,setPhase]=useState<Phase>('idle'),[lang,setLang]=useState<Lang|null>(null),[heard,setHeard]=useState<Heard|null>(null),[shown,setShown]=useState(0);
+  const [phase,setPhase]=useState<VoicePhase>('idle'),[lang,setLang]=useState<Lang|null>(null),[heard,setHeard]=useState<Heard|null>(null),[shown,setShown]=useState(0);
   const [fieldItems, setFieldItems]=useState<VoiceFieldItem[]>([]);
   const [editingIdx, setEditingIdx]=useState<number|null>(null);
   const [showTextInput, setShowTextInput]=useState(false);
@@ -65,7 +71,8 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
   };
 
   const handleTestSample = async () => {
-    setPhase('processing');
+    if (v.listening) await v.stop();
+    setPhase((p) => transitionVoicePhase(p, 'submit'));
     const sampleText =
       kind === 'identity'
         ? 'My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. My PIN is 1234. I am from Bastar, Chhattisgarh practicing traditional handloom weaving.'
@@ -86,9 +93,10 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
         fields: items.map((it) => ({ label: it.label, value: it.value || 'Not detected' })),
       });
       setShown(0);
-      setPhase('understanding');
+      setPhase((p) => transitionVoicePhase(p, 'understood'));
     } catch (e: any) {
       console.error('Test sample error:', e);
+      setPhase((p) => transitionVoicePhase(p, 'failed'));
     }
   };
 
@@ -96,7 +104,8 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
     if (!customText.trim()) return;
     const text = customText.trim();
     setShowTextInput(false);
-    setPhase('processing');
+    if (v.listening) await v.stop();
+    setPhase((p) => transitionVoicePhase(p, 'submit'));
 
     try {
       const res = await processVoiceAudio('VGVzdEF1ZGlv', {
@@ -113,9 +122,10 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
         fields: items.map((it) => ({ label: it.label, value: it.value || 'Not detected' })),
       });
       setShown(0);
-      setPhase('understanding');
+      setPhase((p) => transitionVoicePhase(p, 'understood'));
     } catch (e: any) {
       console.error('Custom text extraction error:', e);
+      setPhase((p) => transitionVoicePhase(p, 'failed'));
     }
   };
 
@@ -123,7 +133,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
     const b=await v.stop();
     const liveText = v.liveTranscript?.current || '';
     blob.current=b;
-    setPhase('processing');
+    setPhase((p) => transitionVoicePhase(p, 'finish'));
     const l=await detectLanguage(b);
     setLang(l);
 
@@ -165,13 +175,14 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
     setFieldItems(items);
     setHeard(h);
     setShown(0);
-    setPhase('understanding');
+    setPhase((p) => transitionVoicePhase(p, 'understood'));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhase('processing');
+    if (v.listening) await v.stop();
+    setPhase((p) => transitionVoicePhase(p, 'submit'));
     blob.current = file;
     const l = await detectLanguage(file);
     setLang(l);
@@ -188,7 +199,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
           fields: items.map(it => ({ label: it.label, value: it.value || 'Not detected' })),
         });
         setShown(0);
-        setPhase('understanding');
+        setPhase((p) => transitionVoicePhase(p, 'understood'));
         return;
       }
     } catch (err: any) {
@@ -205,11 +216,11 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
       fields: fallbackItems.map(it => ({ label: it.label, value: it.value })),
     });
     setShown(0);
-    setPhase('understanding');
+    setPhase((p) => transitionVoicePhase(p, 'understood'));
   };
 
- const tap=async()=>{if(phase==='idle'){window.speechSynthesis?.cancel();setPhase('listening');setRecordingTime(0);await v.start()}else if(phase==='listening')finish()};
- 
+ const tap=async()=>{if(phase==='idle'){window.speechSynthesis?.cancel();setPhase(transitionVoicePhase(phase,'tap'));setRecordingTime(0);await v.start()}else if(phase==='listening')finish()};
+
  // Recording timer
  useEffect(() => {
    if (phase !== 'listening') return;
@@ -219,11 +230,11 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
    }, 1000);
    return () => clearInterval(interval);
  }, [phase]);
- 
+
  // Auto-stop recording after 60 seconds (increased from 12 seconds)
  useEffect(()=>{if(phase!=='listening')return;const t=setTimeout(finish,60000);return()=>clearTimeout(t)},[phase]); // eslint-disable-line
- 
- useEffect(()=>{if(phase!=='understanding'||!heard)return;const last=shown>=heard.fields.length;const t=setTimeout(()=>last?setPhase('confirm'):setShown(shown+1),last?400:450);return()=>clearTimeout(t)},[phase,shown,heard]);
+
+ useEffect(()=>{if(phase!=='understanding'||!heard)return;const last=shown>=heard.fields.length;const t=setTimeout(()=>last?setPhase((p)=>transitionVoicePhase(p,'revealed')):setShown(shown+1),last?400:450);return()=>clearTimeout(t)},[phase,shown,heard]);
  function getFieldItemStyle(isEditing: boolean, isMissing: boolean): string {
    if (isEditing) return 'border-orange-500 bg-orange-50/30';
    if (isMissing) return 'border-amber-200 bg-amber-50/30 cursor-pointer hover:bg-amber-50/60';
@@ -231,7 +242,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
  }
 
  const confirm=async()=>{
-   setPhase('confirmed');
+   setPhase((p) => transitionVoicePhase(p, 'accept'));
    speak('बहुत बढ़िया!');
    await sleep(1300);
    const updatedHeard: Heard | null = heard
@@ -248,11 +259,11 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
      editedFields: fieldItems,
    });
  };
- const retry=()=>{setHeard(null);setFieldItems([]);setShown(0);setEditingIdx(null);setPhase('idle')};
- const on=phase==='listening',early=phase==='idle'||on||phase==='processing';
+ const retry=()=>{setHeard(null);setFieldItems([]);setShown(0);setEditingIdx(null);setPhase((p)=>transitionVoicePhase(p,'retry'))};
+ const on=isListening(phase),early=isVoiceControlsVisible(phase);
 
  return <Screen onBack={onBack} step={step}><div className="flex min-h-full flex-col items-center gap-4 text-center">
-  <ol className="flex w-full justify-between text-[11px] font-semibold">{LABELS.map((l,i)=><li key={l} className={`flex flex-1 flex-col items-center gap-1 ${i<=IDX[phase]?'text-orange-700':'text-stone-400'}`}><span className={`h-2 w-2 rounded-full ${i<IDX[phase]?'bg-emerald-600':i===IDX[phase]?'animate-pulse bg-orange-600':'bg-stone-300'}`}/>{l}</li>)}</ol>
+  <ol className="flex w-full justify-between text-[11px] font-semibold">{VOICE_PHASE_LABELS.map((l,i)=><li key={l} className={`flex flex-1 flex-col items-center gap-1 ${i<=VOICE_PHASE_STEP[phase]?'text-orange-700':'text-stone-400'}`}><span className={`h-2 w-2 rounded-full ${i<VOICE_PHASE_STEP[phase]?'bg-emerald-600':i===VOICE_PHASE_STEP[phase]?'animate-pulse bg-orange-600':'bg-stone-300'}`}/>{l}</li>)}</ol>
   <span className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-stone-700 shadow-sm">🎙 {lang?`${lang.native} · ${lang.name} detected`:'Speak in your own language'}</span>
   {!!thumbs?.length&&early&&<div className="flex gap-2 self-start">{thumbs.map((t,i)=><Thumb key={i} src={t}/>)}</div>}
   <h2 className="text-2xl font-bold">{phase==='confirm'?'Did I understand right?':title}</h2>
@@ -344,7 +355,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
       </div>
     )}
    </>}
-  {heard&&(phase==='understanding'||phase==='confirm')&&<div className="w-full space-y-3 text-left">
+  {heard&&showsTranscript(phase)&&<div className="w-full space-y-3 text-left">
    <div className="rounded-2xl bg-orange-50/80 border border-orange-200 p-3">
      <div className="flex items-center justify-between mb-1">
        <span className="text-xs font-bold uppercase tracking-wider text-orange-800">
@@ -378,7 +389,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
          return (
            <li
              key={f.label}
-             onClick={() => { if (phase === 'confirm' && !isEditing) setEditingIdx(i); }}
+              onClick={() => { if (canEditFields(phase) && !isEditing) setEditingIdx(i); }}
              className={`animate-fade-up rounded-xl border p-3 shadow-sm transition-all ${getFieldItemStyle(isEditing, isMissing)}`}
            >
              <div className="flex items-center justify-between mb-0.5">
@@ -436,11 +447,11 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
                  <p className={`text-base font-bold ${isMissing ? 'text-stone-400 italic' : 'text-stone-900'}`}>
                    {f.value || 'Not detected'}
                  </p>
-                 {phase === 'confirm' && (
-                   <span className="text-stone-400 hover:text-stone-600">
-                     <Edit3 size={15}/>
-                   </span>
-                 )}
+                  {canEditFields(phase) && (
+                    <span className="text-stone-400 hover:text-stone-600">
+                      <Edit3 size={15}/>
+                    </span>
+                  )}
                </div>
              )}
            </li>
