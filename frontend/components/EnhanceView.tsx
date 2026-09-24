@@ -46,7 +46,7 @@ export function EnhanceView({
       .then((res: StudioResult) => {
         if (!active) return;
         setStudioSrc(res.studioSrc);
-        setEngineUsed(res.engineUsed === 'rembg-u2net' ? 'U²-Net (browser)' : 'Studio CV');
+        setEngineUsed(res.engineUsed === 'rembg-u2net' ? 'OpenCV + U²-Net' : 'Studio CV');
         setStepIdx(3);
         setProcessing(false);
       })
@@ -126,13 +126,13 @@ export function EnhanceView({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        className="relative aspect-[3/4] cursor-ew-resize select-none overflow-hidden rounded-3xl border-4 border-white shadow-xl touch-none bg-stone-100"
+        className="relative aspect-square cursor-ew-resize select-none overflow-hidden rounded-3xl border-4 border-white shadow-xl touch-none bg-stone-100"
       >
         {/* Original Raw Photo (Base) */}
         <img
           src={src}
           alt="Original craft with room background"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-contain"
         />
 
         {/* Studio Photo with Background Removed (Revealed by slider) */}
@@ -140,7 +140,7 @@ export function EnhanceView({
           <img
             src={studioSrc}
             alt="Studio isolated craft"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
             style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
           />
         )}

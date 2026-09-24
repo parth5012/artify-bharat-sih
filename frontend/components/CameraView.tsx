@@ -6,12 +6,47 @@ export type Shot={src:string;lat:number|null;lng:number|null;ts:number};
 export function CameraView({onShot}:{onShot:(s:Shot)=>void}){
  const vid=useRef<HTMLVideoElement>(null),camFile=useRef<HTMLInputElement>(null),browseFile=useRef<HTMLInputElement>(null),pos=useRef<{lat:number;lng:number}|null>(null);
  const [ok,setOk]=useState(false),[busy,setBusy]=useState(false),[gps,setGps]=useState<'wait'|'ok'|'none'>('wait');
- useEffect(()=>{let st:MediaStream|null=null;
-  navigator.mediaDevices?.getUserMedia({video:{facingMode:{ideal:'environment'}}}).then(s=>{st=s;if(vid.current){vid.current.srcObject=s;vid.current.play()}setOk(true)}).catch(()=>setOk(false));
-  getPosition().then(p=>{pos.current=p;setGps(p?'ok':'none')});
-  return()=>st?.getTracks().forEach(t=>t.stop())},[]);
+ useEffect(()=>{
+  let st:MediaStream|null=null;
+  let active=true;
+  navigator.mediaDevices?.getUserMedia({video:{facingMode:{ideal:'environment'}}}).then(s=>{
+    if(!active){
+      s.getTracks().forEach(t=>t.stop());
+      return;
+    }
+    st=s;
+    if(vid.current){
+      vid.current.srcObject=s;
+      vid.current.play().catch(()=>{});
+    }
+    setOk(true);
+  }).catch(()=>{
+    if(active)setOk(false);
+  });
+  getPosition().then(p=>{
+    if(active){
+      pos.current=p;
+      setGps(p?'ok':'none');
+    }
+  });
+  return()=>{
+    active=false;
+    if(vid.current){
+      vid.current.srcObject=null;
+    }
+    st?.getTracks().forEach(t=>t.stop());
+  };
+ },[]);
  const finish=async(src:string)=>{setBusy(true);const p=pos.current??await getPosition();onShot({src,lat:p?.lat??null,lng:p?.lng??null,ts:Date.now()})};
- const snap=()=>{const v=vid.current!;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d')!.drawImage(v,0,0);finish(c.toDataURL('image/jpeg',.85))};
+ const snap=()=>{
+  const v=vid.current;
+  if(!v||!v.videoWidth||!v.videoHeight)return;
+  const c=document.createElement('canvas');
+  c.width=v.videoWidth;
+  c.height=v.videoHeight;
+  c.getContext('2d')!.drawImage(v,0,0);
+  finish(c.toDataURL('image/jpeg',.85));
+ };
  const pick=(e:ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>finish(r.result as string);r.readAsDataURL(f);e.target.value=''};
  const corner='absolute h-10 w-10 border-white';
  return <div className="space-y-3">
