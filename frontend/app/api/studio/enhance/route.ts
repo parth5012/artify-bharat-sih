@@ -17,14 +17,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve studio python worker path
-    const studioDir = path.resolve(process.cwd(), 'backend', 'studio');
-    const pythonExe = process.platform === 'win32'
-      ? path.join(studioDir, '.venv', 'Scripts', 'python.exe')
-      : path.join(studioDir, '.venv', 'bin', 'python');
+    const candidateDirs = [
+      path.resolve(process.cwd(), 'backend', 'studio'),
+      path.resolve(process.cwd(), 'frontend', 'backend', 'studio'),
+    ];
+    const studioDir = candidateDirs.find((d) => fs.existsSync(d)) || candidateDirs[0];
+
+    const candidatePythonExes = [
+      process.env.STUDIO_PYTHON_PATH,
+      process.platform === 'win32'
+        ? path.join(studioDir, '.venv', 'Scripts', 'python.exe')
+        : path.join(studioDir, '.venv', 'bin', 'python'),
+    ].filter(Boolean) as string[];
+
+    const pythonExe = candidatePythonExes.find((p) => fs.existsSync(p));
     const scriptPath = path.join(studioDir, 'process.py');
 
-    if (!fs.existsSync(pythonExe)) {
-      console.warn('Studio Python venv not found at:', pythonExe);
+    if (!pythonExe || !fs.existsSync(pythonExe)) {
+      console.warn('Studio Python venv not found at candidate paths:', candidatePythonExes);
       return NextResponse.json({ error: 'Studio Python service not initialized' }, { status: 503 });
     }
 
@@ -36,12 +46,16 @@ export async function POST(req: NextRequest) {
     try {
       await fs.promises.writeFile(tmpIn, JSON.stringify({ image }), 'utf-8');
 
-      // Execute Python OpenCV + rembg (U²-Net) worker
+      // Execute Python OpenCV + rembg (U²-Net) worker.
+      // rembg cold-loads the 176 MB ONNX model once per subprocess (≈0.5 s on
+      // subsequent calls after disk cache is warm). Allow 180 s for large photos
+      // on slow CPUs; typical steady-state is 1–5 s.
       await execFileAsync(pythonExe, [scriptPath, tmpIn, tmpOut], {
         cwd: studioDir,
-        timeout: 45000,
+        timeout: 180_000,
         maxBuffer: 20 * 1024 * 1024,
       });
+
 
       if (!fs.existsSync(tmpOut)) {
         throw new Error('Python worker did not generate output file');

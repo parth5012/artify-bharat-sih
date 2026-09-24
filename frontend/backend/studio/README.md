@@ -12,3 +12,5 @@ The Studio receives the original artisan photo and returns a derived marketplace
 6. Require artisan approval before publishing the derived image.
 
 The Next.js frontend currently exposes this boundary through the capture review flow and `EnhanceView`. Add the service URL and authenticated upload proxy when the Python worker is deployed.
+
+For the full 4-stage pipeline specification, anti-generative guards, and fallback mechanics, see [docs/studio-pipeline-reference.md](../../../docs/studio-pipeline-reference.md).

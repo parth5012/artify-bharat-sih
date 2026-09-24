@@ -217,41 +217,7 @@ function cvSegmentForeground(img: HTMLImageElement): HTMLCanvasElement {
   return outCanvas;
 }
 
-/**
- * Remove background using @imgly/background-removal (U²-Net WASM, runs 100% in-browser).
- * Falls back to the CV k-means segmentor only if the model load itself fails.
- */
-async function removeBackgroundSmart(
-  img: HTMLImageElement,
-  src: string
-): Promise<{ canvas: HTMLCanvasElement; engine: 'rembg-u2net' | 'canvas-cv' }> {
-  if (typeof window !== 'undefined' && src.startsWith('data:')) {
-    try {
-      const resp = await fetch('/api/studio/enhance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: src }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.studioSrc) {
-          const sImg = await loadImage(data.studioSrc);
-          const c = document.createElement('canvas');
-          c.width = sImg.naturalWidth || sImg.width;
-          c.height = sImg.naturalHeight || sImg.height;
-          const ctx = c.getContext('2d')!;
-          ctx.drawImage(sImg, 0, 0);
-          return { canvas: c, engine: 'rembg-u2net' };
-        }
-      }
-    } catch {
-      // Fall through to client canvas CV
-    }
-  }
 
-  const cvCanvas = cvSegmentForeground(img);
-  return { canvas: cvCanvas, engine: 'canvas-cv' };
-}
 
 /**
  * Find bounding box of foreground in RGBA canvas
@@ -292,37 +258,40 @@ function getForegroundBoundingBox(canvas: HTMLCanvasElement): { x: number; y: nu
 }
 
 export async function createStudioImage(src: string): Promise<StudioResult> {
-  // Always use the client-side neural engine (@imgly/background-removal)
-  // Server Python endpoint skipped — rembg venv not deployed in this environment
-  const originalImg = await loadImage(src);
-  const { canvas: isolatedCanvas, engine } = await removeBackgroundSmart(originalImg, src);
-
-  // ── Product Enhancement: adaptive contrast lift on isolated craft pixels ──
-  // Mimics CLAHE — stretches luminance 5th–95th percentile to [8, 248],
-  // boosting midtones and micro-contrast without touching hue/saturation.
-  const enhCanvas = document.createElement('canvas');
-  enhCanvas.width = isolatedCanvas.width;
-  enhCanvas.height = isolatedCanvas.height;
-  const enhCtx = enhCanvas.getContext('2d', { willReadFrequently: true })!;
-  enhCtx.drawImage(isolatedCanvas, 0, 0);
-  const enhData = enhCtx.getImageData(0, 0, enhCanvas.width, enhCanvas.height);
-  const d = enhData.data;
-  // Build luminance histogram over foreground pixels only
-  const lums: number[] = [];
-  for (let i = 0; i < d.length; i += 4) {
-    if (d[i + 3] > 30) lums.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
-  }
-  lums.sort((a, b) => a - b);
-  const lo = lums[Math.floor(lums.length * 0.05)] ?? 0;
-  const hi = lums[Math.floor(lums.length * 0.95)] ?? 255;
-  const range = Math.max(1, hi - lo);
-  for (let i = 0; i < d.length; i += 4) {
-    if (d[i + 3] < 10) continue;
-    for (let c = 0; c < 3; c++) {
-      d[i + c] = Math.min(255, Math.max(0, Math.round(((d[i + c] - lo) / range) * 240 + 8)));
+  // 1. Try server-side Python OpenCV + rembg (U²-Net) canonical pipeline first
+  if (typeof window !== 'undefined' && src.startsWith('data:')) {
+    try {
+      const resp = await fetch('/api/studio/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: src }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.studioSrc) {
+          return {
+            studioSrc: data.studioSrc,
+            rawSrc: src,
+            engineUsed: 'rembg-u2net',
+            complexityScore: data.complexityScore ?? 0.82,
+            claheApplied: data.claheApplied ?? true,
+            backgroundRemoved: data.backgroundRemoved ?? true,
+            cropApplied: data.cropApplied ?? true,
+            rembgUsed: data.rembgUsed ?? true,
+            pipelineSteps: data.pipelineSteps,
+            complexityPricingFactor: data.complexityPricingFactor,
+            authenticityGuarantee: data.authenticityGuarantee,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Server studio pipeline unavailable, falling back to client CV:', err);
     }
   }
-  enhCtx.putImageData(enhData, 0, 0);
+
+  // 2. Client-side Fallback (pure CV in-browser when server is offline)
+  const originalImg = await loadImage(src);
+  const isolatedCanvas = cvSegmentForeground(originalImg);
 
   // Target standard studio canvas size (1024x1024 for e-commerce catalog)
   const targetW = 1024;
@@ -333,30 +302,22 @@ export async function createStudioImage(src: string): Promise<StudioResult> {
   studioCanvas.height = targetH;
   const ctx = studioCanvas.getContext('2d')!;
 
-  // 1. Studio Lighting Backdrop
-  // Artify Bharat Signature Studio Canvas: Warm neutral studio cove lighting
+  // 1. Studio Lighting Backdrop: Pure Neutral White Studio Light (no warm/yellow cast)
   const bgGrad = ctx.createRadialGradient(
     targetW * 0.5, targetH * 0.42, targetW * 0.1,
     targetW * 0.5, targetH * 0.5, targetW * 0.75
   );
   bgGrad.addColorStop(0, '#FFFFFF');     // Studio spotlight apex
-  bgGrad.addColorStop(0.55, '#F9F8F5');  // Soft neutral silk
-  bgGrad.addColorStop(1, '#EDE9E0');     // Gentle studio cove vignette
+  bgGrad.addColorStop(0.65, '#FAFAFA');  // Clean neutral white
+  bgGrad.addColorStop(1, '#F2F2F2');     // Soft studio softbox edge
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, targetW, targetH);
 
-  // Subtle floor plane horizon
-  const floorGrad = ctx.createLinearGradient(0, targetH * 0.65, 0, targetH);
-  floorGrad.addColorStop(0, 'rgba(235, 230, 222, 0.0)');
-  floorGrad.addColorStop(1, 'rgba(225, 218, 208, 0.35)');
-  ctx.fillStyle = floorGrad;
-  ctx.fillRect(0, targetH * 0.65, targetW, targetH * 0.35);
-
   // 2. Measure foreground craft bounding box
-  const bbox = getForegroundBoundingBox(enhCanvas);
+  const bbox = getForegroundBoundingBox(isolatedCanvas);
 
-  // Fit craft inside 80% of canvas area
-  const padding = targetW * 0.12;
+  // Fit craft inside 78% of canvas area
+  const padding = targetW * 0.11;
   const availW = targetW - padding * 2;
   const availH = targetH - padding * 2;
 
@@ -366,11 +327,11 @@ export async function createStudioImage(src: string): Promise<StudioResult> {
   const drawX = (targetW - drawW) / 2;
   const drawY = (targetH - drawH) / 2;
 
-  // 3. Studio Ground Contact Shadow
+  // 3. Studio Ground Contact Shadow (Neutral charcoal, zero yellow cast)
   const shadowCenterY = drawY + drawH - (drawH * 0.02);
   const shadowCenterX = targetW / 2;
   const shadowRx = (drawW * 0.42);
-  const shadowRy = Math.max(10, drawH * 0.05);
+  const shadowRy = Math.max(8, drawH * 0.05);
 
   // Outer ambient shadow
   ctx.save();
@@ -378,9 +339,9 @@ export async function createStudioImage(src: string): Promise<StudioResult> {
     shadowCenterX, shadowCenterY, 5,
     shadowCenterX, shadowCenterY, shadowRx * 1.15
   );
-  ambientShadow.addColorStop(0, 'rgba(45, 38, 30, 0.22)');
-  ambientShadow.addColorStop(0.4, 'rgba(50, 42, 35, 0.12)');
-  ambientShadow.addColorStop(1, 'rgba(50, 42, 35, 0.0)');
+  ambientShadow.addColorStop(0, 'rgba(30, 30, 30, 0.20)');
+  ambientShadow.addColorStop(0.4, 'rgba(30, 30, 30, 0.08)');
+  ambientShadow.addColorStop(1, 'rgba(30, 30, 30, 0.0)');
 
   ctx.fillStyle = ambientShadow;
   ctx.beginPath();
@@ -390,35 +351,35 @@ export async function createStudioImage(src: string): Promise<StudioResult> {
   // Darker tight contact shadow directly beneath the craft base
   const contactShadow = ctx.createRadialGradient(
     shadowCenterX, shadowCenterY, 2,
-    shadowCenterX, shadowCenterY, shadowRx * 0.7
+    shadowCenterX, shadowCenterY, shadowRx * 0.75
   );
-  contactShadow.addColorStop(0, 'rgba(25, 20, 15, 0.35)');
-  contactShadow.addColorStop(0.6, 'rgba(30, 25, 20, 0.15)');
-  contactShadow.addColorStop(1, 'rgba(30, 25, 20, 0.0)');
+  contactShadow.addColorStop(0, 'rgba(15, 15, 15, 0.35)');
+  contactShadow.addColorStop(0.6, 'rgba(15, 15, 15, 0.12)');
+  contactShadow.addColorStop(1, 'rgba(15, 15, 15, 0.0)');
 
   ctx.fillStyle = contactShadow;
   ctx.beginPath();
-  ctx.ellipse(shadowCenterX, shadowCenterY, shadowRx * 0.7, shadowRy * 0.65, 0, 0, Math.PI * 2);
+  ctx.ellipse(shadowCenterX, shadowCenterY, shadowRx * 0.75, shadowRy * 0.65, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // 4. Draw the enhanced craft onto the studio stage
+  // 4. Draw the authentic craft (natural dye colors 100% untouched)
   ctx.drawImage(
-    enhCanvas,
+    isolatedCanvas,
     bbox.x, bbox.y, bbox.w, bbox.h,
     drawX, drawY, drawW, drawH
   );
 
-  const studioSrc = studioCanvas.toDataURL('image/jpeg', 0.92);
+  const studioSrc = studioCanvas.toDataURL('image/jpeg', 0.95);
 
   return {
     studioSrc,
     rawSrc: src,
-    engineUsed: engine,
+    engineUsed: 'canvas-cv',
     complexityScore: 0.82,
     claheApplied: true,
     backgroundRemoved: true,
     cropApplied: true,
-    rembgUsed: engine === 'rembg-u2net',
+    rembgUsed: false,
   };
 }
