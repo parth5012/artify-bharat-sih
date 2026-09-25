@@ -1,0 +1,61 @@
+# Gitleaks configuration for ArtifyBharat
+# Fail-closed secret detection with a strict allowlist for known-safe literals only.
+# Maintained by @parth5012 per .github/CODEOWNERS.
+
+title = "ArtifyBharat Gitleaks Config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe literals, example templates, test fixtures, and documentation samples"
+
+# Narrow file paths for template .env files that contain placeholder variable definitions only
+paths = [
+  # Root environment template (no real secrets, placeholder empty values only)
+  '''^\.env\.example$''',
+  # Frontend environment template
+  '''^frontend/\.env\.example$''',
+  # Historical legacy environment templates (archived/out-of-scope)
+  '''^legacy/\.env\.example$''',
+  '''^legacy/backend/\.env\.example$''',
+  # Test fixtures directory for leak guard tests
+  '''^frontend/tests/__fixtures__/.*$''',
+  # Next.js build output (gitignored; auto-generated signing/encryption keys are
+  # not repo secrets and can never be committed)
+  '''(^|/)\.next/''',
+]
+
+# Narrow regexes for known-safe dummy secrets and sample values used in tests, docs, and compose configs
+regexes = [
+  # Development dummy JWT secret used in local compose and legacy docs
+  '''artify_bharat_super_secret_jwt_key_2026_sih''',
+  # Local development database password in compose and legacy examples
+  '''postgrespassword''',
+  # Local development MinIO root credentials in compose and legacy examples
+  '''minioadmin''',
+  # Test mock keys and tokens used in automated Jest test suites
+  '''ulca_key_123''',
+  '''inference_key_789''',
+  '''legacy-s3cret''',
+  '''e2e-secret''',
+  # Truncated JWT placeholder used in docs samples: header + literal "...".
+  # Anchored on the trailing ellipsis so a complete JWT still fails the scan.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.$''',
+  # Android EncryptedSharedPreferences *key name* (not a credential)
+  '''^db_sqlcipher_passphrase_b64$''',
+  # Mock ONDC webhook secret used in Jest suites — anchored so a real secret
+  # that merely CONTAINS this substring still fails the scan
+  '''^s3cret$''',
+]
+
+stopwords = [
+  # Exact string matches for dummy tokens used across test suites and example configs
+  "artify_bharat_super_secret_jwt_key_2026_sih",
+  "postgrespassword",
+  "minioadmin",
+  "ulca_key_123",
+  "inference_key_789",
+  "legacy-s3cret",
+  "e2e-secret",
+]

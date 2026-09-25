@@ -10,10 +10,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: jobs only read the repo (gitleaks-action needs PR metadata read).
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   frontend-ci:
     name: Frontend Tests and Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4.2.2
@@ -40,3 +46,38 @@ jobs:
       - name: Build Next.js App
         working-directory: ./frontend
         run: npm run build
+
+  secret-scan:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      # Pinned to the commit behind tag v2 (mutable tag otherwise).
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  merge-gate:
+    name: Merge Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [frontend-ci, secret-scan]
+    if: always()
+    steps:
+      - name: Evaluate Upstream Job Results
+        run: |
+          echo "frontend-ci: ${{ needs.frontend-ci.result }}"
+          echo "secret-scan: ${{ needs.secret-scan.result }}"
+          if [ "${{ needs.frontend-ci.result }}" != "success" ] || [ "${{ needs.secret-scan.result }}" != "success" ]; then
+            echo "❌ Merge gate failed: All upstream jobs must succeed."
+            exit 1
+          fi
+          echo "✅ Merge gate passed: All required checks succeeded."
+

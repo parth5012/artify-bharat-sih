@@ -1,3 +1,14 @@
+# ==============================================================================
+# WARNING: NOT VALID FOR PRODUCTION DEPLOYMENT (TARGET TBD — see docs/deployment-guide.md)
+# ==============================================================================
+# This docker-compose file represents a historical local development topology only.
+# Currently, it cannot build out of the box because:
+#   1) `./backend` was moved to `legacy/backend/` and is out of the active codebase.
+#   2) `web-portal/` was permanently deleted in commit b0cece4 (now in frontend/).
+# Production deployment infrastructure is TARGET TBD (deferred to #154).
+# Do NOT use this file for production deployments.
+# ==============================================================================
+
 services:
   # --- PostgreSQL Database ---
   postgres:
@@ -43,7 +54,7 @@ services:
     volumes:
       - minio_data:/data
 
-  # FastAPI Backend Service
+  # FastAPI Backend Service (Historical: ./backend moved to legacy/backend/)
   backend:
     build:
       context: ./backend
@@ -101,7 +112,7 @@ services:
     depends_on:
       - redis
 
-  # Web Verification Portal
+  # Web Verification Portal (Historical: web-portal/ deleted in commit b0cece4; now under frontend/)
   web_portal:
     image: nginx:alpine
     container_name: artify_web_portal
