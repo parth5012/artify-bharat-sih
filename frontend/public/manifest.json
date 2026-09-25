@@ -1,1 +1,36 @@
-{"name":"Artifact","short_name":"Artifact","start_url":"/","display":"standalone","background_color":"#FBF7F0","theme_color":"#FBF7F0","icons":[{"src":"/logo.png","sizes":"512x512","type":"image/png","purpose":"any"}]}
+{
+  "name": "Artify - Artisan Marketplace",
+  "short_name": "Artify",
+  "description": "Connect artisans with buyers. Real Artisan • Real Craft • Verified Origin • Real Marketplace",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8EF",
+  "theme_color": "#F97316",
+  "orientation": "portrait",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["shopping", "marketplace", "social"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Artisan Login",
+      "short_name": "Artisan",
+      "description": "Login as an artisan to sell products",
+      "url": "/login",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    }
+  ]
+}

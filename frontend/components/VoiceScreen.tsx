@@ -47,7 +47,8 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
         { label: 'Artisan ID', value: art.artisanId.value || '', flag: art.artisanId.flag },
         { label: 'Phone', value: art.phone.value || '', flag: art.phone.flag },
         { label: 'Location', value: art.location.value || '', flag: art.location.flag },
-        { label: 'Craft Category', value: art.craft.value || '', flag: art.craft.flag }
+        { label: 'Craft Category', value: art.craft.value || '', flag: art.craft.flag },
+        { label: 'PIN', value: art.pin.value || '', flag: art.pin.flag }
       );
     } else {
       const prod = extractProductFromTranscript(text);
@@ -66,7 +67,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
     setPhase('processing');
     const sampleText =
       kind === 'identity'
-        ? 'My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. I am from Bastar, Chhattisgarh practicing traditional handloom weaving.'
+        ? 'My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. My PIN is 1234. I am from Bastar, Chhattisgarh practicing traditional handloom weaving.'
         : 'This is our handwoven Banarasi pure silk saree with authentic gold zari border. It took fifteen full days of handloom labor to craft this traditional piece. It is used for weddings and festive occasions.';
 
     try {

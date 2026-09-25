@@ -18,6 +18,7 @@ export interface ArtisanExtractionResult {
   artisanId: ExtractedField<string>;
   location: ExtractedField<string>;
   craft: ExtractedField<string>;
+  pin: ExtractedField<string>;
   rawTranscript: string;
   overallConfidence: number;
 }
@@ -88,6 +89,7 @@ export function extractArtisanFromTranscript(transcript: string): ArtisanExtract
       artisanId: makeField<string>(null, 0),
       location: makeField<string>(null, 0),
       craft: makeField<string>(null, 0),
+      pin: makeField<string>(null, 0),
       rawTranscript: transcript,
       overallConfidence: 0,
     };
@@ -197,13 +199,32 @@ export function extractArtisanFromTranscript(transcript: string): ArtisanExtract
     }
   }
 
+  // 6. PIN extraction (4-digit PIN)
+  let pinValue: string | null = null;
+  let pinConf = 0;
+
+  // Look for explicit PIN patterns: "my PIN is 1234", "PIN 5678", "पिन 9876"
+  const labeledPinMatch = text.match(/(?:my\s+)?(?:pin|पिन|पासवर्ड)(?:\s+is|\s+hai|\s+)?\s*(\d{4})\b/i);
+  if (labeledPinMatch) {
+    pinValue = labeledPinMatch[1];
+    pinConf = 0.95;
+  } else {
+    // Look for comma-separated 4-digit pattern: "9876543210, 1234"
+    const commaPinMatch = text.match(/\d{10}[\s,]+(\d{4})\b/);
+    if (commaPinMatch) {
+      pinValue = commaPinMatch[1];
+      pinConf = 0.85;
+    }
+  }
+
   const nameField = makeField(nameValue, nameConf);
   const phoneField = makeField(phoneValue, phoneConf);
   const idField = makeField(idValue, idConf);
   const locField = makeField(locValue, locConf);
   const craftField = makeField(craftValue, craftConf);
+  const pinField = makeField(pinValue, pinConf);
 
-  const fields = [nameField, phoneField, idField, locField, craftField];
+  const fields = [nameField, phoneField, idField, locField, craftField, pinField];
   const populated = fields.filter(f => f.value !== null);
   const overallConfidence = populated.length > 0
     ? Number((populated.reduce((acc, f) => acc + f.confidence, 0) / populated.length).toFixed(2))
@@ -215,6 +236,7 @@ export function extractArtisanFromTranscript(transcript: string): ArtisanExtract
     artisanId: idField,
     location: locField,
     craft: craftField,
+    pin: pinField,
     rawTranscript: transcript,
     overallConfidence,
   };

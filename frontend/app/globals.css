@@ -3,3 +3,13 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highl
 .enhanced{/* Authentic craft colors preserved - zero generative or saturation color shift */}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
 @media print{body *{visibility:hidden}#report,#report *{visibility:visible}#report{position:absolute;left:0;top:0;width:100%;box-shadow:none!important}}
+
+/* Animation utilities */
+.animation-delay-200{animation-delay:200ms}
+.animation-delay-400{animation-delay:400ms}
+
+@keyframes fade-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.animate-fade-up{animation:fade-up 0.5s ease-out forwards}
+
+@keyframes pop{0%{transform:scale(0.8);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.animate-pop{animation:pop 0.5s ease-out forwards}
