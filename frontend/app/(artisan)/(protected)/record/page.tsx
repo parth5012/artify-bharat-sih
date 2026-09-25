@@ -2,6 +2,7 @@
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {PublishingFlow, MarketplaceSuccess} from '@/components/PublishingFlow';
+import {Screen} from '@/components/ui';
 import {createRecord,shrink} from '@/lib/mock';
 import {enqueueProduct} from '@/lib/sync';
 import {useMarket} from '@/lib/market';
@@ -116,31 +117,35 @@ export default function Record(){
  // Show error state
  if(error){
    return (
-     <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFF8EF] px-4 text-center">
-       <div className="w-full max-w-md space-y-4">
-         <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-red-100 text-red-600">
-           <span className="text-4xl">⚠️</span>
+     <Screen step={6}>
+       <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+         <div className="w-full space-y-4">
+           <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-red-100 text-red-600">
+             <span className="text-4xl">⚠️</span>
+           </div>
+           <h2 className="text-2xl font-bold text-[#3B2418]">Could not publish product</h2>
+           <p className="text-stone-600">{error}</p>
+           <button
+             onClick={()=>{setError('');set({productId:null})}}
+             className="rounded-full bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700 active:scale-95 transition-transform"
+           >
+             Try again
+           </button>
          </div>
-         <h2 className="text-2xl font-bold text-[#3B2418]">Could not publish product</h2>
-         <p className="text-stone-600">{error}</p>
-         <button
-           onClick={()=>{setError('');set({productId:null})}}
-           className="rounded-full bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700 active:scale-95 transition-transform"
-         >
-           Try again
-         </button>
        </div>
-     </div>
+     </Screen>
    );
  }
 
  // Show publishing animation
  if(!publishingComplete || !s.record || !s.productId || !productHash){
    return (
-     <PublishingFlow
-       onComplete={() => setPublishingComplete(true)}
-       onError={(err) => setError(err)}
-     />
+     <Screen step={6}>
+       <PublishingFlow
+         onComplete={() => setPublishingComplete(true)}
+         onError={(err) => setError(err)}
+       />
+     </Screen>
    );
  }
 
@@ -148,14 +153,16 @@ export default function Record(){
  const productId = s.productId || `ART-P-${s.record.serialNumber}`;
  
  return (
-   <MarketplaceSuccess
-     productId={productId}
-     productName={s.product?.localName || 'Your Product'}
-     productHash={productHash}
-     onViewProducts={() => r.push('/home')}
-     onViewMarketplace={() => r.push('/buyer/product/'+s.productId)}
-     ondcUrl={`https://ondc.org/listing/${productId}`}
-     gemUrl={`https://gem.gov.in/product/${productId}`}
-   />
+   <Screen step={6}>
+     <MarketplaceSuccess
+       productId={productId}
+       productName={s.product?.localName || 'Your Product'}
+       productHash={productHash}
+       onViewProducts={() => r.push('/home')}
+       onViewMarketplace={() => r.push('/buyer/product/'+s.productId)}
+       ondcUrl={`https://ondc.org/listing/${productId}`}
+       gemUrl={`https://gem.gov.in/product/${productId}`}
+     />
+   </Screen>
  );
 }
