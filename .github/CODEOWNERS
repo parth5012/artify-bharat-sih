@@ -1,0 +1,8 @@
+*                               @parth5012 @yashitchugh
+.env*                           @parth5012
+**/.env*                        @parth5012
+docker-compose.yml              @parth5012
+.github/workflows/              @parth5012
+frontend/backend/bhashini.ts    @parth5012
+frontend/tests/env-leak.test.ts @parth5012
+.gitleaks.toml                  @parth5012
