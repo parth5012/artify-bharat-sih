@@ -6,6 +6,6 @@ import {currentUser} from '@/backend/auth';
 // each API route as well; this guard stops unauthenticated renders early.
 export default async function ProtectedLayout({children}:{children:ReactNode}){
  const user=await currentUser();
- if(!user)redirect('/onboarding');
+ if(!user)redirect('/login');
  return <>{children}</>;
 }

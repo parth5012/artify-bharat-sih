@@ -2,7 +2,7 @@ import {mkdir,readFile,writeFile,rename} from 'node:fs/promises';
 import {join} from 'node:path';
 import {Pool,PoolClient} from 'pg';
 
-export type User={id:string;phone:string;name?:string;artisanId?:string;place?:string;craft?:string;createdAt:number;updatedAt:number};
+export type User={id:string;phone:string;name?:string;artisanId?:string;place?:string;craft?:string;pinHash?:string;createdAt:number;updatedAt:number};
 export type OtpChallenge={phone:string;codeHash:string;expiresAt:number;attempts:number};
 export type Session={tokenHash:string;userId:string;expiresAt:number};
 export type ProductRecord={id:string;parentHash:string;childHash:string;serialNumber:string;artisanId:string;name:string;craft:string;price:number;description:string;materials:string[];status:'published'|'archived';ownership:'artisan'|'sold';soldAt?:number;orderId?:string;createdAt:number};

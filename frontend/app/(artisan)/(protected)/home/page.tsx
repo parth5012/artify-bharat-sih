@@ -8,8 +8,22 @@ import {useStore} from '@/lib/store';
 import {useMarket} from '@/lib/market';
 export default function Home(){
  const r=useRouter();const {s,set}=useStore();const {products}=useMarket();const p=s.profile;
- useEffect(()=>{fetch('/api/auth/me').then(x=>{if(!x.ok)r.replace('/onboarding')}).catch(()=>r.replace('/onboarding'))},[r]);
- const logout=async()=>{await fetch('/api/auth/logout',{method:'POST'});set({lang:null,profile:{name:'',artisanId:'',phone:''},photos:[],product:null,record:null,productId:null});r.replace('/onboarding')};
+ useEffect(()=>{
+  fetch('/api/auth/me').then(async x=>{
+   if(!x.ok){r.replace('/login');return}
+   const data=await x.json();
+   if(data.user){
+    set({profile:{
+     name:data.user.name||'',
+     artisanId:data.user.artisanId||'',
+     phone:data.user.phone||'',
+     place:data.user.place,
+     craft:data.user.craft
+    }});
+   }
+  }).catch(()=>r.replace('/login'))
+ },[r,set]);
+ const logout=async()=>{await fetch('/api/auth/logout',{method:'POST'});set({lang:null,profile:{name:'',artisanId:'',phone:''},photos:[],product:null,record:null,productId:null});r.replace('/login')};
  const mine=products.filter(x=>x.id.startsWith('u-')&&x.artisanId===p.artisanId);
  return <Screen><div className="flex min-h-full flex-col items-center gap-5">
   <div className="grid h-24 w-24 place-items-center rounded-full border-2 border-stone-400 bg-white"><User size={56}/></div>

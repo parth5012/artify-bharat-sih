@@ -58,7 +58,9 @@ export default function Describe(){
      const p: Product = {
        localName: prodName || (extracted.productName.value || voiceResult?.transcript || 'Handcrafted Heritage Item'),
        recognizedAs: extracted.craftCategory.value || 'Artisan Handcraft',
-       description: extracted.description.value || voiceResult?.translation || voiceResult?.transcript || 'Handcrafted traditional artisan product.',
+       description: (extracted.description.value && extracted.description.value.length > 10) 
+         ? extracted.description.value 
+         : (voiceResult?.translation || voiceResult?.transcript || 'Handcrafted traditional artisan product.'),
        howMade: howMade || (extracted.makingProcess.value || 'Traditional handcrafted method'),
        usedFor: usedFor || (extracted.usage.value || 'Traditional décor & gifting'),
        materials,
