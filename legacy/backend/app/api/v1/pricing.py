@@ -1,19 +1,66 @@
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.database import get_db
-from app.services.pricing_service import pricing_service
-from app.models.product import Product
 from app.models.pricing import ProductPricing
+from app.models.product import Product
 from app.schemas.pricing import (
-    PricingCalculateRequest,
-    PricingCalculateResponse,
     CostBreakdown,
     FairWagePricingRequest,
     FairWagePricingResponse,
+    PricingCalculateRequest,
+    PricingCalculateResponse,
 )
+from app.services.market_pricing import VALID_UNITS, market_pricing_service
+from app.services.pricing_service import pricing_service
 
 router = APIRouter(tags=["Dynamic Pricing Engine & Fair-Wage Calculator"])
+
+
+class MaterialPricingInput(BaseModel):
+    name: str = Field(default="")
+    quantity: float = Field(default=0.0)
+    unit: str = Field(default="kg")
+
+
+class MarketPricingRequest(BaseModel):
+    product_name: str = Field(default="")
+    description: str = Field(default="")
+    materials: List[MaterialPricingInput] = Field(default_factory=list)
+    making_days: float = Field(default=0.0)
+    location: str = Field(default="")
+    image_data_url: str | None = Field(default=None)
+    raw_material_image_data_url: str | None = Field(default=None)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
+    weight_kg: float | None = Field(default=None)
+
+
+class MarketPricingResponse(BaseModel):
+    product_name: str
+    estimated_cost: float
+    material_cost: float
+    labour_cost: float
+    overhead_cost: float
+    suggested_price_range: Dict[str, float]
+    market_reference: Dict[str, float]
+    sources: List[Dict[str, Any]] = []
+    market_sources: List[Dict[str, Any]] = []
+    product_understanding: Dict[str, Any] = {}
+    estimated_material_cost: float
+    estimated_labour_cost: float
+    estimated_total_making_cost: float
+    material_cost_estimate: Dict[str, Any] = {}
+    making_time_estimate: Dict[str, Any] = {}
+    similar_product_market_range: Dict[str, float]
+    recommended_price: float
+    research_status: str
+    search_queries: List[str] = []
+    warning: str | None = None
 
 
 @router.post("/calculate-price", response_model=FairWagePricingResponse, status_code=status.HTTP_200_OK)
@@ -55,6 +102,68 @@ async def calculate_fair_wage_price(payload: FairWagePricingRequest):
         cost_breakdown=CostBreakdown(**cost_info),
         pricing_formula_summary=result["pricing_formula_summary"],
     )
+
+
+@router.post("/pricing/calculate-market", response_model=MarketPricingResponse)
+async def calculate_market_pricing(payload: MarketPricingRequest):
+    """Manual artisan pricing route: product attributes + current market context -> deterministic suggested price range."""
+    product_name = (payload.product_name or "").strip()
+    if not product_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product name cannot be empty")
+    if not (payload.description or "").strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product description cannot be empty")
+    if not (payload.image_data_url or "").strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product image is required")
+
+    materials = payload.materials or []
+    if not materials:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Materials cannot be empty")
+
+    normalized_materials: List[Dict[str, Any]] = []
+    for item in materials:
+        material_name = (item.name or "").strip()
+        if not material_name:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Material name cannot be empty")
+        quantity = float(item.quantity)
+        if quantity <= 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be greater than 0")
+        unit = (item.unit or "kg").strip() or "kg"
+        normalized_unit = unit.lower().replace(".", "").replace("-", " ")
+        if normalized_unit not in VALID_UNITS:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unit '{unit}' is invalid")
+        normalized_materials.append({"name": material_name, "quantity": quantity, "unit": unit})
+
+    if float(payload.making_days) <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Making days must be greater than 0")
+
+    location = (payload.location or "").strip()
+    if not location:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Location should be present")
+
+    try:
+        return await market_pricing_service.calculate_market_pricing(
+            product_name=product_name,
+            materials=normalized_materials,
+            making_days=float(payload.making_days),
+            location=location,
+            description=payload.description or "",
+            image_data_url=payload.image_data_url,
+            raw_material_image_data_url=payload.raw_material_image_data_url,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+        )
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc) if str(exc) else "Current market research is unavailable. No final price was calculated.",
+        ) from exc
+    except Exception as exc:  # pragma: no cover - defensive safety net
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc) if str(exc) else "Unable to calculate a fair market-aligned price.",
+        ) from exc
 
 
 @router.post("/pricing/calculate", response_model=PricingCalculateResponse)

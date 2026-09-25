@@ -14,139 +14,96 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#FFF8EF]">
-      {/* Header */}
-      <header className="px-4 py-6 text-center">
-        <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center">
-          <img src="/logo.png" alt="Artify" className="h-full w-full object-contain" />
-        </div>
-        <h1 className="text-lg font-bold uppercase tracking-wide text-[#3B2418]">ARTIFACT</h1>
-        <p className="mt-1 text-xs text-stone-600">
-          Real Artisan → Real Craft → Verified Origin → Real Marketplace
-        </p>
-      </header>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#E8E8E8] p-4">
+      {/* Main Container with rounded border */}
+      <div className="relative w-full max-w-md rounded-[40px] border-8 border-black bg-[#F5F5F5] p-6 shadow-2xl">
+        {/* Main Title - Large and Centered */}
+        <header className="mb-6 text-center">
+          <h1 className="text-5xl font-extrabold uppercase tracking-wide text-[#3B2418]">
+            ARTIFACT
+          </h1>
+        </header>
 
-      {/* Main Cards Container */}
-      <div className="flex flex-1 flex-col gap-4 px-4 pb-8">
-        {/* Artisan Card */}
-        <Link
-          href="/onboarding"
-          className="group relative overflow-hidden rounded-3xl shadow-xl transition-transform active:scale-98 hover:shadow-2xl"
-        >
-          <div className="relative h-64">
-            {/* Background Image */}
-            <img
-              src="/src/images/artisan-card-bg.jpg"
-              alt="Artisan"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                // Fallback gradient if image not found
-                e.currentTarget.style.display = 'none';
-                const parent = e.currentTarget.parentElement;
-                if (parent) {
-                  parent.style.background = 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)';
-                }
-              }}
-            />
-            {/* Overlay Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/70" />
-            
-            {/* Content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-              <h2 className="text-5xl font-extrabold text-white drop-shadow-lg">Artisan</h2>
-              <p className="mt-3 text-lg font-semibold text-white/95 drop-shadow">
-                Speak · Create · Verify · Sell
-              </p>
+        {/* Cards Stack */}
+        <div className="space-y-4">
+          {/* Artisan Card */}
+          <Link
+            href="/onboarding"
+            className="group relative block overflow-hidden rounded-3xl border-4 border-black shadow-lg transition-transform active:scale-[0.98]"
+          >
+            <div className="relative h-52">
+              {/* Background Image - Centered and Cropped */}
+              <img
+                src="/src/artisan.jpg"
+                alt="Artisan"
+                className="absolute inset-0 h-full w-full object-cover object-center"
+              />
+              
+              {/* Content Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <h2 className="text-6xl font-extrabold text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)]">
+                  Artisan
+                </h2>
+              </div>
+              
+              {/* Hand Cursor Icon - Bottom Right */}
+              <div className="absolute bottom-4 right-6">
+                <div className="text-5xl drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">👆</div>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        {/* Buyer Card */}
-        <Link
-          href="/buyer"
-          className="group relative overflow-hidden rounded-3xl shadow-xl transition-transform active:scale-98 hover:shadow-2xl"
-        >
-          <div className="relative h-64">
-            {/* Background Image */}
-            <img
-              src="/src/images/buyer-card-bg.jpg"
-              alt="Buyer"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                // Fallback: Light background with illustration
-                e.currentTarget.style.display = 'none';
-                const parent = e.currentTarget.parentElement;
-                if (parent) {
-                  parent.style.background = 'linear-gradient(135deg, #E8D7C3 0%, #D4C4B0 100%)';
-                }
-              }}
-            />
-            {/* Lighter Overlay */}
-            <div className="absolute inset-0 bg-white/30" />
-            
-            {/* Content */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-              <h2 className="text-5xl font-extrabold text-stone-900 drop-shadow-sm">buyer</h2>
-              <p className="mt-3 text-lg font-semibold text-stone-800">
-                Discover · Connect · Verify · Buy
-              </p>
+          {/* Buyer Card */}
+          <Link
+            href="/buyer"
+            className="group relative block overflow-hidden rounded-3xl border-4 border-black bg-white shadow-lg transition-transform active:scale-[0.98]"
+          >
+            <div className="relative h-52 flex flex-col items-center justify-center">
+              {/* Buyer Illustration - Centered and Zoomed */}
+              <div className="relative z-10 flex flex-col items-center justify-center">
+                <img
+                  src="/src/buyer.jpg"
+                  alt="Buyer"
+                  className="h-40 w-40 object-contain mb-3"
+                />
+                <h2 className="text-4xl font-semibold text-stone-700">buyer</h2>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        {/* Authority Card */}
-        <Link
-          href="/ministry"
-          className="group relative overflow-hidden rounded-3xl shadow-xl transition-transform active:scale-98 hover:shadow-2xl"
-        >
-          <div className="relative h-64">
-            {/* Background Image - Government Emblem */}
-            <img
-              src="/src/images/authority-card-bg.jpg"
-              alt="Authority"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              onError={(e) => {
-                // Fallback: Dark blue/navy gradient
-                e.currentTarget.style.display = 'none';
-                const parent = e.currentTarget.parentElement;
-                if (parent) {
-                  parent.style.background = 'linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%)';
-                }
-              }}
-            />
-            {/* Dark Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-blue-900/60 via-blue-900/70 to-blue-900/90" />
-            
-            {/* Government Emblem Icon */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-              {/* Government of India Emblem SVG or Image */}
-              <div className="mb-3 h-16 w-16 opacity-90">
-                <img 
-                  src="/src/images/govt-emblem.png" 
-                  alt="Government of India"
-                  className="h-full w-full object-contain"
-                  onError={(e) => {
-                    // Fallback: Show text icon
-                    e.currentTarget.style.display = 'none';
-                  }}
+          {/* Authority Card */}
+          <Link
+            href="/ministry"
+            className="group relative block overflow-hidden rounded-3xl border-4 border-black shadow-lg transition-transform active:scale-[0.98]"
+          >
+            <div className="relative h-52 bg-gradient-to-br from-[#F5E6D3] via-[#E8D7C3] to-[#D4C4B0]">
+              {/* Ministry Image/Emblem - Larger and More Prominent */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img
+                  src="/src/ministry.jpg"
+                  alt="Authority"
+                  className="h-44 w-44 object-contain opacity-95"
                 />
               </div>
-              <h2 className="text-4xl font-extrabold text-white drop-shadow-lg">Authority</h2>
-              <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-white/90 drop-shadow">
-                Government of India
-              </p>
-              <p className="mt-1 text-xs text-white/75">Ministry of MSME</p>
+              
+              {/* Text Overlay - Bottom - Smaller Text */}
+              <div className="absolute inset-0 flex items-end justify-center pb-4">
+                <div className="text-center">
+                  <h2 className="text-4xl font-extrabold text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
+                    Authority
+                  </h2>
+                  <p className="mt-1 text-xs font-bold uppercase tracking-wide text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]">
+                    Government of India
+                  </p>
+                  <p className="mt-0.5 text-[9px] font-semibold uppercase text-white/90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]">
+                    Ministry of Social Justice and Empowerment
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-stone-200 bg-white px-4 py-4 text-center">
-        <p className="text-xs text-stone-500">
-          🇮🇳 Ministry Portal — Authorized Access Only
-        </p>
-      </footer>
     </div>
   );
 }

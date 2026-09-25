@@ -35,6 +35,7 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
   const [editingIdx, setEditingIdx]=useState<number|null>(null);
   const [showTextInput, setShowTextInput]=useState(false);
   const [customText, setCustomText]=useState('');
+  const [recordingTime, setRecordingTime]=useState(0);
 
   useEffect(()=>{if(phase!=='idle')return;const t=setTimeout(()=>speak(spoken),500);return()=>{clearTimeout(t);window.speechSynthesis?.cancel()}},[spoken,phase]);
 
@@ -207,8 +208,21 @@ const IDX:Record<Phase,number>={idle:0,listening:1,processing:2,understanding:3,
     setPhase('understanding');
   };
 
- const tap=async()=>{if(phase==='idle'){window.speechSynthesis?.cancel();setPhase('listening');await v.start()}else if(phase==='listening')finish()};
- useEffect(()=>{if(phase!=='listening')return;const t=setTimeout(finish,12000);return()=>clearTimeout(t)},[phase]); // eslint-disable-line
+ const tap=async()=>{if(phase==='idle'){window.speechSynthesis?.cancel();setPhase('listening');setRecordingTime(0);await v.start()}else if(phase==='listening')finish()};
+ 
+ // Recording timer
+ useEffect(() => {
+   if (phase !== 'listening') return;
+   setRecordingTime(0);
+   const interval = setInterval(() => {
+     setRecordingTime(prev => prev + 1);
+   }, 1000);
+   return () => clearInterval(interval);
+ }, [phase]);
+ 
+ // Auto-stop recording after 60 seconds (increased from 12 seconds)
+ useEffect(()=>{if(phase!=='listening')return;const t=setTimeout(finish,60000);return()=>clearTimeout(t)},[phase]); // eslint-disable-line
+ 
  useEffect(()=>{if(phase!=='understanding'||!heard)return;const last=shown>=heard.fields.length;const t=setTimeout(()=>last?setPhase('confirm'):setShown(shown+1),last?400:450);return()=>clearTimeout(t)},[phase,shown,heard]);
  function getFieldItemStyle(isEditing: boolean, isMissing: boolean): string {
    if (isEditing) return 'border-orange-500 bg-orange-50/30';

@@ -1,6 +1,11 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+REPOSITORY_DIR = BACKEND_DIR.parents[1]
 
 
 class Settings(BaseSettings):
@@ -48,6 +53,8 @@ class Settings(BaseSettings):
     INDICTRANS2_ENDPOINT: str = "http://localhost:8001/translate"
     MISTRAL_LLM_ENDPOINT: str = "http://localhost:11434/api/generate"  # Ollama / vLLM endpoint
     MISTRAL_MODEL_NAME: str = "mistral"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     BHASHINI_API_KEY: str = ""
     BHASHINI_ULCA_API_KEY: str = ""
     Inference: str = ""
@@ -101,7 +108,7 @@ class Settings(BaseSettings):
     DADI_AGENT_TIMEOUT_SECONDS: float = 30.0
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(BACKEND_DIR / ".env", REPOSITORY_DIR / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
