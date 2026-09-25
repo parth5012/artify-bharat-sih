@@ -13,3 +13,12 @@ body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-tap-highl
 
 @keyframes pop{0%{transform:scale(0.8);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 .animate-pop{animation:pop 0.5s ease-out forwards}
+
+/* PWA optimizations */
+.active\:scale-98:active{transform:scale(0.98)}
+@media (hover: hover){
+  .hover\:shadow-2xl:hover{box-shadow:0 25px 50px -12px rgba(0,0,0,0.25)}
+}
+
+/* Prevent pull-to-refresh on PWA */
+body{overscroll-behavior-y:contain}
