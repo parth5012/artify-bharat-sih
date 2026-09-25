@@ -74,6 +74,9 @@ Validated with `z.object({text: z.string(), kind: z.enum(['identity','product'])
 - `text` not a string / `kind` missing or invalid / body not JSON-parseable → **400** `{error: string}`.
 - `text` is `""` or whitespace-only → **200** with the all-missing result (regex handles empty input at
   `frontend/lib/nlp.ts:85`); the provider chain is skipped entirely (`attempts: []`, `served: 'none'`).
+- `text.length > 4_000` → **413** `{error: string}`. Spec default (not a human decision): bounds the token
+  cost of a single request and keeps a hostile payload from consuming the 26s budget. Raise only with a
+  measured transcript-length ceiling. The client needs no change — real transcripts are far below this.
 
 ### Response types
 
@@ -158,6 +161,28 @@ never hits this branch, so typed/sample paths keep working keyless (#170 §3).
 Deliberately untouched: `frontend/app/(artisan)/onboarding/page.tsx:308` and
 `frontend/app/(artisan)/(protected)/describe/page.tsx:87` keep their local regex as a last-resort backstop for
 fields the server returned empty (minimal-change rule; a later cleanup can drop them).
+
+### Admission controls & third-party disclosure — **OPEN, human decision** (raised on PR #173 review)
+
+Two design gaps were flagged in review of this spec. Neither was decided on map #166, so neither is
+implemented below; both are recorded in `docs/pending-decisions.md` and must be settled **before** the route
+is reachable in any shared environment.
+
+1. **Caller / rate controls.** The timeouts in §6 bound a *single* request (8s attempts, 26s budget); nothing
+   bounds *how many* requests a caller may fire, nor how many may run concurrently. The 413 input-size bound
+   above caps per-request cost but not aggregate cost — each accepted request can burn up to 3 provider calls
+   against a 1,000 req/day (Groq) / 50 req/day (OpenRouter) free quota, so an unauthenticated flooder can
+   exhaust the quota for every artisan on the instance. Options and trade-offs live in the pending-decisions
+   entry; the spec deliberately does **not** pick one.
+2. **Transcript disclosure to external providers.** With keys configured, the route forwards the artisan's
+   raw `translation || transcript` (identity data: name, phone, location) to **Groq** and **OpenRouter** —
+   third-party processors outside the MoSJE perimeter. The PII-free `[extract]` log (§6) protects the
+   *logging* sink only; it says nothing about this disclosure. A data-minimization / vendor-disclosure
+   position (DPDP posture, what is redacted before egress, whether the identity kind may be sent at all)
+   is likewise a human/policy decision, pending-decisions entry 2.
+
+**Coder-session rule:** implement §2–§7 as written, do **not** invent rate limiting or redaction, and treat
+both items as blocking gates for any deployment beyond local/dev — surface them in the rollout note.
 
 ---
 
@@ -763,6 +788,14 @@ decision (charted 2026-09-25) and are **not** part of `POST /api/extract` v1:
 | *Numeric price / making-days parsing (regex → LLM?)* | `match(/(\d+(?:\.\d+)?)/)` at `frontend/app/(artisan)/(protected)/describe/page.tsx:35` and `frontend/app/(artisan)/(protected)/review/page.tsx:48` | Sits outside the transcript extraction functions; open question recorded there: whether `timeRequired` extraction subsumes it once the LLM path ships |
 
 Promote either entry to a new map/ticket if it should be picked up; do not smuggle them into this spec.
+
+**Two further entries are open and were raised by the PR #173 review — these are blocking gates for any
+shared/production exposure of the route** (see §2 "Admission controls & third-party disclosure"):
+
+| Entry | What it is | Status |
+|---|---|---|
+| *Admission controls for `POST /api/extract`* | Per-request bounds exist (413/8s/26s) but no rate, concurrency or daily-quota guard before provider calls burn the free quota | Pending — human decision, not implemented |
+| *Third-party transcript disclosure (Groq / OpenRouter) under DPDP* | Raw identity transcripts are forwarded to external processors; the PII-free log does not cover this egress | Pending — human/policy decision, not implemented |
 
 ---
 
