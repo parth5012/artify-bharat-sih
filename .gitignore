@@ -2,5 +2,8 @@
 node_modules/
 data/
 .env*
-!.env.example*.tsbuildinfo
+!.env.example
+*.tsbuildinfo
 **/*.tsbuildinfo
+.tmp/
+*.log

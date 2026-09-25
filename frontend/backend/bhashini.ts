@@ -311,7 +311,7 @@ export async function processVoiceWithBhashini(input: VoiceInput): Promise<Voice
     return getMockVoiceResult(sourceLanguage, input.kind || 'product');
   }
 
-  console.log(`[bhashini] Calling live Dhruva endpoint: ${endpoint()} (userId=${userId}, authKey=${authKey ? 'configured' : 'missing'})`);
+  console.log(`[bhashini] Calling live Dhruva endpoint: ${endpoint()} (userId=${userId ? 'configured' : 'missing'}, authKey=${authKey ? 'configured' : 'missing'})`);
 
   const normalizedWavBase64 = await normalizeAudioToWav(cleanBase64);
 
