@@ -11,6 +11,7 @@ from app.services.cv_service import cv_service
 from app.services.nlp_service import nlp_service
 from app.services.assistant_service import assistant_service
 from app.services.pricing_service import pricing_service
+from app.services.market_pricing import market_pricing_service
 from app.services.passport_service import passport_service
 from app.services.export_service import export_adapter_service, ExportAdapterService
 from app.services import auth_service
@@ -26,6 +27,7 @@ __all__ = [
     "nlp_service",
     "assistant_service",
     "pricing_service",
+    "market_pricing_service",
     "passport_service",
     "export_adapter_service",
     "export_service",

@@ -567,6 +567,158 @@ async def test_pricing_api_rejects_invalid_payloads(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_manual_market_pricing_endpoint_contract(client: AsyncClient):
+    res = await client.post(
+        "/api/v1/pricing/calculate-market",
+        json={
+            "product_name": "Handmade Clay Pot",
+            "description": "A hand-finished clay storage pot.",
+            "materials": [{"name": "clay", "quantity": 5, "unit": "kg"}],
+            "making_days": 2,
+            "location": "Haryana, India",
+            "image_data_url": "data:image/jpeg;base64,product-image",
+        },
+    )
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["research_status"] == "fallback"
+    assert data["recommended_price"] > 0
+    assert "local deterministic pricing model" in data["warning"]
+
+
+@pytest.mark.asyncio
+async def test_market_pricing_uses_researched_inputs_before_calculation(client: AsyncClient, monkeypatch):
+    from app.services.market_pricing import market_pricing_service
+
+    captured = {}
+
+    async def _research(**kwargs):
+        captured.update(kwargs)
+        return {
+            "material_prices": [{"name": "clay", "price_per_unit": 200.0}],
+            "labour_wage": 700.0,
+            "similar_product_prices": [
+                {"name": "Comparable clay pot", "price": 2400.0, "source": "Co-op"},
+                {"name": "Comparable clay pot 2", "price": 3000.0, "source": "Market"},
+            ],
+            "sources": [{"name": "Co-op", "url": "https://example.test/co-op"}],
+            "warning": None,
+            "research_status": "researched",
+            "product_understanding": {
+                "product": "Handmade Clay Pot",
+                "category": "Pottery",
+                "material": "Clay",
+                "capacity": "2 litres",
+                "use_case": "Storage",
+                "craftsmanship": "Wheel-thrown and hand-finished",
+                "visual_notes": "Glazed floral design",
+                "search_keywords": ["handmade clay pot"],
+            },
+            "estimated_material_cost": {"min": 900.0, "max": 1100.0, "confidence": "Estimated"},
+            "estimated_making_time": {"min_hours": 14.0, "max_hours": 18.0, "confidence": "Estimated"},
+            "search_queries": ["handmade clay pot India price"],
+        }
+
+    monkeypatch.setattr(market_pricing_service, "research_market_data", _research)
+    res = await client.post(
+        "/api/v1/pricing/calculate-market",
+        json={
+            "product_name": "Handmade Clay Pot",
+            "description": "A glazed storage pot with floral design.",
+            "materials": [{"name": "clay", "quantity": 5, "unit": "kg"}],
+            "making_days": 2,
+            "location": "Khurja, Uttar Pradesh",
+            "latitude": 28.25,
+            "longitude": 77.85,
+            "image_data_url": "data:image/jpeg;base64,product-image",
+            "raw_material_image_data_url": "data:image/jpeg;base64,clay-image",
+        },
+    )
+
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert captured["description"] == "A glazed storage pot with floral design."
+    assert captured["image_data_url"].startswith("data:image/jpeg")
+    assert captured["raw_material_image_data_url"].startswith("data:image/jpeg")
+    assert captured["location"] == "Khurja, Uttar Pradesh"
+    assert captured["latitude"] == 28.25
+    assert captured["longitude"] == 77.85
+    assert data["material_cost"] == 1000.0
+    assert data["labour_cost"] == 1400.0
+    assert data["estimated_material_cost"] == 1000.0
+    assert data["estimated_labour_cost"] == 1400.0
+    assert data["estimated_total_making_cost"] == 2760.0
+    assert data["similar_product_market_range"] == {"low": 2400.0, "high": 3000.0}
+    assert data["recommended_price"] == 2898.0
+    assert data["market_sources"] == data["sources"]
+
+
+@pytest.mark.asyncio
+async def test_manual_market_pricing_validation_errors(client: AsyncClient):
+    bad_quantity = await client.post(
+        "/api/v1/pricing/calculate-market",
+        json={
+            "product_name": "Bad Product",
+            "materials": [{"name": "clay", "quantity": -5, "unit": "kg"}],
+            "making_days": 2,
+            "location": "Haryana, India",
+        },
+    )
+    assert bad_quantity.status_code == 400
+
+    empty_materials = await client.post(
+        "/api/v1/pricing/calculate-market",
+        json={
+            "product_name": "Bad Product",
+            "materials": [],
+            "making_days": 2,
+            "location": "Haryana, India",
+        },
+    )
+    assert empty_materials.status_code == 400
+
+    missing_name = await client.post(
+        "/api/v1/pricing/calculate-market",
+        json={
+            "product_name": "",
+            "materials": [{"name": "clay", "quantity": 1, "unit": "kg"}],
+            "making_days": 2,
+            "location": "Haryana, India",
+        },
+    )
+    assert missing_name.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_manual_market_pricing_handles_search_failures_gracefully(client: AsyncClient, monkeypatch):
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("gemini unavailable")
+
+    from app.services.market_pricing import market_pricing_service
+    monkeypatch.setattr(market_pricing_service, "research_market_data", _boom)
+
+    res = await client.post(
+        "/api/v1/pricing/calculate-market",
+        json={
+            "product_name": "Handmade Bamboo Basket",
+            "materials": [
+                {"name": "bamboo", "quantity": 2, "unit": "kg"},
+                {"name": "natural rope", "quantity": 0.5, "unit": "kg"},
+            ],
+            "making_days": 3,
+            "location": "Haryana, India",
+            "description": "A handwoven bamboo basket.",
+            "image_data_url": "data:image/jpeg;base64,product-image",
+        },
+    )
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["research_status"] == "fallback"
+    assert data["recommended_price"] > 0
+    assert "local deterministic pricing model" in data["warning"]
+
+
+@pytest.mark.asyncio
 async def test_fair_wage_calculate_price_endpoint_contract(client: AsyncClient):
     """POST /api/v1/pricing/calculate-price — stateless hourly-wage engine route."""
     res = await client.post(

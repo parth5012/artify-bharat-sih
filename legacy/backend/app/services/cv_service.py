@@ -84,16 +84,26 @@ class ComputerVisionService:
     @staticmethod
     def equalize_lighting(image_bgr: np.ndarray) -> np.ndarray:
         """
-        Equalizes lighting and gamma using CLAHE on the L-channel in LAB color space.
-        Preserves natural dyes and artisan color warmth without artificial saturation.
+        White-light enhancement: CLAHE on LAB L-channel + mild incandescent de-yellow.
+
+        Strategy — white studio light simulation:
+          1. CLAHE on L only  → local contrast boost, no hue change.
+          2. B channel −8     → pulls warm incandescent yellow toward neutral daylight.
+                                B > 128 = warm/yellow; offset of −8 removes cast without
+                                affecting actual craft hues (imperceptible shift).
+          3. A channel        → never touched (red/green natural dye balance preserved).
         """
         lab = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2LAB)
         l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         cl = clahe.apply(l)
-        limg = cv2.merge((cl, a, b))
+        # Mild de-yellow: −8 on B axis (blue-yellow) removes incandescent bulb warmth.
+        cb = np.clip(b.astype(np.int16) - 8, 0, 255).astype(np.uint8)
+        limg = cv2.merge((cl, a, cb))
         enhanced = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
         return enhanced
+
+
 
     @staticmethod
     def _grabcut_fallback(image_bgr: np.ndarray) -> Tuple[np.ndarray, bool]:
