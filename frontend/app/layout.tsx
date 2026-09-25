@@ -5,6 +5,7 @@ import {StoreProvider} from '@/lib/store';
 import {MarketProvider} from '@/lib/market';
 import SW from '@/components/SW';
 import {LanguageSync} from '@/components/LanguageSync';
+import {AppInitializer} from '@/components/AppInitializer';
 
 export const metadata: Metadata = {
   title: 'Artify – Real Artisan. Real Craft.',

@@ -210,8 +210,8 @@ export default function Onboarding(){
  // Verified - Show Confirmed Details
  if (phase === 'verified' && verifiedArtisan) {
   return (
-   <div className="flex min-h-screen items-center justify-center bg-stone-50 p-4">
-    <div className="w-full max-w-md space-y-6">
+   <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
+    <div className="w-full space-y-6">
      <div className="text-center">
       <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-emerald-100 mb-4">
        <Check size={48} className="text-emerald-600" />

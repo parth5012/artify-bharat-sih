@@ -10,8 +10,8 @@ export function Logo({size=44}:{size?:number}){
 export function Screen({children,onBack,step}:{children:ReactNode;onBack?:()=>void;step?:number}){
  return <div className="flex min-h-0 flex-1 flex-col">
   <header className="flex items-center justify-between px-4 pb-2 pt-4">
-   <div className="w-12">{onBack&&<button onClick={onBack} aria-label="Back" className="grid h-12 w-12 place-items-center rounded-full bg-white shadow active:scale-95"><ArrowLeft/></button>}</div>
-   <Logo/><div className="w-12"/>
+   <div className="flex-1">{onBack&&<button onClick={onBack} aria-label="Back" className="grid h-12 w-12 place-items-center rounded-full bg-white shadow active:scale-95"><ArrowLeft/></button>}</div>
+   <div className="flex-1"/>
   </header>
   {step&&<div className="px-5 pb-2"><div className="flex gap-1">{STEPS.map((_,i)=><span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i<step?'bg-orange-600':'bg-stone-200'}`}/>)}</div>
    <p className="mt-1 text-xs font-semibold text-stone-500">Step {step} of {STEPS.length} · {STEPS[step-1]}</p></div>}
