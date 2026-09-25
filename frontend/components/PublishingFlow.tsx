@@ -143,14 +143,14 @@ export function PublishingFlow({ onComplete, onError }: PublishingFlowProps) {
             label="Publishing to ONDC Network"
             completed={isStepComplete('ondc')}
             active={isStepActive('ondc')}
-            logo="/logos/ondc-logo.png"
+            logo="/src/ondchvv_d4-removebg-preview.png"
             logoAlt="ONDC"
           />
           <PublishingStepItem
             label="Listing on GeM"
             completed={isStepComplete('gem')}
             active={isStepActive('gem')}
-            logo="/logos/gem-logo.png"
+            logo="/src/gem-Photoroom.png"
             logoAlt="GeM"
           />
           <PublishingStepItem
@@ -461,30 +461,23 @@ export function MarketplaceSuccess({
         {/* ONDC Card */}
         <div className="rounded-2xl border-2 border-blue-200 bg-white p-5 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white p-2">
               <img 
-                src="/logos/ondc-logo.png" 
-                alt="ONDC" 
-                className="h-12 w-12 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    parent.className = 'flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600';
-                    parent.innerHTML = '<span class="text-2xl font-extrabold text-white">ONDC</span>';
-                  }
-                }}
+                src="/src/ondchvv_d4-removebg-preview.png" 
+                alt="Open Network for Digital Commerce" 
+                className="h-full w-full object-contain"
               />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-stone-900">ONDC Network</h3>
+                <h3 className="font-bold text-stone-900">Open Network for Digital Commerce</h3>
                 <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
                   <span className="h-2 w-2 rounded-full bg-emerald-600" />
                   Published
                 </span>
               </div>
-              <p className="mt-1 text-sm text-stone-600">Ready for buyer orders</p>
+              <p className="mt-1 text-xs text-stone-500 uppercase tracking-wide font-semibold">ONDC Network</p>
+              <p className="mt-1 text-sm text-stone-600">Product listed on national digital commerce platform</p>
               {ondcUrl && (
                 <a
                   href={ondcUrl}
@@ -502,19 +495,11 @@ export function MarketplaceSuccess({
         {/* GeM Card */}
         <div className="rounded-2xl border-2 border-orange-200 bg-white p-5 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-orange-50">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white p-2">
               <img 
-                src="/logos/gem-logo.png" 
-                alt="GeM" 
-                className="h-12 w-12 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    parent.className = 'flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 via-green-400 to-blue-400';
-                    parent.innerHTML = '<span class="text-2xl font-extrabold text-white drop-shadow-md">GeM</span>';
-                  }
-                }}
+                src="/src/gem-Photoroom.png" 
+                alt="Government e-Marketplace" 
+                className="h-full w-full object-contain"
               />
             </div>
             <div className="flex-1">
@@ -525,7 +510,8 @@ export function MarketplaceSuccess({
                   Listed
                 </span>
               </div>
-              <p className="mt-1 text-sm text-stone-600">Available for government buyers</p>
+              <p className="mt-1 text-xs text-stone-500 uppercase tracking-wide font-semibold">GeM Portal</p>
+              <p className="mt-1 text-sm text-stone-600">Eligible for government procurement orders</p>
               {gemUrl && (
                 <a
                   href={gemUrl}

@@ -120,138 +120,159 @@ export default function Login() {
 
   return (
     <Screen>
-      <div className="flex min-h-full flex-col items-center justify-center gap-6 px-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center mb-8">
-            <h1 className="font-display text-4xl font-extrabold text-[#3B2418]">Welcome Back</h1>
-            <p className="mt-2 text-lg text-stone-600">Login to your artisan account</p>
-          </div>
+      <div className="flex min-h-full flex-col items-center justify-center gap-6 py-8">
+        {/* Header */}
+        <div className="w-full text-center space-y-2">
+          <h1 className="text-3xl font-extrabold text-[#3B2418]">Welcome Back</h1>
+          <p className="text-base text-stone-600">Login to your artisan account</p>
+        </div>
 
-          {/* Voice Login Section */}
-          <div className="rounded-3xl border-2 border-[#E8D7C3] bg-[#FFF8EF] p-8 shadow-lg">
+        {/* Voice Login Card */}
+        <div className="w-full rounded-3xl border-2 border-stone-200 bg-white p-6 shadow-lg">
+          <div className="space-y-4">
+            {/* Title */}
             <div className="text-center">
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-[#3B2418] mb-1">🎙️ Voice Login</h3>
-                <p className="text-sm text-stone-600">Speak your phone number and 4-digit PIN</p>
-              </div>
-              
-              <div className="relative inline-block">
-                <button
-                  onClick={handleVoiceLogin}
-                  disabled={loading}
-                  className={`relative mx-auto grid h-40 w-40 place-items-center rounded-full shadow-2xl transition-all ${
-                    isListening ? 'bg-emerald-50 ring-4 ring-emerald-200' : 'bg-white ring-4 ring-orange-200'
-                  } ${loading ? 'opacity-60' : ''}`}
-                >
-                  {isListening && (
-                    <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/50" />
-                  )}
-                  {isListening ? (
-                    <Mic size={72} className="text-emerald-600" />
-                  ) : (
-                    <MicOff size={72} className="text-stone-700" />
-                  )}
-                </button>
-              </div>
-              
-              <div className="mt-4 flex h-14 items-center justify-center gap-[3px]">
-                {v.levels.map((h, i) => (
-                  <span
-                    key={i}
-                    className="w-1.5 rounded-full bg-orange-400/70 transition-all"
-                    style={{ height: isListening ? h : 4 }}
-                  />
-                ))}
-              </div>
-              
-              <p className="mt-4 text-base font-semibold text-[#3B2418]">
-                {isListening
-                  ? '🔴 Listening... Tap to stop'
-                  : loading
-                  ? '⏳ Processing...'
-                  : ''}
-              </p>
-              
-              {!isListening && !loading && (
-                <div className="mt-3 rounded-xl bg-orange-50/50 border border-orange-200 p-3">
-                  <p className="text-xs font-semibold text-stone-600 mb-1">Try saying:</p>
-                  <p className="text-sm font-mono text-stone-800">"9876543210, my PIN is 1234"</p>
-                </div>
-              )}
-              
+              <h2 className="text-xl font-bold text-[#3B2418] mb-1">🎙️ Voice Login</h2>
+              <p className="text-sm text-stone-600">Speak your phone number and 4-digit PIN</p>
+            </div>
+            
+            {/* Microphone Button */}
+            <div className="relative py-4">
               <button
-                onClick={() => speak('अपना फ़ोन नंबर और चार अंकों का पिन बोलिए')}
-                className="mt-4 flex items-center gap-2 rounded-full bg-orange-100 px-4 py-2 text-sm font-semibold text-orange-800 mx-auto hover:bg-orange-200 transition-colors"
+                onClick={handleVoiceLogin}
+                disabled={loading}
+                aria-label={isListening ? 'Stop recording' : 'Start voice login'}
+                className={`relative mx-auto grid h-36 w-36 place-items-center rounded-full shadow-xl transition-all active:scale-95 ${
+                  isListening ? 'bg-emerald-50' : 'bg-white'
+                } ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
-                <Volume2 size={16} /> Listen to example
+                {isListening && (
+                  <span className="absolute inset-0 animate-ping rounded-full bg-emerald-300/40" />
+                )}
+                {isListening ? (
+                  <Mic size={64} className="text-emerald-600 relative z-10" />
+                ) : (
+                  <MicOff size={64} className="text-stone-700 relative z-10" />
+                )}
               </button>
             </div>
-          </div>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t-2 border-[#E8D7C3]"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-stone-50 px-6 py-1 font-semibold text-stone-500 rounded-full border-2 border-[#E8D7C3]">
-                Or enter manually
-              </span>
-            </div>
-          </div>
-
-          {/* Manual Login Form */}
-          <form onSubmit={handleManualLogin} className="rounded-3xl border-2 border-[#E8D7C3] bg-[#FFFAF5] p-6 shadow-lg">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-[#3B2418] mb-2">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="9876543210"
-                  className="h-14 w-full rounded-xl border-2 border-[#E8D7C3] bg-white px-4 text-xl outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+            
+            {/* Audio Visualizer */}
+            <div className="flex h-12 items-center justify-center gap-[3px]">
+              {v.levels.map((h, i) => (
+                <span
+                  key={i}
+                  className="w-1.5 rounded-full bg-stone-700/70 transition-all"
+                  style={{ height: isListening ? h : 4 }}
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#3B2418] mb-2">
-                  4-Digit PIN
-                </label>
-                <input
-                  type="password"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="••••"
-                  maxLength={4}
-                  className="h-14 w-full rounded-xl border-2 border-[#E8D7C3] bg-white px-4 text-xl tracking-widest outline-none transition-colors focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-                />
-              </div>
-
-              {error && (
-                <div className="rounded-xl border-2 border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-700">
-                  ⚠️ {error}
-                </div>
-              )}
-
-              <Btn type="submit" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'} <LogIn />
-              </Btn>
+              ))}
             </div>
-          </form>
-
-          <div className="text-center mt-6">
-            <p className="text-sm text-stone-600">
-              New artisan?{' '}
-              <button
-                onClick={() => r.push('/onboarding')}
-                className="font-semibold text-orange-700 underline decoration-2 hover:text-orange-800"
-              >
-                Create your profile
-              </button>
+            
+            {/* Status Text */}
+            <p className="text-center text-base font-semibold text-[#3B2418] min-h-[24px]">
+              {isListening
+                ? 'Listening... Tap again to stop'
+                : loading
+                ? 'Processing your voice...'
+                : 'Tap the mic and speak'}
             </p>
+            
+            {/* Example Box */}
+            {!isListening && !loading && (
+              <div className="rounded-xl bg-stone-50 border border-stone-200 p-4">
+                <p className="text-xs font-bold text-stone-600 mb-2 uppercase tracking-wide">Try saying:</p>
+                <p className="text-sm font-mono text-stone-900">"9876543210, my PIN is 1234"</p>
+              </div>
+            )}
+            
+            {/* Listen Button */}
+            <button
+              onClick={() => speak('अपना फ़ोन नंबर और चार अंकों का पिन बोलिए')}
+              className="flex items-center justify-center gap-2 rounded-full bg-orange-100 px-4 py-2.5 text-sm font-semibold text-orange-800 mx-auto hover:bg-orange-200 active:scale-95 transition-all"
+            >
+              <Volume2 size={18} /> Listen to example
+            </button>
           </div>
+        </div>
+
+        {/* Divider */}
+        <div className="relative w-full my-2">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t-2 border-stone-200"></div>
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-[#FBF7F0] px-6 py-1 text-sm font-semibold text-stone-500 rounded-full border-2 border-stone-200">
+              Or enter manually
+            </span>
+          </div>
+        </div>
+
+        {/* Manual Login Form */}
+        <form onSubmit={handleManualLogin} className="w-full rounded-3xl border-2 border-stone-200 bg-white p-6 shadow-lg">
+          <div className="space-y-4">
+            {/* Phone Number Input */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-bold text-stone-700 mb-2 uppercase tracking-wide">
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="9876543210"
+                maxLength={10}
+                className="h-14 w-full rounded-xl border-2 border-stone-300 bg-white px-4 text-lg font-semibold text-stone-900 placeholder:text-stone-400 outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              />
+            </div>
+
+            {/* PIN Input */}
+            <div>
+              <label htmlFor="pin" className="block text-sm font-bold text-stone-700 mb-2 uppercase tracking-wide">
+                4-Digit PIN
+              </label>
+              <input
+                id="pin"
+                type="password"
+                inputMode="numeric"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="••••"
+                maxLength={4}
+                className="h-14 w-full rounded-xl border-2 border-stone-300 bg-white px-4 text-2xl font-bold text-stone-900 tracking-[0.5em] placeholder:tracking-normal placeholder:text-stone-400 outline-none transition-all focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+              />
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700 flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <span className="flex-1">{error}</span>
+              </div>
+            )}
+
+            {/* Login Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-orange-600 text-lg font-bold text-white shadow-lg transition-all hover:bg-orange-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Logging in...' : 'Login'} <LogIn size={20} />
+            </button>
+          </div>
+        </form>
+
+        {/* Register Link */}
+        <div className="w-full text-center mt-4">
+          <p className="text-sm text-stone-600">
+            New artisan?{' '}
+            <button
+              onClick={() => r.push('/onboarding')}
+              className="font-bold text-orange-700 underline decoration-2 underline-offset-2 hover:text-orange-800 transition-colors"
+            >
+              Create your profile →
+            </button>
+          </p>
         </div>
       </div>
     </Screen>

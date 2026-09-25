@@ -160,7 +160,7 @@ export default function Record(){
        productHash={productHash}
        onViewProducts={() => r.push('/home')}
        onViewMarketplace={() => r.push('/buyer/product/'+s.productId)}
-       ondcUrl={`https://ondc.org/listing/${productId}`}
+       ondcUrl="https://ondc.org/"
        gemUrl={`https://gem.gov.in/product/${productId}`}
      />
    </Screen>
