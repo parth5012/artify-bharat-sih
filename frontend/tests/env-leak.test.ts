@@ -18,23 +18,34 @@ const NEXT_DIR = path.join(FRONTEND, '.next');
 const CHUNKS_DIR = path.join(NEXT_DIR, 'static');
 
 const NEXT_PUBLIC_NEEDLE = ['NEXT_PUBLIC', 'BHASHINI'].join('_');
+const NEXT_PUBLIC_NEEDLES = [
+  NEXT_PUBLIC_NEEDLE,
+  ['NEXT_PUBLIC', 'GROQ'].join('_'),
+  ['NEXT_PUBLIC', 'OPENROUTER'].join('_'),
+];                                  // each: expect(scanTracked(needle)).toEqual([])
 // 1) dot or bracket access off process.env; 2) quoted key literal
 // ('BHASHINI_X') wherever it appears (bracket on any object, quoted
 // destructuring); 3) bare destructuring `const {BHASHINI_X} = process.env`.
 // (2) deliberately also trips on a bare quoted string so a key smuggled
 // through a helper cannot hide; false positives on UI copy are accepted
 // for a fail-closed secret guard.
-const CLIENT_ENV_PATTERNS: RegExp[] = [
-  /process\.env(?:\.BHASHINI|\[['"]BHASHINI)/,
-  /['"]BHASHINI_[A-Z_]+['"]/,
-  /(?:const|let|var)\s*\{[^}]*\bBHASHINI_[A-Z_]+[^}]*\}\s*=\s*process\.env/,
-];
+// Built per provider prefix via new RegExp so this file never contains the
+// assembled literals (same fail-closed concatenation as the needles above).
+const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER'] as const;
+const CLIENT_ENV_PATTERNS: RegExp[] = CLIENT_ENV_PREFIXES.flatMap((prefix) => [
+  new RegExp(`process\\.env(?:\\.${prefix}|\\[['"]${prefix})`),
+  new RegExp(`['"]${prefix}_[A-Z_]+['"]`),
+  new RegExp(`(?:const|let|var)\\s*\\{[^}]*\\b${prefix}_[A-Z_]+[^}]*\\}\\s*=\\s*process\\.env`),
+]);
 // Any import style: from '...', side-effect import '...', dynamic import('...').
 const SERVER_IMPORT_NEEDLE = ['backend', 'bhashini'].join('/');
 const SERVER_IMPORT_RE = new RegExp(
   `(?:\\bfrom\\s*|\\bimport\\s*\\(?\\s*)['"][^'"]*${SERVER_IMPORT_NEEDLE}['"]`
 );
-const SECRET_NAMES = ['BHASHINI_API_KEY', 'BHASHINI_USER_ID', 'BHASHINI_INFERENCE_API_KEY'];
+const SECRET_NAMES = [
+  'BHASHINI_API_KEY', 'BHASHINI_USER_ID', 'BHASHINI_INFERENCE_API_KEY',
+  'GROQ_API_KEY', 'OPENROUTER_API_KEY',
+];
 const BINARY_EXT = /\.(jpg|jpeg|png|gif|pdf|zip|woff2?|ico|mp4|db|ttf)$/i;
 const MAX_SCAN_BYTES = 2_000_000;
 
@@ -131,6 +142,10 @@ function stripTypeImports(text: string): string {
 describe('Bhashini credentials stay server-side only', () => {
   it('no NEXT_PUBLIC_-prefixed Bhashini var in any tracked file', () => {
     expect(scanTracked(NEXT_PUBLIC_NEEDLE)).toEqual([]);
+  });
+
+  it('no NEXT_PUBLIC_-prefixed LLM provider var in any tracked file', () => {
+    for (const needle of NEXT_PUBLIC_NEEDLES) expect(scanTracked(needle)).toEqual([]);
   });
 
   it('frontend/.env.local is git-ignored and not tracked', () => {

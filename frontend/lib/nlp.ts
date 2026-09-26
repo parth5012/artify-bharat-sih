@@ -54,7 +54,7 @@ const CRAFT_HUBS_HI = [
   'ओडिशा', 'पश्चिम बंगाल', 'कर्नाटक', 'तमिलनाडु'
 ];
 
-const CRAFT_TYPES = [
+export const CRAFT_TYPES = [
   { keywords: ['handloom', 'weaving', 'weaver', 'weave', 'loom', 'बुनाई', 'हथकरघा', 'बुनकर'], label: 'Handloom & Weaving' },
   { keywords: ['banarasi', 'zari', 'brocade', 'saree', 'sari', 'silk', 'साड़ी', 'सिल्क', 'जरी'], label: 'Banarasi Silk & Zari Weaving' },
   { keywords: ['pashmina', 'cashmere', 'wool', 'shawl', 'stole', 'ऊन', 'शॉल'], label: 'Pashmina & Wool Weaving' },
@@ -251,7 +251,7 @@ const NUMBER_WORDS: Record<string, number> = {
   एक: 1, दो: 2, तीन: 3, चार: 4, पांच: 5, छह: 6, सात: 7, आठ: 8, नौ: 9, दस: 10, पंद्रह: 15
 };
 
-const MATERIALS_DICTIONARY: { keywords: string[]; label: string }[] = [
+export const MATERIALS_DICTIONARY: { keywords: string[]; label: string }[] = [
   { keywords: ['silk', 'pure silk', 'mulberry silk', 'kosa silk', 'tussar silk', 'रेशम', 'सिल्क'], label: 'Silk' },
   { keywords: ['gold zari', 'silver zari', 'zari', 'जरी'], label: 'Zari' },
   { keywords: ['brass', 'पीतल'], label: 'Brass' },

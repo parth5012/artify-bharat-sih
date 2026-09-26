@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest --ci"
+    "test": "jest --ci",
+    "test:live": "EXTRACT_LIVE=1 jest extract.live --ci"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
@@ -17,7 +18,8 @@
     "qrcode.react": "^4.1.0",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^2.15.4"
+    "recharts": "^2.15.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
