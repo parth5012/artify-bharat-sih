@@ -28,7 +28,7 @@ It is async (replies come later as callbacks), not one simple request-response.
 
 ## The sandbox repos (what each gives you)
 
-- `beckn/beckn-sandbox` — fake full market on your laptop via Docker. Boots fake Gateway + fake seller + fake buyer + Registry with one command. For offline judge demos, no real registration needed.
+- `beckn/beckn-sandbox` — fake market simulator on your laptop via Docker (the fake seller/BPP side). Upstream advertises "gateway + seller + buyer + registry in one command", but the image we run is just this one service; in our `docker-compose.yml` it is the `beckn_sandbox` sidecar (host port 3100 -> 3000), and the fake Gateway + Registry are separate services you opt into with the `ondc-gateway` profile. For offline judge demos, no real registration needed.
 - `beckn/beckn-onix` — same fake market but newer, heavier box. Ignore for SIH, too big.
 - `beckn/protocol-server` — translator that signs messages (Ed25519) and forwards webhooks. You use it, you do not rebuild it.
 - `ONDC-Official/reference-buyer-app` — sample buyer app to check your listing shows up, like a demo Paytm.
