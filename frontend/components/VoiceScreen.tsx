@@ -4,9 +4,8 @@ import {Check,Edit3,Mic,MicOff,RotateCcw,Volume2,X} from 'lucide-react';
 import {Btn,Screen,Thumb} from './ui';
 import {useVoice} from './useVoice';
 import {detectLanguage,Heard,listen,sleep,speak} from '@/lib/mock';
-import {processVoiceAudio} from '@/lib/voice';
+import {processExtract, processVoiceAudio} from '@/lib/voice';
 import {Lang} from '@/lib/store';
-import {extractArtisanFromTranscript, extractProductFromTranscript} from '@/lib/nlp';
 import type {VoiceResult} from '@/backend/bhashini';
 import {
   VOICE_PHASE_LABELS,
@@ -45,10 +44,10 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
 
   useEffect(()=>{if(phase!=='idle')return;const t=setTimeout(()=>speak(spoken),500);return()=>{clearTimeout(t);window.speechSynthesis?.cancel()}},[spoken,phase]);
 
-  const extractEntitiesForKind = (text: string, res: VoiceResult | null) => {
+  const extractEntitiesForKind = async (text: string): Promise<VoiceFieldItem[]> => {
     const items: VoiceFieldItem[] = [];
     if (kind === 'identity') {
-      const art = extractArtisanFromTranscript(text);
+      const art = await processExtract(text, 'identity');
       items.push(
         { label: 'Name', value: art.name.value || '', flag: art.name.flag },
         { label: 'Artisan ID', value: art.artisanId.value || '', flag: art.artisanId.flag },
@@ -58,7 +57,7 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
         { label: 'PIN', value: art.pin.value || '', flag: art.pin.flag }
       );
     } else {
-      const prod = extractProductFromTranscript(text);
+      const prod = await processExtract(text, 'product');
       items.push(
         { label: 'Product Name', value: prod.productName.value || '', flag: prod.productName.flag },
         { label: 'Materials', value: prod.materials.value?.join(', ') || '', flag: prod.materials.flag },
@@ -86,7 +85,7 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
         clientTranscript: sampleText,
       });
       lastVoiceResult.current = res;
-      const items = extractEntitiesForKind(sampleText, res);
+      const items = await extractEntitiesForKind(sampleText);
       setFieldItems(items);
       setHeard({
         transcript: sampleText,
@@ -115,7 +114,7 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
         clientTranscript: text,
       });
       lastVoiceResult.current = res;
-      const items = extractEntitiesForKind(text, res);
+      const items = await extractEntitiesForKind(text);
       setFieldItems(items);
       setHeard({
         transcript: text,
@@ -151,7 +150,13 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
       lastVoiceResult.current = res;
       if (res && (res.transcript || res.translation)) {
         const textToExtract = res.translation || res.transcript;
-        items = extractEntitiesForKind(textToExtract, res);
+        try {
+          items = await extractEntitiesForKind(textToExtract);
+        } catch (extractErr: any) {
+          console.error('Extract client error:', extractErr);
+          setPhase((p) => transitionVoicePhase(p, 'failed'));
+          return;
+        }
         h = {
           transcript: res.transcript || res.translation,
           fields: items.map(it => ({ label: it.label, value: it.value || 'Not detected' })),
@@ -192,7 +197,14 @@ export function VoiceScreen({kind,title,spoken,hints,thumbs,step,onBack,onResult
       lastVoiceResult.current = res;
       if (res && (res.transcript || res.translation)) {
         const textToExtract = res.translation || res.transcript;
-        const items = extractEntitiesForKind(textToExtract, res);
+        let items: VoiceFieldItem[];
+        try {
+          items = await extractEntitiesForKind(textToExtract);
+        } catch (extractErr: any) {
+          console.error('Extract client error:', extractErr);
+          setPhase((p) => transitionVoicePhase(p, 'failed'));
+          return;
+        }
         setFieldItems(items);
         setHeard({
           transcript: res.transcript || res.translation,
