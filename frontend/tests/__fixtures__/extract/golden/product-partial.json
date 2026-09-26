@@ -1,0 +1,95 @@
+{
+  "id": "product-partial",
+  "kind": "product",
+  "input": "It takes 12 days to make this piece.",
+  "inputSource": "transcript",
+  "llm": {
+    "productName": null,
+    "materials": null,
+    "makingProcess": null,
+    "usage": null,
+    "timeRequired": "12 days",
+    "craftCategory": null,
+    "description": null
+  },
+  "expected": {
+    "llm": {
+      "productName": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "materials": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "makingProcess": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "usage": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "timeRequired": {
+        "value": "12 days",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craftCategory": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "description": {
+        "value": "It takes 12 days to make this piece.",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "It takes 12 days to make this piece.",
+      "overallConfidence": 0.9
+    },
+    "keyless": {
+      "productName": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "materials": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "makingProcess": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "usage": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "timeRequired": {
+        "value": "12 days",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "craftCategory": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "description": {
+        "value": "It takes 12 days to make this piece.",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "It takes 12 days to make this piece.",
+      "overallConfidence": 0.95
+    }
+  }
+}

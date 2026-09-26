@@ -1,0 +1,84 @@
+{
+  "id": "identity-en-full",
+  "kind": "identity",
+  "input": "My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. I am a master weaver from Bastar, Chhattisgarh practicing traditional handloom weaving.",
+  "inputSource": "transcript",
+  "llm": {
+    "name": "Ramesh Kumar",
+    "phone": "9876543210",
+    "artisanId": "ART-2041",
+    "location": "Bastar, Chhattisgarh",
+    "craft": "Handloom & Weaving",
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": "Ramesh Kumar",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "phone": {
+        "value": "9876543210",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "artisanId": {
+        "value": "ART-2041",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "location": {
+        "value": "Bastar, Chhattisgarh",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craft": {
+        "value": "Handloom & Weaving",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. I am a master weaver from Bastar, Chhattisgarh practicing traditional handloom weaving.",
+      "overallConfidence": 0.75
+    },
+    "keyless": {
+      "name": {
+        "value": "Ramesh Kumar",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "phone": {
+        "value": "9876543210",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "artisanId": {
+        "value": "ART-2041",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "location": {
+        "value": "Bastar, Chhattisgarh",
+        "confidence": 0.85,
+        "flag": "low_confidence"
+      },
+      "craft": {
+        "value": "Handloom & Weaving",
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "My name is Ramesh Kumar. My artisan ID is ART-2041 and phone number is 9876543210. I am a master weaver from Bastar, Chhattisgarh practicing traditional handloom weaving.",
+      "overallConfidence": 0.91
+    }
+  }
+}

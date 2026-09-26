@@ -1,0 +1,84 @@
+{
+  "id": "identity-en-partial",
+  "kind": "identity",
+  "input": "I craft brass statues in Varanasi.",
+  "inputSource": "transcript",
+  "llm": {
+    "name": null,
+    "phone": null,
+    "artisanId": null,
+    "location": "Varanasi",
+    "craft": "Dhokra Brass & Bell Metal Craft",
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "phone": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Varanasi",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craft": {
+        "value": "Dhokra Brass & Bell Metal Craft",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "I craft brass statues in Varanasi.",
+      "overallConfidence": 0.3
+    },
+    "keyless": {
+      "name": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "phone": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Varanasi",
+        "confidence": 0.85,
+        "flag": "low_confidence"
+      },
+      "craft": {
+        "value": "Dhokra Brass & Bell Metal Craft",
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "I craft brass statues in Varanasi.",
+      "overallConfidence": 0.86
+    }
+  }
+}

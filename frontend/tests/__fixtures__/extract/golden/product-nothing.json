@@ -1,0 +1,95 @@
+{
+  "id": "product-nothing",
+  "kind": "product",
+  "input": "Handmade item.",
+  "inputSource": "transcript",
+  "llm": {
+    "productName": null,
+    "materials": null,
+    "makingProcess": null,
+    "usage": null,
+    "timeRequired": null,
+    "craftCategory": null,
+    "description": null
+  },
+  "expected": {
+    "llm": {
+      "productName": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "materials": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "makingProcess": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "usage": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "timeRequired": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "craftCategory": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "description": {
+        "value": "Handmade item.",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "Handmade item.",
+      "overallConfidence": 0
+    },
+    "keyless": {
+      "productName": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "materials": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "makingProcess": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "usage": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "timeRequired": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "craftCategory": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "description": {
+        "value": "Handmade item.",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "Handmade item.",
+      "overallConfidence": 0
+    }
+  }
+}

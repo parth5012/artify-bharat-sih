@@ -1,0 +1,84 @@
+{
+  "id": "identity-bad-mt",
+  "kind": "identity",
+  "input": "I am the name of Ramesh Kumar. From the village Bastar of Chhattisgarh. For contact the number is 9876543210.",
+  "inputSource": "translation",
+  "llm": {
+    "name": "Ramesh Kumar",
+    "phone": "9876543210",
+    "artisanId": null,
+    "location": "Bastar",
+    "craft": null,
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": "Ramesh Kumar",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "phone": {
+        "value": "9876543210",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Bastar",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "I am the name of Ramesh Kumar. From the village Bastar of Chhattisgarh. For contact the number is 9876543210.",
+      "overallConfidence": 0.45
+    },
+    "keyless": {
+      "name": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "phone": {
+        "value": "9876543210",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Bastar",
+        "confidence": 0.85,
+        "flag": "low_confidence"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "I am the name of Ramesh Kumar. From the village Bastar of Chhattisgarh. For contact the number is 9876543210.",
+      "overallConfidence": 0.9
+    }
+  }
+}

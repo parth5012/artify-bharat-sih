@@ -1,0 +1,107 @@
+{
+  "id": "product-en-dhokra",
+  "kind": "product",
+  "input": "This is a Dhokra brass elephant made by lost-wax casting using brass, beeswax, and river clay. It is used for home décor and gifting, and took five days to make.",
+  "inputSource": "transcript",
+  "llm": {
+    "productName": "Dhokra Brass Elephant Figurine",
+    "materials": [
+      "Brass",
+      "Beeswax",
+      "River clay"
+    ],
+    "makingProcess": "Lost-wax casting, hand-finished",
+    "usage": "Home décor & gifting",
+    "timeRequired": "5 days",
+    "craftCategory": "Dhokra Brass & Bell Metal Craft",
+    "description": "Dhokra brass elephant made by lost-wax casting for home décor and gifting."
+  },
+  "expected": {
+    "llm": {
+      "productName": {
+        "value": "Dhokra Brass Elephant Figurine",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "materials": {
+        "value": [
+          "Brass",
+          "Beeswax",
+          "River clay"
+        ],
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "makingProcess": {
+        "value": "Lost-wax casting, hand-finished",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "usage": {
+        "value": "Home décor & gifting",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "timeRequired": {
+        "value": "5 days",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craftCategory": {
+        "value": "Dhokra Brass & Bell Metal Craft",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "description": {
+        "value": "Dhokra brass elephant made by lost-wax casting for home décor and gifting.",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "rawTranscript": "This is a Dhokra brass elephant made by lost-wax casting using brass, beeswax, and river clay. It is used for home décor and gifting, and took five days to make.",
+      "overallConfidence": 0.9
+    },
+    "keyless": {
+      "productName": {
+        "value": "Dhokra Brass Elephant Figurine",
+        "confidence": 0.92,
+        "flag": "low_confidence"
+      },
+      "materials": {
+        "value": [
+          "Brass",
+          "Beeswax",
+          "River clay"
+        ],
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "makingProcess": {
+        "value": "Lost-wax casting, hand-finished",
+        "confidence": 0.92,
+        "flag": "low_confidence"
+      },
+      "usage": {
+        "value": "Home décor & gifting",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "timeRequired": {
+        "value": "5 days",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "craftCategory": {
+        "value": "Dhokra Brass & Bell Metal Craft",
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "description": {
+        "value": "This is a Dhokra brass elephant made by lost-wax casting using brass, beeswax, and river clay. It is used for home décor and gifting, and took five days to make.",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "This is a Dhokra brass elephant made by lost-wax casting using brass, beeswax, and river clay. It is used for home décor and gifting, and took five days to make.",
+      "overallConfidence": 0.9
+    }
+  }
+}
