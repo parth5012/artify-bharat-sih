@@ -1,22 +1,78 @@
 import {randomBytes,randomUUID} from 'node:crypto';
-import {OndcOrderIntent,readDb,writeDb} from './db';
+import {OndcOrderIntent,OndcCallbackStatus,ONDC_CALLBACKS,readDb,writeDb} from './db';
 import {audit} from './security';
 import {mapProductToBecknCatalog,normalizeShortcode} from './beckn-mapper';
 import type {BecknCatalog,BecknProductInput} from './beckn-mapper';
+
+export {ONDC_CALLBACKS};
+export type {OndcCallbackStatus};
 
 export async function createOndcIntent(input:Omit<OndcOrderIntent,'id'|'status'|'createdAt'|'updatedAt'>){
  const now=Date.now();const order:OndcOrderIntent={...input,id:'ondc_'+randomBytes(10).toString('hex'),status:'created',createdAt:now,updatedAt:now};const db=await readDb();db.ondcOrders.push(order);await writeDb(db);return order;
 }
 export async function getOndcIntent(id:string){const db=await readDb();return db.ondcOrders.find(x=>x.id===id)??null}
 
-// Returns the order and its previous status so callers can implement
-// idempotency (a webhook replaying the same status is a no-op).
-export async function updateOndcIntent(id:string,status:'paid'|'failed'){
+// Beckn order callback -> intent status (#194). The pre-existing vocabulary
+// (`created|paid|failed`) is reused, not extended: select/init are staged
+// callbacks that leave the intent in `created`, confirm (and the legacy
+// `paid`) settle it `paid`, failed marks failure. The raw callback stage is
+// recorded separately on `intent.callback`, so no parallel states exist.
+export function callbackIntentStatus(callback:OndcCallbackStatus):OndcOrderIntent['status']{
+ if(callback==='confirm'||callback==='paid')return 'paid';
+ if(callback==='failed')return 'failed';
+ return 'created';
+}
+
+export type OndcIntentUpdate={
+ order:OndcOrderIntent;
+ /** Order status BEFORE this call — for audits and the replay no-op. */
+ previousStatus:OndcOrderIntent['status'];
+ /** Mapped lifecycle status of this callback (`created|paid|failed`). */
+ target:OndcOrderIntent['status'];
+ /** True when this callback is a replay/no-op: nothing was written. */
+ duplicate:boolean;
+};
+
+// Returns the order, its previous status, and idempotency verdict so callers
+// can skip side effects on a replay. Dedup keys on:
+//  - the last applied callback (select/init both map to `created`, so the
+//    status alone cannot tell a staged replay from a new stage),
+//  - a staged select/init arriving AFTER the intent settled (paid/failed) —
+//    that is a late/out-of-order packet, not a new stage,
+//  - `previousStatus === 'paid'`: once settled, no later callback may regress
+//    the order (a late `failed` must not un-pay it or re-message the buyer),
+//  - the previousStatus check for same-status replays: an order already
+//    `failed` ignores a second `failed` — no confirmation call, no re-lock,
+//    no duplicate audit.
+//
+// Serialized on a module-level chain: readDb/writeDb hand out fresh documents
+// (file/JSONB read), so two concurrent webhooks would otherwise both read
+// `created` and both apply — a lost update. Chaining the read-modify-write
+// makes concurrent delivery behave exactly like sequential replay.
+let intentChain:Promise<unknown>=Promise.resolve();
+
+export function updateOndcIntent(id:string,callback:OndcCallbackStatus):Promise<OndcIntentUpdate|null>{
+ const run=intentChain.then(()=>applyOndcIntentUpdate(id,callback));
+ intentChain=run.then(()=>{},()=>{});
+ return run;
+}
+
+async function applyOndcIntentUpdate(id:string,callback:OndcCallbackStatus):Promise<OndcIntentUpdate|null>{
  const db=await readDb();const order=db.ondcOrders.find(x=>x.id===id);if(!order)return null;
  const previousStatus=order.status;
- order.status=status;order.updatedAt=Date.now();
+ const target=callbackIntentStatus(callback);
+ const duplicate=order.callback===callback
+  ||previousStatus==='paid'
+  ||(target==='created'&&previousStatus!=='created')
+  ||(target!=='created'&&previousStatus===target);
+ if(duplicate)return{order,previousStatus,target,duplicate:true};
+ order.callback=callback;
+ // Staged callbacks (select/init) never regress a settled intent: only
+ // paid/failed outcomes move the status, and only when they differ.
+ if(target!=='created')order.status=target;
+ order.updatedAt=Date.now();
  await writeDb(db);
- return{order,previousStatus};
+ return{order,previousStatus,target,duplicate:false};
 }
 
 // --- Wayfinder #193: local Beckn sandbox seller loop -------------------------
