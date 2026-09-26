@@ -11,21 +11,25 @@ The redesigned Step 6 "Ready" flow creates a professional publishing experience 
 When artisan clicks "Proceed" from the review page:
 
 ```
-STEP 6 · LIVE
+STEP 6 OF 6 · READY
 [Animated spinner/check]
 "Taking your craft to market"
 "Your product is being published..."
 
 ✓ Product registered
 ✓ Photos & product details saved
-✓ Price confirmed
-→ Publishing to ONDC Network
+✓ Publishing to ONDC Network   [Live sandbox]
+  on_search ack · 1 attempt · catalog cat_…
 → Listing on GeM
 ○ Making your product available to buyers
 ```
 
-**Duration**: ~5 seconds with smooth animations
-**Design**: Orange spinner, emerald checkmarks, clean checklist
+**Duration**: follows the real publish pipeline — no simulated delays. Local record → photo thumbnails + passport hash → `POST /api/products` (the server pushes the Beckn `on_search` catalog) → durable local publish.
+**Design**: Orange spinner, emerald checkmarks, clean checklist (unchanged)
+
+**Source badge (grill A1)**: the ONDC row carries a visible badge — `Live sandbox` (emerald) when the sandbox answered, `Offline fallback` (orange) when the sandbox was unreachable/unset and the mocked intent ran (`ondc.fallback === true`). The proof line under the row shows the `on_search` ack, attempt count and sandbox catalog id.
+
+**Listing failure**: if the sandbox rejects the listing (`ondc.listed === false`, e.g. a 4xx `reason`), the ONDC row turns red and a `role="alert"` panel shows the reason with a **Try Again** button. Retry re-runs the seller publish for the already-registered product (`POST /api/ondc/listing`) — it never registers a second copy. Success is never claimed for a rejected listing.
 
 ### 2. Success State (`MarketplaceSuccess` component)
 
@@ -38,7 +42,8 @@ After publishing completes:
 
 ┌─────────────────────────────┐
 │ [ONDC Logo]  ONDC Network   │
-│ ✓ Published                 │
+│ ✓ Published [Live sandbox]  │
+│ on_search catalog cat_…     │
 │ Ready for buyer orders      │
 │ [View Listing]              │
 └─────────────────────────────┘
@@ -63,13 +68,16 @@ Ready to receive orders
 ### Components
 
 #### `PublishingFlow.tsx`
-- Manages 6-step publishing sequence with timing
-- Shows animated checklist with checkmarks
-- Handles error states
-- Calls `onComplete()` when done
+- Renders the 5-step checklist from **real** publish status (no timers)
+- Status derivation lives in `frontend/lib/publishing.ts` (`deriveChecklist`)
+- Shows the Live sandbox / Offline fallback source badge + `on_search` proof line
+- Failure state (`ondc.listed === false`) with **Try Again** relist
+- Keeps orange/emerald design, `role="status"` progress region, `role="alert"` failure
+- Calls `onComplete()` when every step is done
 
 #### `MarketplaceSuccess.tsx`
 - Displays success state with marketplace cards
+- ONDC card carries the same source badge + `on_search` catalog id
 - Shows ONDC and GeM logos (with fallbacks)
 - Displays product ID
 - Provides navigation to products or marketplace
@@ -78,15 +86,16 @@ Ready to receive orders
 
 #### Record Page (`record/page.tsx`)
 - Creates product record
-- Publishes to buyer marketplace API
-- Shows `PublishingFlow` during publishing
+- Runs the real publish pipeline and reports progress to `PublishingFlow`
+- Photos + passport hash → `POST /api/products` → durable local publish
+- Surfaces the hard-failure screen and re-runs the pipeline on Try Again
+- Handles offline queueing (queued on failure; dropped when a manual retry succeeds)
 - Shows `MarketplaceSuccess` on completion
-- Handles offline queueing
 
 #### APIs
-- `/api/products` - Product registration
-- ONDC integration (mocked in prototype)
-- GeM integration (mocked in prototype)
+- `/api/products` - Product registration + ONDC listing (`{product, ondc}`)
+- `/api/ondc/listing` - Listing retry for an already-registered product (Try Again)
+- GeM integration (still a stub channel — no listing API; the step completes with the durable publish)
 
 ### Logo Assets
 
@@ -121,20 +130,30 @@ If logos are missing, text fallbacks are shown.
 ## Error Handling
 
 ### Publishing Failure
-If API call fails:
+If the registration API call fails:
 ```
 ⚠️
-"Publishing failed"
+"Could not publish product"
 [Error message]
-[Try Again]
+[Try again]
+```
+
+### ONDC Listing Rejected
+If the sandbox accepts the product but rejects the listing (`ondc.listed === false`):
+```
+✗ Publishing to ONDC Network
+"Could not publish to the ONDC Network"
+[reason, e.g. ONDC listing rejected with 422]
+[Try Again]   → POST /api/ondc/listing (re-publishes the registered product)
 ```
 
 ### Network Offline
-Product is queued for retry when connection returns (existing offline handling preserved).
+Product is queued for retry when connection returns (existing offline handling preserved). If the artisan's manual Try Again reaches the server first, the queued copy of that record is dropped so only one product is registered.
 
 ## Accessibility
 
 - Clear status indicators (✓ checkmarks, loading spinners)
+- `role="status"` + `aria-live="polite"` progress region; `role="alert"` on the failure panel
 - High contrast colors
 - Large touch targets for buttons
 - Simple language for low-literacy users
@@ -143,10 +162,9 @@ Product is queued for retry when connection returns (existing offline handling p
 ## Future Enhancements
 
 ### Real API Integration
-Replace mock publishing delays with actual:
-- ONDC seller onboarding API
-- GeM seller registration API
-- Product listing endpoints
+- ONDC seller publish runs against the local beckn sandbox (`ONDC_SELLER_LISTING_URL`), with the Grill A1 offline fallback when it is down
+- GeM seller registration API (today the GeM step is a stub channel)
+- Product listing endpoints for GeM / other portals
 
 ### Enhanced Status
 - Real-time order notifications
@@ -160,9 +178,12 @@ Replace mock publishing delays with actual:
 ## Testing
 
 ### Manual Testing Checklist
-- [ ] Publishing animation shows all 6 steps
-- [ ] Checkmarks appear smoothly
-- [ ] Success state shows both marketplace cards
+- [ ] Publishing animation shows all 5 steps from real progress (no fixed delays)
+- [ ] Checkmarks appear as each real step finishes
+- [ ] ONDC step shows the Live sandbox / Offline fallback source badge
+- [ ] ONDC step shows the `on_search` proof line (attempts + catalog id)
+- [ ] Sandbox rejection shows the failure panel and Try Again re-publishes
+- [ ] Success state shows both marketplace cards (with the source badge)
 - [ ] Product ID is displayed correctly
 - [ ] "Go to My Products" navigates to home
 - [ ] "View Marketplace" navigates to product page
@@ -179,7 +200,8 @@ Test with artisans to verify:
 
 ## Notes
 
-- The publishing animation is simulated with delays for demo purposes
-- Actual ONDC/GeM integration requires seller credentials and API keys
+- The checklist reads real publish progress (`frontend/lib/publishing.ts`); it is no longer simulated with delays
+- ONDC publish requires a reachable sandbox (`docker compose up beckn_sandbox`); otherwise the A1 fallback lists the mocked intent and the badge says so
+- GeM integration still requires seller credentials and an API (stub channel today)
 - Product IDs follow format: `ART-P-####` for display, `u-{recordId}` internally
 - Privacy: Artisan phone numbers are never published to marketplaces

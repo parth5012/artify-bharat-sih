@@ -21,7 +21,18 @@ export const states:StateM[]=MAP.locations.map(l=>{
 });
 export const stateById=(id:string)=>states.find(s=>s.id===id)!;
 const sum=(k:keyof StateM)=>states.reduce((a,s)=>a+(s[k] as number),0);
-export const kpis=()=>({artisans:sum('registered'),verified:sum('verified'),products:sum('products'),orders:sum('orders'),salesCr:r1(sum('sales')/100),clusters:sum('clusters'),active:sum('active'),listings:Math.round(sum('products')*.7),ondc:Math.round(sum('products')*.7*.42)});
+// #195 Ministry proof (context.md component 6, "MinistryProof — ONDC-linked
+// KPIs"): ONDC-linked counts are a DOCUMENTED DEMO MULTIPLIER over the demo
+// listings count. This module is the client-side demo path and cannot read the
+// server-side ONDC-linked intents the sandbox loop writes (db.ondcOrders +
+// `product.ondc_listing` audits), so real intent counts belong to an authorized
+// aggregate endpoint (e.g. GET /api/ministry/ondc) later. Aggregated counts
+// only — never per-order amounts, buyer names or phone numbers.
+export const ONDC_LINKED_DEMO_MULTIPLIER=0.42;
+/** Shared label so every ONDC-linked figure in the ministry view says Aggregated. */
+export const ONDC_LINKED_LABEL={value:'ONDC-linked products',sub:'Aggregated · demo multiplier'};
+export const ondcLinkedFromListings=(listings:number)=>Math.round(listings*ONDC_LINKED_DEMO_MULTIPLIER);
+export const kpis=()=>{const listings=Math.round(sum('products')*.7);return{artisans:sum('registered'),verified:sum('verified'),products:sum('products'),orders:sum('orders'),salesCr:r1(sum('sales')/100),clusters:sum('clusters'),active:sum('active'),listings,ondc:ondcLinkedFromListings(listings)}};
 const DIST:Record<string,string>={an:'South Andaman,North & Middle Andaman,Nicobar',ap:'Visakhapatnam,Krishna,Guntur,Chittoor,Kurnool',ar:'Papum Pare,Tawang,East Siang,Lower Subansiri',as:'Kamrup Metropolitan,Nalbari,Jorhat,Sivasagar,Barpeta',br:'Madhubani,Patna,Bhagalpur,Gaya,Darbhanga',ch:'Chandigarh',ct:'Bastar,Raipur,Raigarh,Surguja,Kondagaon',dn:'Dadra and Nagar Haveli',dd:'Daman,Diu',dl:'New Delhi,South Delhi,North Delhi',ga:'North Goa,South Goa',gj:'Kutch,Surendranagar,Patan,Ahmedabad,Jamnagar',hr:'Faridabad,Panipat,Sonipat,Karnal',hp:'Kullu,Kangra,Chamba,Mandi',jk:'Srinagar,Budgam,Anantnag,Jammu,Baramulla',jh:'Ranchi,Dumka,West Singhbhum,Hazaribagh',ka:'Bidar,Ramanagara,Mysuru,Belagavi,Dharwad',kl:'Alappuzha,Thrissur,Kannur,Thiruvananthapuram',ld:'Kavaratti,Agatti,Minicoy',mp:'Bhopal,Ashoknagar,Indore,Mandla,Gwalior',mh:'Kolhapur,Nagpur,Pune,Sindhudurg,Aurangabad',mn:'Imphal West,Imphal East,Thoubal,Bishnupur',ml:'East Khasi Hills,West Garo Hills,Ri-Bhoi',mz:'Aizawl,Champhai,Lunglei',nl:'Kohima,Dimapur,Mokokchung,Mon',or:'Puri,Cuttack,Bargarh,Mayurbhanj,Ganjam',py:'Puducherry,Karaikal',pb:'Amritsar,Ludhiana,Patiala,Jalandhar',rj:'Jaipur,Jodhpur,Udaipur,Barmer,Bikaner',sk:'Gangtok,Namchi',tn:'Kancheepuram,Thanjavur,Madurai,Salem,Kanniyakumari',tg:'Hyderabad,Nalgonda,Adilabad,Karimnagar,Warangal',tr:'West Tripura,Gomati,Unakoti',up:'Varanasi,Moradabad,Bulandshahr,Lucknow,Agra',ut:'Dehradun,Nainital,Almora,Haridwar',wb:'Birbhum,Nadia,Murshidabad,Bankura,Kolkata'};
 export function getDistricts(sid:string):DistM[]{
  const s=stateById(sid),names=(DIST[sid]||'').split(','),r=rnd('d'+sid),ws=names.map(()=>.4+r()),t=ws.reduce((a,b)=>a+b,0);

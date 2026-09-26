@@ -1,97 +1,52 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Check, Loader2, ExternalLink, Printer, Download, QrCode } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { getVerificationUrl, shortenHash } from '@/lib/hash';
+import {useEffect,useMemo,useRef} from 'react';
+import {Check,Loader2,ExternalLink,Printer,Download,QrCode,X} from 'lucide-react';
+import {QRCodeSVG} from 'qrcode.react';
+import {getVerificationUrl,shortenHash} from '@/lib/hash';
+import {deriveChecklist,PublishSource,PublishState,PublishStepId,PublishStepStatus} from '@/lib/publishing';
 
-type PublishingStep = 
-  | 'registering'
-  | 'publishing-ondc'
-  | 'publishing-gem'
-  | 'finalizing'
-  | 'complete'
-  | 'error';
+// Wayfinder #195 — the Step 6 checklist renders REAL publish progress: the
+// record page feeds it the local record/photos work plus the `ondc` payload of
+// POST /api/products (and the Try Again relist). No simulated delays. The
+// component consumes the API response only — no env reads, no ONDC_* secrets.
 
 interface PublishingFlowProps {
+  /** Live publish progress reported by the record page. */
+  status: PublishState;
   onComplete: () => void;
-  onError?: (error: string) => void;
+  /** Try Again on a rejected listing: re-attempts the sandbox publish. */
+  onRetryListing: () => void;
 }
 
-export function PublishingFlow({ onComplete, onError }: PublishingFlowProps) {
-  const [step, setStep] = useState<PublishingStep>('registering');
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+const STEP_LABELS:Record<PublishStepId,string>={
+  registered:'Product registered',
+  photos:'Photos & product details saved',
+  ondc:'Publishing to ONDC Network',
+  gem:'Listing on GeM',
+  available:'Making your product available to buyers',
+};
+const STEP_LOGOS:Partial<Record<PublishStepId,{src:string;alt:string}>>={
+  ondc:{src:'/src/ondchvv_d4-removebg-preview.png',alt:'ONDC'},
+  gem:{src:'/src/gem-Photoroom.png',alt:'GeM'},
+};
+const SOURCE_LABEL:Record<PublishSource,string>={
+  'live-sandbox':'Live sandbox',
+  'offline-fallback':'Offline fallback',
+};
 
+export function PublishingFlow({ status, onComplete, onRetryListing }: PublishingFlowProps) {
+  const view = useMemo(() => deriveChecklist(status), [status]);
+  const firedRef = useRef(false);
+
+  // Hold on the completed checklist for a beat so the artisan actually sees the
+  // final green step before the success card replaces this screen.
   useEffect(() => {
-    const sequence = async () => {
-      try {
-        // Step 1: Register product
-        await delay(1500);
-        setCompletedSteps(prev => [...prev, 'registered']);
-        
-        await delay(500);
-        setCompletedSteps(prev => [...prev, 'photos']);
-        
-        // Step 2: Publish to ONDC
-        await delay(800);
-        setStep('publishing-ondc');
-        setCompletedSteps(prev => [...prev, 'ondc']);
-        
-        // Step 3: Publish to GeM
-        await delay(1200);
-        setStep('publishing-gem');
-        setCompletedSteps(prev => [...prev, 'gem']);
-        
-        // Step 4: Finalize
-        await delay(800);
-        setStep('finalizing');
-        setCompletedSteps(prev => [...prev, 'available']);
-        
-        // Complete
-        await delay(500);
-        setStep('complete');
-        onComplete();
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Publishing failed';
-        setError(errorMsg);
-        setStep('error');
-        onError?.(errorMsg);
-      }
-    };
+    if (!view.complete || firedRef.current) return;
+    const timer = setTimeout(() => { firedRef.current = true; onComplete(); }, 700);
+    return () => clearTimeout(timer);
+  }, [view.complete, onComplete]);
 
-    sequence();
-  }, [onComplete, onError]);
-
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const isStepComplete = (stepName: string) => completedSteps.includes(stepName);
-  const isStepActive = (stepName: string) => {
-    const currentIndex = completedSteps.length;
-    const steps = ['registered', 'photos', 'ondc', 'gem', 'available'];
-    return steps[currentIndex] === stepName;
-  };
-
-  if (step === 'error') {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
-        <div className="w-full space-y-6 text-center">
-          <div className="mx-auto grid h-24 w-24 place-items-center rounded-full bg-red-100 text-red-600">
-            <span className="text-4xl">⚠️</span>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-stone-900">Publishing failed</h2>
-            <p className="mt-2 text-stone-600">{error}</p>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="rounded-full bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700 active:scale-95 transition-transform"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const failed = view.listingFailure !== null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
@@ -104,10 +59,12 @@ export function PublishingFlow({ onComplete, onError }: PublishingFlowProps) {
         {/* Animated Circle */}
         <div className="flex justify-center">
           <div className="relative">
-            <div className="h-32 w-32 rounded-full border-4 border-orange-200 animate-pulse" />
+            <div className={`h-32 w-32 rounded-full border-4 animate-pulse ${failed ? 'border-red-200' : 'border-orange-200'}`} />
             <div className="absolute inset-0 flex items-center justify-center">
-              {step === 'complete' ? (
+              {view.complete ? (
                 <Check size={48} className="text-emerald-600 animate-bounce" />
+              ) : failed ? (
+                <X size={48} className="text-red-600" />
               ) : (
                 <Loader2 size={48} className="animate-spin text-orange-600" />
               )}
@@ -118,47 +75,49 @@ export function PublishingFlow({ onComplete, onError }: PublishingFlowProps) {
         {/* Title and Subtitle */}
         <div className="text-center">
           <h1 className="text-3xl font-extrabold text-[#3B2418]">
-            {step === 'complete' ? '🎉 Your craft is now live!' : 'Taking your craft to market'}
+            {view.complete ? '🎉 Your craft is now live!' : failed ? 'ONDC listing needs attention' : 'Taking your craft to market'}
           </h1>
           <p className="mt-2 text-stone-600">
-            {step === 'complete' 
-              ? 'Your product has been successfully published.' 
-              : 'Your product is being published...'}
+            {view.complete
+              ? 'Your product has been successfully published.'
+              : failed
+                ? 'The product is registered, but the ONDC Network rejected the listing.'
+                : 'Your product is being published...'}
           </p>
         </div>
 
         {/* Publishing Steps Checklist */}
-        <div className="space-y-3 rounded-2xl border-2 border-[#E8D7C3] bg-white p-6 shadow-lg">
-          <PublishingStepItem
-            label="Product registered"
-            completed={isStepComplete('registered')}
-            active={isStepActive('registered')}
-          />
-          <PublishingStepItem
-            label="Photos & product details saved"
-            completed={isStepComplete('photos')}
-            active={isStepActive('photos')}
-          />
-          <PublishingStepItem
-            label="Publishing to ONDC Network"
-            completed={isStepComplete('ondc')}
-            active={isStepActive('ondc')}
-            logo="/src/ondchvv_d4-removebg-preview.png"
-            logoAlt="ONDC"
-          />
-          <PublishingStepItem
-            label="Listing on GeM"
-            completed={isStepComplete('gem')}
-            active={isStepActive('gem')}
-            logo="/src/gem-Photoroom.png"
-            logoAlt="GeM"
-          />
-          <PublishingStepItem
-            label="Making your product available to buyers"
-            completed={isStepComplete('available')}
-            active={isStepActive('available')}
-          />
+        <div role="status" aria-live="polite" aria-label="Publishing progress" className="space-y-3 rounded-2xl border-2 border-[#E8D7C3] bg-white p-6 shadow-lg">
+          {view.steps.map((step) => (
+            <PublishingStepItem
+              key={step.id}
+              label={STEP_LABELS[step.id]}
+              status={step.status}
+              logo={STEP_LOGOS[step.id]?.src}
+              logoAlt={STEP_LOGOS[step.id]?.alt}
+              badge={step.id === 'ondc' && view.source ? SOURCE_LABEL[view.source] : undefined}
+              badgeSource={step.id === 'ondc' ? view.source ?? undefined : undefined}
+              detail={step.id === 'ondc' ? view.ondcDetail ?? undefined : undefined}
+            />
+          ))}
         </div>
+
+        {/* Listing failure (#195): never claim success the sandbox rejected. */}
+        {failed && (
+          <div role="alert" className="rounded-2xl border-2 border-red-200 bg-red-50 p-5 text-center">
+            <p className="font-bold text-red-700">Could not publish to the ONDC Network</p>
+            <p className="mt-1 text-sm text-red-600">{view.listingFailure}</p>
+            <button
+              onClick={onRetryListing}
+              disabled={view.retrying}
+              aria-busy={view.retrying}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700 active:scale-95 transition-transform disabled:opacity-60"
+            >
+              {view.retrying && <Loader2 size={18} className="animate-spin" />}
+              {view.retrying ? 'Retrying…' : 'Try Again'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -166,24 +125,34 @@ export function PublishingFlow({ onComplete, onError }: PublishingFlowProps) {
 
 interface PublishingStepItemProps {
   label: string;
-  completed: boolean;
-  active: boolean;
+  status: PublishStepStatus;
   logo?: string;
   logoAlt?: string;
+  /** Grill A1 source badge (Live sandbox vs Offline fallback). */
+  badge?: string;
+  badgeSource?: PublishSource;
+  /** Proof line for the ONDC step (`on_search` ack + attempts + catalog id). */
+  detail?: string;
 }
 
-function PublishingStepItem({ label, completed, active, logo, logoAlt }: PublishingStepItemProps) {
+function PublishingStepItem({ label, status, logo, logoAlt, badge, badgeSource, detail }: PublishingStepItemProps) {
+  const completed = status === 'done';
+  const active = status === 'active';
+  const failed = status === 'failed';
   return (
     <div className="flex items-center gap-3">
       <div className={`
         flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all
-        ${completed 
-          ? 'bg-emerald-600 text-white' 
-          : active 
-            ? 'border-2 border-orange-600 bg-orange-50' 
-            : 'border-2 border-stone-300 bg-white'}
+        ${completed
+          ? 'bg-emerald-600 text-white'
+          : failed
+            ? 'bg-red-600 text-white'
+            : active
+              ? 'border-2 border-orange-600 bg-orange-50'
+              : 'border-2 border-stone-300 bg-white'}
       `}>
         {completed && <Check size={18} className="animate-pop" />}
+        {failed && <X size={18} />}
         {active && !completed && logo && (
           <img src={logo} alt={logoAlt} className="h-5 w-5 object-contain animate-pulse" />
         )}
@@ -191,12 +160,24 @@ function PublishingStepItem({ label, completed, active, logo, logoAlt }: Publish
           <div className="h-2 w-2 rounded-full bg-orange-600 animate-ping" />
         )}
       </div>
-      <p className={`
-        text-sm transition-all flex-1
-        ${completed ? 'font-semibold text-stone-900' : active ? 'font-semibold text-orange-600' : 'text-stone-500'}
+      <div className="flex-1">
+        <p className={`
+        text-sm transition-all
+        ${completed ? 'font-semibold text-stone-900' : failed ? 'font-semibold text-red-600' : active ? 'font-semibold text-orange-600' : 'text-stone-500'}
       `}>
-        {label}
-      </p>
+          {label}
+        </p>
+        {detail && <p className="mt-0.5 text-xs text-stone-500">{detail}</p>}
+      </div>
+      {badge && (
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+            badgeSource === 'offline-fallback' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+          }`}
+        >
+          {badge}
+        </span>
+      )}
       {logo && (active || completed) && (
         <img src={logo} alt={logoAlt} className="h-6 w-6 object-contain opacity-70" />
       )}
@@ -212,6 +193,8 @@ interface MarketplaceSuccessProps {
   onViewMarketplace: () => void;
   ondcUrl?: string;
   gemUrl?: string;
+  /** Real publish verdict from POST /api/products (#195): source badge + catalog proof. */
+  ondc?: { source: PublishSource; catalogId?: string } | null;
 }
 
 export function MarketplaceSuccess({
@@ -222,6 +205,7 @@ export function MarketplaceSuccess({
   onViewMarketplace,
   ondcUrl,
   gemUrl,
+  ondc,
 }: MarketplaceSuccessProps) {
   const verificationUrl = getVerificationUrl(productId);
   
@@ -475,9 +459,21 @@ export function MarketplaceSuccess({
                   <span className="h-2 w-2 rounded-full bg-emerald-600" />
                   Published
                 </span>
+                {ondc && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      ondc.source === 'offline-fallback' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {SOURCE_LABEL[ondc.source]}
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-xs text-stone-500 uppercase tracking-wide font-semibold">ONDC Network</p>
               <p className="mt-1 text-sm text-stone-600">Product listed on national digital commerce platform</p>
+              {ondc?.catalogId && (
+                <p className="mt-1 text-xs text-stone-500">on_search catalog {ondc.catalogId}</p>
+              )}
               {ondcUrl && (
                 <a
                   href={ondcUrl}

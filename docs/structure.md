@@ -23,7 +23,7 @@
 - **ExtractAI Eval Harness:** JSONL-backed scoring of the extraction pipelines — record schema + loader (`frontend/scripts/eval/schema.ts`, `dataset.ts`), metrics (`metrics.ts`, incl. flag-calibration rates `trustErrorRate` / `lowConfErrorRate` / `errorCatchRate`), pluggable regex/canned/llm pipelines (`pipelines.ts`), report + CLI (`report.ts`, `run.ts`), `.env.local` loader (`env.ts`), golden-fixture converter (`convert-golden.ts`). Datasets in `frontend/eval/datasets/`, compiled to `frontend/.tmp/eval-dist/` by `npm run build:eval`.
 - **PricingAI:** Fair Wage Floor calculation (`frontend/app/api/pricing/calculate`).
 - **VerifyService & Heritage Passport:** Deterministic SHA-256 heritage passport verification and shortcode lookup (`frontend/lib/hash.ts`, `/verify/[code]`).
-- **Exports & ONDC:** ONDC buyer checkout redirect, Beckn order-callback webhook (select/init/confirm + replay-safe idempotency) and seller webhook integration (`frontend/app/api/ondc/*`, adapter `frontend/backend/ondc.ts`, Atomic Inventory Lock helper `frontend/backend/inventory.ts`).
+- **Exports & ONDC:** ONDC buyer checkout redirect, Beckn order-callback webhook (select/init/confirm + replay-safe idempotency) and seller webhook integration (`frontend/app/api/ondc/*` — checkout, webhook, listing retry; adapter `frontend/backend/ondc.ts`, Atomic Inventory Lock helper `frontend/backend/inventory.ts`), plus the Step 6 live publish status derivation (`frontend/lib/publishing.ts`, rendered by `frontend/components/PublishingFlow.tsx` from `frontend/app/(artisan)/(protected)/record/page.tsx`).
 - **Web Client:** Dual-role artisan UI, voice capture, translation, camera studio integration, responsive verification portal.
 
 ## Entry Points
