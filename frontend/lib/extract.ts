@@ -200,8 +200,9 @@ export function runRegex(
 // Merge + confidence (§4 adapter: buildResult)
 // ---------------------------------------------------------------------------
 
-const IDENTITY_FIELDS = ['name', 'phone', 'artisanId', 'location', 'craft', 'pin'] as const;
-const PRODUCT_FIELDS = [
+// Exported for the eval harness (frontend/scripts/eval) — export-only, no behavior change.
+export const IDENTITY_FIELDS = ['name', 'phone', 'artisanId', 'location', 'craft', 'pin'] as const;
+export const PRODUCT_FIELDS = [
   'productName',
   'materials',
   'makingProcess',
@@ -211,7 +212,7 @@ const PRODUCT_FIELDS = [
   'description',
 ] as const;
 // Product score set excludes `description` (parity with nlp checkFields).
-const PRODUCT_SCORED = [
+export const PRODUCT_SCORED = [
   'productName',
   'materials',
   'makingProcess',

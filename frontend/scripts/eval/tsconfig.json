@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "lib": ["dom", "esnext"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": false,
+    "rootDir": "../..",
+    "outDir": "../../.tmp/eval-dist",
+    "incremental": true,
+    "tsBuildInfoFile": "../../.tmp/eval-dist/.tsbuildinfo"
+  },
+  "include": ["./**/*.ts"]
+}
