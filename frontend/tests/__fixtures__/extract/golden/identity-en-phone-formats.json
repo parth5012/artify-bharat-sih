@@ -1,0 +1,84 @@
+{
+  "id": "identity-en-phone-formats",
+  "kind": "identity",
+  "input": "Name is Sunita Bai, contact +91 91234-56789 from Jaipur.",
+  "inputSource": "transcript",
+  "llm": {
+    "name": "Sunita Bai",
+    "phone": "+91 91234-56789",
+    "artisanId": null,
+    "location": "Jaipur",
+    "craft": null,
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": "Sunita Bai",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "phone": {
+        "value": "9123456789",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Jaipur",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "Name is Sunita Bai, contact +91 91234-56789 from Jaipur.",
+      "overallConfidence": 0.45
+    },
+    "keyless": {
+      "name": {
+        "value": "Sunita Bai",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "phone": {
+        "value": "9123456789",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Jaipur",
+        "confidence": 0.85,
+        "flag": "low_confidence"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "Name is Sunita Bai, contact +91 91234-56789 from Jaipur.",
+      "overallConfidence": 0.9
+    }
+  }
+}

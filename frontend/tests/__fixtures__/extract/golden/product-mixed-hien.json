@@ -1,0 +1,104 @@
+{
+  "id": "product-mixed-hien",
+  "kind": "product",
+  "input": "यह बनारसी सिल्क साड़ी है, इसमें silk और zari लगा है। इसे बुनने में 15 दिन लगते हैं, शादी में पहनने के लिए।",
+  "inputSource": "transcript",
+  "llm": {
+    "productName": "बनारसी सिल्क साड़ी",
+    "materials": [
+      "Silk",
+      "Zari"
+    ],
+    "makingProcess": null,
+    "usage": "शादी में पहनने के लिए",
+    "timeRequired": "15 दिन",
+    "craftCategory": "Banarasi Silk & Zari Weaving",
+    "description": null
+  },
+  "expected": {
+    "llm": {
+      "productName": {
+        "value": "बनारसी सिल्क साड़ी",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "materials": {
+        "value": [
+          "Silk",
+          "Zari"
+        ],
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "makingProcess": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "usage": {
+        "value": "शादी में पहनने के लिए",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "timeRequired": {
+        "value": "15 दिन",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craftCategory": {
+        "value": "Banarasi Silk & Zari Weaving",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "description": {
+        "value": "यह बनारसी सिल्क साड़ी है, इसमें silk और zari लगा है। इसे बुनने में 15 दिन लगते हैं, शादी में पहनने के लिए।",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "यह बनारसी सिल्क साड़ी है, इसमें silk और zari लगा है। इसे बुनने में 15 दिन लगते हैं, शादी में पहनने के लिए।",
+      "overallConfidence": 0.9
+    },
+    "keyless": {
+      "productName": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "materials": {
+        "value": [
+          "Silk",
+          "Zari"
+        ],
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "makingProcess": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "usage": {
+        "value": "Weddings & festive occasions",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "timeRequired": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "craftCategory": {
+        "value": "Banarasi Silk & Zari Weaving",
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "description": {
+        "value": "यह बनारसी सिल्क साड़ी है, इसमें silk और zari लगा है। इसे बुनने में 15 दिन लगते हैं, शादी में पहनने के लिए।",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "यह बनारसी सिल्क साड़ी है, इसमें silk और zari लगा है। इसे बुनने में 15 दिन लगते हैं, शादी में पहनने के लिए।",
+      "overallConfidence": 0.89
+    }
+  }
+}

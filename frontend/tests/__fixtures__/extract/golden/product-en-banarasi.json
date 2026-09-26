@@ -1,0 +1,104 @@
+{
+  "id": "product-en-banarasi",
+  "kind": "product",
+  "input": "This is a handwoven Banarasi pure silk saree with authentic gold zari border. It is made using pit loom jacquard weaving and took 15 full days to craft. It is used for weddings and festive ceremonies.",
+  "inputSource": "transcript",
+  "llm": {
+    "productName": "Handwoven Banarasi Silk Saree",
+    "materials": [
+      "Silk",
+      "Zari"
+    ],
+    "makingProcess": "Pit loom jacquard weaving",
+    "usage": "Weddings & festive occasions",
+    "timeRequired": "15 days",
+    "craftCategory": "Banarasi Silk & Zari Weaving",
+    "description": "Handwoven Banarasi pure silk saree with gold zari border for weddings."
+  },
+  "expected": {
+    "llm": {
+      "productName": {
+        "value": "Handwoven Banarasi Silk Saree",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "materials": {
+        "value": [
+          "Silk",
+          "Zari"
+        ],
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "makingProcess": {
+        "value": "Pit loom jacquard weaving",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "usage": {
+        "value": "Weddings & festive occasions",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "timeRequired": {
+        "value": "15 days",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craftCategory": {
+        "value": "Banarasi Silk & Zari Weaving",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "description": {
+        "value": "Handwoven Banarasi pure silk saree with gold zari border for weddings.",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "rawTranscript": "This is a handwoven Banarasi pure silk saree with authentic gold zari border. It is made using pit loom jacquard weaving and took 15 full days to craft. It is used for weddings and festive ceremonies.",
+      "overallConfidence": 0.9
+    },
+    "keyless": {
+      "productName": {
+        "value": "Handwoven Banarasi Silk Saree",
+        "confidence": 0.92,
+        "flag": "low_confidence"
+      },
+      "materials": {
+        "value": [
+          "Silk",
+          "Zari"
+        ],
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "makingProcess": {
+        "value": "Pit loom jacquard weaving",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "usage": {
+        "value": "Weddings & festive occasions",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "timeRequired": {
+        "value": "15 days",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "craftCategory": {
+        "value": "Handloom & Weaving",
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "description": {
+        "value": "This is a handwoven Banarasi pure silk saree with authentic gold zari border. It is made using pit loom jacquard weaving and took 15 full days to craft. It is used for weddings and festive ceremonies.",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "rawTranscript": "This is a handwoven Banarasi pure silk saree with authentic gold zari border. It is made using pit loom jacquard weaving and took 15 full days to craft. It is used for weddings and festive ceremonies.",
+      "overallConfidence": 0.9
+    }
+  }
+}

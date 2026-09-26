@@ -1,0 +1,84 @@
+{
+  "id": "identity-hi-full",
+  "kind": "identity",
+  "input": "मेरा नाम शान्ति देवी है। फोन 9812345670 और आईडी ART-5521 है। मैं मधुबनी से हूँ।",
+  "inputSource": "transcript",
+  "llm": {
+    "name": "शान्ति देवी",
+    "phone": "9812345670",
+    "artisanId": "ART-5521",
+    "location": "मधुबनी",
+    "craft": "Traditional Painting",
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": "शान्ति देवी",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "phone": {
+        "value": "9812345670",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "artisanId": {
+        "value": "ART-5521",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "location": {
+        "value": "मधुबनी",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craft": {
+        "value": "Traditional Painting",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "मेरा नाम शान्ति देवी है। फोन 9812345670 और आईडी ART-5521 है। मैं मधुबनी से हूँ।",
+      "overallConfidence": 0.75
+    },
+    "keyless": {
+      "name": {
+        "value": "शान्ति देवी",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "phone": {
+        "value": "9812345670",
+        "confidence": 0.75,
+        "flag": "low_confidence"
+      },
+      "artisanId": {
+        "value": "ART-5521",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "location": {
+        "value": "मधुबनी",
+        "confidence": 0.85,
+        "flag": "low_confidence"
+      },
+      "craft": {
+        "value": "Traditional Painting",
+        "confidence": 0.88,
+        "flag": "low_confidence"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "मेरा नाम शान्ति देवी है। फोन 9812345670 और आईडी ART-5521 है। मैं मधुबनी से हूँ।",
+      "overallConfidence": 0.87
+    }
+  }
+}

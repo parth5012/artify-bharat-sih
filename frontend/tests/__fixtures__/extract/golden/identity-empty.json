@@ -1,0 +1,84 @@
+{
+  "id": "identity-empty",
+  "kind": "identity",
+  "input": "",
+  "inputSource": "transcript",
+  "llm": {
+    "name": null,
+    "phone": null,
+    "artisanId": null,
+    "location": null,
+    "craft": null,
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "phone": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "",
+      "overallConfidence": 0
+    },
+    "keyless": {
+      "name": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "phone": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "",
+      "overallConfidence": 0
+    }
+  }
+}

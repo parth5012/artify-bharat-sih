@@ -1,0 +1,84 @@
+{
+  "id": "identity-mixed-hien",
+  "kind": "identity",
+  "input": "मेरा नाम Sunita Devi है। मैं Jaipur से हूँ और फ़ोन नंबर 9876543210 है।",
+  "inputSource": "transcript",
+  "llm": {
+    "name": "Sunita Devi",
+    "phone": "9876543210",
+    "artisanId": null,
+    "location": "Jaipur",
+    "craft": null,
+    "pin": null
+  },
+  "expected": {
+    "llm": {
+      "name": {
+        "value": "Sunita Devi",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "phone": {
+        "value": "9876543210",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Jaipur",
+        "confidence": 0.9,
+        "flag": "verified"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "मेरा नाम Sunita Devi है। मैं Jaipur से हूँ और फ़ोन नंबर 9876543210 है।",
+      "overallConfidence": 0.45
+    },
+    "keyless": {
+      "name": {
+        "value": "Sunita Devi",
+        "confidence": 0.9,
+        "flag": "low_confidence"
+      },
+      "phone": {
+        "value": "9876543210",
+        "confidence": 0.95,
+        "flag": "low_confidence"
+      },
+      "artisanId": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "location": {
+        "value": "Jaipur",
+        "confidence": 0.85,
+        "flag": "low_confidence"
+      },
+      "craft": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "pin": {
+        "value": null,
+        "confidence": 0,
+        "flag": "missing"
+      },
+      "rawTranscript": "मेरा नाम Sunita Devi है। मैं Jaipur से हूँ और फ़ोन नंबर 9876543210 है।",
+      "overallConfidence": 0.9
+    }
+  }
+}
