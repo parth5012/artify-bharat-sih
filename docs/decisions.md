@@ -27,4 +27,6 @@
 
 _Future thought: weekly panel recrawl (same SKU IDs, diff storage, festival markdown tracking) for 200 items — 10x work, deferred to v2._
 
+> **Proposed draft, not accepted (#195):** ADR 0006 "Local Beckn Sandbox Seller Loop" is still a draft at `.tmp/sessions/2026-09-26-ondc-sandbox-integration/adr-0006-draft.md` (session scratch, gitignored). Nothing from it is recorded as an accepted decision here — move the draft to `docs/adr/0006-*.md` and append an entry under **Decisions** only after a human accepts it.
+
 _None yet — see `docs/adr/` for canonical records (0001 FastAPI+Celery, 0002 SHA-256 passports, 0003 responsive web, 0004 fair-wage engine). Append new significant choices here and as `docs/adr/NNNN-*.md`._

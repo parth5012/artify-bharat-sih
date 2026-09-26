@@ -4,7 +4,7 @@ import {Card,Kpi,PageHead} from '@/components/ministry/ui';
 import {MapExplorer} from '@/components/ministry/MapExplorer';
 import {C,CraftDonut,MarketBars,StateBars,Trend} from '@/components/ministry/Charts';
 import {InsightCards} from '@/components/ministry/Insights';
-import {fmt,kpis,marketTrend,onboardingTrend,productTrend} from '@/lib/ministry/data';
+import {fmt,kpis,marketTrend,onboardingTrend,productTrend,ONDC_LINKED_LABEL} from '@/lib/ministry/data';
 export default function Dashboard(){
  const K=kpis();
  return <div className="space-y-6">
@@ -18,7 +18,7 @@ export default function Dashboard(){
   <Card title="Craft Distribution" sub="Select a segment for detail" demo><CraftDonut/></Card>
   <h2 className="pt-2 text-xl font-bold text-navy">Product & market analytics</h2>
   <div className="grid gap-4 xl:grid-cols-2"><Card title="Product Registration Trend" sub="New registrations per month" demo><Trend data={productTrend()} series={[{key:'products',name:'Products registered',color:C.navy}]}/></Card>
-   <Card title="Market Activity" sub="Aggregated · no individual financial data" demo><div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[['Listings',fmt(K.listings)],['Orders',fmt(K.orders)],['Sales / activity',`₹${K.salesCr} Cr`],['ONDC-linked',fmt(K.ondc)]].map(([a,b])=><div key={a} className="rounded-lg bg-slate-50 p-2.5"><p className="text-[11px] font-semibold uppercase text-slate-500">{a}</p><p className="text-lg font-bold text-navy">{b}</p></div>)}</div><MarketBars data={marketTrend()}/></Card></div>
+   <Card title="Market Activity" sub="Aggregated · no individual financial data" demo><div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{[['Listings',fmt(K.listings)],['Orders',fmt(K.orders)],['Sales / activity',`₹${K.salesCr} Cr`],[ONDC_LINKED_LABEL.value,fmt(K.ondc)]].map(([a,b])=><div key={a} className="rounded-lg bg-slate-50 p-2.5"><p className="text-[11px] font-semibold uppercase text-slate-500">{a}</p><p className="text-lg font-bold text-navy">{b}</p></div>)}</div><MarketBars data={marketTrend()}/></Card></div>
   <InsightCards/>
  </div>;
 }

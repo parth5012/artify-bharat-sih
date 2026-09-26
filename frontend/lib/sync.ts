@@ -32,6 +32,15 @@ function upsert(item:QueuedItem){
 }
 export function removeFromQueue(idempotencyKey:string){writeQueue(readQueue().filter(x=>x.idempotencyKey!==idempotencyKey))}
 
+// #195: a manual publish retry that reaches the server supersedes the queued
+// copy of the SAME record — drop it so the auto-replay (connectivity restored)
+// cannot register a second product for one craft.
+export function takeQueuedProduct(queuedAtSeed:string){
+ const entry=readQueue().find(x=>x.kind==='product'&&String(x.payload.queuedAtSeed)===queuedAtSeed);
+ if(entry)removeFromQueue(entry.idempotencyKey);
+ return entry??null;
+}
+
 export function enqueueProduct(item:{name:string;craft:string;description:string;price:number;materials:string[];queuedAtSeed:string}){
  // Key derives from content so the same product replay is always idempotent.
  const idempotencyKey='q_product_'+item.name.toLowerCase().replace(/\s+/g,'-')+'_'+item.queuedAtSeed;
