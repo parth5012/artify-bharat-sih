@@ -1,4 +1,5 @@
 import type { VoiceResult } from '@/backend/bhashini';
+import type { ExtractKind, ExtractResponse } from './extract';
 
 export interface ProcessVoiceOptions {
   language?: string;
@@ -52,4 +53,28 @@ export async function processVoiceAudio(
   }
 
   return data as VoiceResult;
+}
+
+export const EXTRACT_TIMEOUT_MS = 30_000;
+
+/**
+ * Client helper to send transcript text to the server-side /api/extract route.
+ * Generic return is required — a union return would not narrow at call sites.
+ * Server 200 (including keyless regex-only) resolves; network errors and the
+ * 30s abort reject so the caller can move the voice phase to 'failed'.
+ */
+export async function processExtract<K extends ExtractKind>(
+  text: string,
+  kind: K,
+): Promise<ExtractResponse<K>> {
+  const res = await fetch('/api/extract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, kind }),
+    signal: AbortSignal.timeout(EXTRACT_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error('Extraction failed.');
+  }
+  return res.json();
 }

@@ -34,6 +34,13 @@ export const ExtractRequestSchema = z.object({
 export type ExtractRequest = z.infer<typeof ExtractRequestSchema>;
 
 // ---------------------------------------------------------------------------
+// Response type (§2: result object returned directly, no envelope)
+// ---------------------------------------------------------------------------
+
+export type ExtractResponse<K extends ExtractKind> =
+  K extends 'identity' ? ArtisanExtractionResult : ProductExtractionResult;
+
+// ---------------------------------------------------------------------------
 // Kind schemas + provider JSON Schema literals (§4)
 // ---------------------------------------------------------------------------
 
