@@ -124,7 +124,83 @@ services:
     depends_on:
       - backend
 
+  # ==============================================================================
+  # --- ONDC Beckn sandbox sidecar (#191) ----------------------------------------
+  # The only section the offline ONDC demo needs:
+  #     docker compose up beckn_sandbox
+  # Optional Beckn Gateway + Registry (profiled; NOT started by the demo):
+  #     docker compose --profile ondc-gateway up beckn_sandbox ondc_gateway ondc_registry
+  # Upstream github.com/beckn/beckn-sandbox ships ONE NestJS mock BPP and has no
+  # compose file, Gateway, Registry or Mock BAP. See docs/deployment-guide.md
+  # section 4 ("Spec vs upstream reality") before assuming otherwise.
+  # ==============================================================================
+  beckn_sandbox:
+    build:
+      # pinned commit of beckn/beckn-sandbox main (release 1.1.0, 2025-07-22)
+      context: https://github.com/beckn/beckn-sandbox.git#644ccd1608ac69b1574af144878668d18719bff8
+      dockerfile: Dockerfile
+    image: artify/beckn-sandbox:1.1.0-644ccd16
+    container_name: artify_ondc_sandbox
+    restart: unless-stopped
+    environment:
+      # upstream src/main.ts does listen(process.env.PORT) with no fallback
+      PORT: "3000"
+    ports:
+      # host 3100 keeps the sandbox off 3000 (Next.js dev / historical web_portal)
+      - "3100:3000"
+    healthcheck:
+      # upstream registers POST routes only (no GET health path), so any HTTP
+      # reply from the listener counts as healthy; a dead socket fails.
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get({host:'127.0.0.1',port:process.env.PORT||3000,path:'/'},()=>process.exit(0)).on('error',()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ondc_sandbox
+
+  # Optional Beckn Gateway (BG). Image published by beckn for its own
+  # beckn/beckn-onix install/docker-compose-gateway.yml, digest-pinned here.
+  # NOT exercised in CI (no docker daemon) and not required by the demo:
+  # gateway properties/keys wiring is not configured in this file.
+  ondc_gateway:
+    profiles: ["ondc-gateway"]
+    image: fidedocker/gateway:multiarch@sha256:307f28f554f6910fdcdf34d126e3d73cf452465fe613c90246931545e1c3a72f
+    container_name: artify_ondc_gateway
+    restart: unless-stopped
+    # no upstream healthcheck or documented health route -> none declared
+    ports:
+      - "4000:4000"
+      - "4030:4030"
+    networks:
+      - ondc_sandbox
+
+  # Optional Beckn/ONDC Registry. Same provenance as ondc_gateway
+  # (beckn/beckn-onix install/docker-compose-registry.yml), digest-pinned.
+  # NOT exercised in CI; no registry subscription/keys configured here.
+  # Host port 3000 is remapped to 3200 (Next.js dev / web_portal own 3000);
+  # the in-container registry port is unchanged.
+  ondc_registry:
+    profiles: ["ondc-gateway"]
+    image: fidedocker/registry:multiarch@sha256:d42b1367ca4ef6c7ec8c766b6852829af50c12464635dfdc4e98134b4cc3edab
+    container_name: artify_ondc_registry
+    restart: unless-stopped
+    # no upstream healthcheck or documented health route -> none declared
+    ports:
+      - "3200:3000"
+      - "3030:3030"
+    networks:
+      - ondc_sandbox
+
 volumes:
   postgres_data:
   redis_data:
   minio_data:
+
+networks:
+  ondc_sandbox:
+    driver: bridge

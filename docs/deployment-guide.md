@@ -36,6 +36,7 @@ Each key's consumer in the active codebase has been verified with ripgrep.
 | `ONDC_SELLER_LISTING_URL` | `frontend/backend/ondc.ts` | Frontend Server Route | **Server-only** | *Unset* | Host env | ONDC seller network listing endpoint URL. |
 | `ONDC_SELLER_TOKEN` | `frontend/backend/ondc.ts` | Frontend Server Route | **Server-only** | *Unset* | Host env secret | Bearer authentication token for ONDC seller network API. |
 | `ONDC_WEBHOOK_SECRET` | `frontend/app/api/ondc/webhook/route.ts` | Frontend Server Route | **Server-only** | *Unset* | Host env secret | Shared HMAC secret for verifying inbound ONDC webhook signatures. |
+| `ONDC_GATEWAY_URL` | Reserved (ONDC Beckn Node, #193) | Frontend Server Route | **Server-only** | `http://localhost:3100` | Host env | Beckn Gateway base URL. Local default points at the `beckn_sandbox` sidecar in `docker-compose.yml`; switch to `https://staging.gateway.ondc.org` for staging. See section 4. |
 | `CONFIRMATION_CALL_URL` | `frontend/backend/notifications.ts` | Frontend Server Route | **Server-only** | *Unset* | Host env | Telephony / IVR gateway endpoint for vernacular payment confirmation calls. |
 | `CONFIRMATION_CALL_TOKEN` | `frontend/backend/notifications.ts` | Frontend Server Route | **Server-only** | *Unset* | Host env secret | Bearer auth token for confirmation call service. |
 | `OTP_PROVIDER_URL` | `frontend/backend/otp.ts` | Frontend Server Route | **Server-only** | *Unset* | Host env | SMS gateway endpoint for artisan mobile OTP delivery. |
@@ -107,3 +108,76 @@ When infrastructure is provisioned, the deploy sequence will follow these steps:
    - Exercise voice translation / ASR endpoint `/api/voice`.
 5. **Rollback Plan**:
    - If smoke tests fail, immediately revert deployment traffic to the previous known-good tag.
+
+---
+
+## 4. Local ONDC Beckn Sandbox (Offline Judge Demo)
+
+The ONDC demo runs entirely on the laptop — no ONDC network-participant registration, no staging credentials, and no network dependency once images are built/pulled. The demo service is `beckn_sandbox` in `docker-compose.yml` (Wayfinder #191); the historical services above it are untouched and remain non-building.
+
+### 4.1 Boot via the integrated compose file (recommended)
+
+```bash
+docker compose config -q        # validates the file without a docker daemon
+docker compose up beckn_sandbox # offline judge demo
+```
+
+| Service | Role | Host ports | Image / source | Started by |
+| :--- | :--- | :--- | :--- | :--- |
+| `beckn_sandbox` | Mock BPP (canned Beckn Retail responses) | `3100 -> 3000` | build `github.com/beckn/beckn-sandbox` pinned to `644ccd1608ac69b1574af144878668d18719bff8` | `docker compose up beckn_sandbox` |
+| `ondc_gateway` | Beckn Gateway (BG) | `4000`, `4030` | `fidedocker/gateway:multiarch@sha256:307f28f554f6910fdcdf34d126e3d73cf452465fe613c90246931545e1c3a72f` | `--profile ondc-gateway` only |
+| `ondc_registry` | Beckn/ONDC Registry | `3200->3000`, `3030` | `fidedocker/registry:multiarch@sha256:d42b1367ca4ef6c7ec8c766b6852829af50c12464635dfdc4e98134b4cc3edab` | `--profile ondc-gateway` only |
+
+Notes:
+- Host port **3100** avoids 3000 (Next.js dev server and the historical `web_portal` mapping) and 8000/5432/6379/9000.
+- `PORT=3000` is set explicitly: upstream `src/main.ts` calls `listen(process.env.PORT)` with no fallback, and upstream never ships a `.env`.
+- The `beckn_sandbox` healthcheck is derived (any HTTP reply from the listener = healthy) because upstream registers **POST-only** routes and no GET health path.
+- `ondc_gateway` / `ondc_registry` are digest-pinned images that Beckn publishes for its own `beckn/beckn-onix` `install/docker-compose-*.yml` files. They are **optional, profile-gated and were not booted while writing this ticket** (CI has no docker daemon); no gateway properties, signing keys or registry subscription are configured here. They are **not** required by the demo.
+
+Smoke check once running:
+
+```bash
+docker compose ps beckn_sandbox                    # status: healthy
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3100/   # 404 => NestJS listener is up (root is POST-only)
+```
+
+The Mock BPP serves canned Beckn Retail 1.1.0 actions, e.g. `POST http://localhost:3100/retail/1.1.0/search` (also `/select`, `/init`, `/confirm`, `/status`, …) and `POST /dhp/search`.
+
+### 4.2 Alternative: standalone clone (no compose)
+
+```bash
+git clone https://github.com/beckn/beckn-sandbox.git
+cd beckn-sandbox
+npm install
+PORT=3000 npm run start:dev     # per its README: npm install && npm run start:dev
+```
+
+Per the upstream README, set the **BPP Client URL** and **Base URL** in a local `.env` only if you exercise the webhook-forwarding path. That file is git-ignored upstream — never commit it, and never copy real endpoints or tokens into this repository.
+
+### 4.3 Signing (Ed25519) and registry lookup pointers
+
+- **Ed25519 request signing / webhook verification**: [beckn/protocol-server](https://github.com/beckn/protocol-server) is the Beckn BAP/BPP protocol layer that performs signing and verification; its keys live in its own `config/default.yml`, never in this repository. ONDC HMAC verification of inbound webhooks stays behind `ONDC_WEBHOOK_SECRET` (server-only).
+- **Registry lookup** (subscribers, key lookup): the local `ondc_registry` image is the stand-in for lookup during the demo; the authoritative specs are [ONDC-Official/ONDC-Registry-Specifications](https://github.com/ONDC-Official/ONDC-Registry-Specifications). No registry subscription is created locally.
+- **Protocol contracts**: [ONDC-Official/ONDC-Protocol-Specs](https://github.com/ONDC-Official/ONDC-Protocol-Specs) (Retail `/search`, `/on_search`, `/select`, `/init`, `/confirm`).
+
+### 4.4 What is not provided locally
+
+| Piece | Status locally | Where to get it |
+| :--- | :--- | :--- |
+| Mock BPP | **Provided** (`beckn_sandbox`) | built from `beckn/beckn-sandbox` |
+| Beckn Gateway (BG) | Optional image only (`ondc_gateway`), unconfigured | Beckn Gateway docs; onix wiring in `beckn/beckn-onix` `install/` |
+| Registry | Optional image only (`ondc_registry`), no subscription | ONDC registry specs; onix `install/docker-compose-registry.yml` |
+| Mock BAP | **Not provided** | no credible standalone public mock-BAP image exists; the Beckn BAP pair is `fidedocker/protocol-server` (bap-client/bap-network) in `beckn/beckn-onix`, which needs Ed25519 keys + a registry subscription first |
+| Registered staging traffic | **Not provided** | `https://staging.gateway.ondc.org` requires ONDC network-participant registration |
+
+**Env switch**: `ONDC_GATEWAY_URL` in `frontend/.env.example` defaults to `http://localhost:3100` (the local sidecar). Point it at `https://staging.gateway.ondc.org` only after registration exists; all `ONDC_*` variables remain server-only.
+
+### 4.5 Spec vs upstream reality
+
+The Wayfinder grill (Q2) and ticket #191 assumed that `github.com/beckn/beckn-sandbox` ships a compose topology with **BG + Mock BPP + Mock BAP + Registry** in one file. Upstream reality, verified against the repository (`main` @ `644ccd16`, last push 2025-07-22):
+
+- `beckn-sandbox` is a **single NestJS app** named `sandbox-bpp` (port 3000, `pm2-runtime ecosystem.config.js`) with per-domain canned response packs. It contains **no compose file, no Gateway, no Registry and no Mock BAP**; its own `deploy-sandbox.sh` just runs `docker build` + `docker run --network host`.
+- Therefore the four-service topology promised by the ticket cannot be sourced "from beckn-sandbox".
+- What this repository does about it: `docker-compose.yml` builds the mock BPP from a commit-pinned `beckn-sandbox` ref (`beckn_sandbox`), adds the only Beckn-published, digest-pinnable **BG** and **Registry** images available (`fidedocker/gateway`, `fidedocker/registry`, from Beckn's own `beckn-onix` install compose) behind the opt-in `ondc-gateway` profile, and declares **no Mock BAP service** rather than inventing one. `ONDC_GATEWAY_URL` defaults to the local sidecar, with the staging switch documented above.
+
+Also note: `docs/ondc-basics.md` (session note) still describes `beckn-sandbox` as booting "fake Gateway + fake seller + fake buyer + Registry with one command" — that statement is the same mistaken assumption and does not match upstream.
