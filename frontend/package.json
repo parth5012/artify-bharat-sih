@@ -7,7 +7,13 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest --ci",
-    "test:live": "EXTRACT_LIVE=1 jest extract.live --ci"
+    "test:live": "EXTRACT_LIVE=1 jest extract.live --ci",
+    "build:eval": "tsc -p scripts/eval/tsconfig.json",
+    "eval": "npm run build:eval && node .tmp/eval-dist/scripts/eval/run.js",
+    "eval:regex": "npm run build:eval && node .tmp/eval-dist/scripts/eval/run.js --pipeline regex",
+    "eval:canned": "npm run build:eval && node .tmp/eval-dist/scripts/eval/run.js --pipeline canned",
+    "eval:live": "npm run build:eval && node .tmp/eval-dist/scripts/eval/run.js --pipeline llm",
+    "eval:fixtures": "npm run build:eval && node .tmp/eval-dist/scripts/eval/convert-golden.js"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
