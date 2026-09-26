@@ -27,6 +27,10 @@ export async function POST(request:Request){
  if(db.products.some(x=>x.parentHash===parentHash||x.childHash===childHash||(x.artisanId===product.artisanId&&x.serialNumber===serialNumber)))return jsonError('Product hash or serial number already exists.',409);
  db.products.push(product);await writeDb(db);
  await audit({action:'product.registered',actor:user.id,target:product.id,ip,detail:{parentHash:product.parentHash,childHash:product.childHash}});
- const ondc=await listProductOnOndc(product);await audit({action:'product.ondc_listing',actor:user.id,target:product.id,ip,detail:{...ondc}});
+ // Artisan view for the Beckn catalog (#193): ProductRecord has no display
+ // name / district, but the owning user row (register route) carries both.
+ const artisan=db.users.find(u=>u.id===product.artisanId||u.artisanId===product.artisanId);
+ const ondc=await listProductOnOndc({...product,artisanDisplayName:artisan?.name??'',artisanDistrict:artisan?.place??''});
+ await audit({action:'product.ondc_listing',actor:user.id,target:product.id,ip,detail:{...ondc}});
  return NextResponse.json({product,ondc},{status:201});
 }

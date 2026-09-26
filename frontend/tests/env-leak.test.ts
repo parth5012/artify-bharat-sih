@@ -9,6 +9,7 @@ import path from 'node:path';
 // Needles are assembled by concatenation where the file must not contain the
 // literal; client-source detectors are regexes (see CLIENT_ENV_PATTERNS) that
 // cover bracket access, quoted keys and destructuring, not just dot access.
+// Wayfinder #193 extended the same guard to the server-only ONDC_* vars.
 
 const FRONTEND = path.resolve(__dirname, '..');
 const REPO = path.resolve(FRONTEND, '..');
@@ -22,6 +23,9 @@ const NEXT_PUBLIC_NEEDLES = [
   NEXT_PUBLIC_NEEDLE,
   ['NEXT_PUBLIC', 'GROQ'].join('_'),
   ['NEXT_PUBLIC', 'OPENROUTER'].join('_'),
+  // #193: every ONDC_* var (seller listing, gateway, webhook, checkout) is
+  // server-only under frontend/app/api/** and frontend/backend/**.
+  ['NEXT_PUBLIC', 'ONDC'].join('_'),
 ];                                  // each: expect(scanTracked(needle)).toEqual([])
 // 1) dot or bracket access off process.env; 2) quoted key literal
 // ('BHASHINI_X') wherever it appears (bracket on any object, quoted
@@ -31,12 +35,19 @@ const NEXT_PUBLIC_NEEDLES = [
 // for a fail-closed secret guard.
 // Built per provider prefix via new RegExp so this file never contains the
 // assembled literals (same fail-closed concatenation as the needles above).
-const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER'] as const;
-const CLIENT_ENV_PATTERNS: RegExp[] = CLIENT_ENV_PREFIXES.flatMap((prefix) => [
-  new RegExp(`process\\.env(?:\\.${prefix}|\\[['"]${prefix})`),
-  new RegExp(`['"]${prefix}_[A-Z_]+['"]`),
-  new RegExp(`(?:const|let|var)\\s*\\{[^}]*\\b${prefix}_[A-Z_]+[^}]*\\}\\s*=\\s*process\\.env`),
-]);
+const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER', 'ONDC'] as const;
+function clientEnvPatterns(prefix: string): RegExp[] {
+  return [
+    new RegExp(`process\\.env(?:\\.${prefix}|\\[['"]${prefix})`),
+    new RegExp(`['"]${prefix}_[A-Z_]+['"]`),
+    new RegExp(`(?:const|let|var)\\s*\\{[^}]*\\b${prefix}_[A-Z_]+[^}]*\\}\\s*=\\s*process\\.env`),
+  ];
+}
+const CLIENT_ENV_PATTERNS: RegExp[] = CLIENT_ENV_PREFIXES.flatMap((prefix) => clientEnvPatterns(prefix));
+// #193 explicit ONDC needles so the guard's ONDC coverage is visible (and the
+// dedicated tests below can fail by name) in addition to the shared prefixes.
+const ONDC_NEEDLE = ['NEXT_PUBLIC', 'ONDC'].join('_');
+const CLIENT_ONDC_PATTERNS: RegExp[] = clientEnvPatterns('ONDC');
 // Any import style: from '...', side-effect import '...', dynamic import('...').
 const SERVER_IMPORT_NEEDLE = ['backend', 'bhashini'].join('/');
 const SERVER_IMPORT_RE = new RegExp(
@@ -189,6 +200,19 @@ describe('Bhashini credentials stay server-side only', () => {
     expect(hits).toEqual([]);
   });
 
+  it('no NEXT_PUBLIC_-prefixed ONDC var in any tracked file (#193)', () => {
+    expect(scanTracked(ONDC_NEEDLE)).toEqual([]);
+  });
+
+  it('client-bundle sources never read ONDC_* env vars (#193)', () => {
+    const hits: string[] = [];
+    for (const rel of clientSourceFiles()) {
+      const text = readSafe(rel);
+      if (text !== null && CLIENT_ONDC_PATTERNS.some((re) => re.test(text))) hits.push(rel);
+    }
+    expect(hits).toEqual([]);
+  });
+
   it('client-bundle sources never value-import the Bhashini server module', () => {
     const hits: string[] = [];
     for (const rel of clientSourceFiles()) {
@@ -232,7 +256,9 @@ describe('Bhashini credentials stay server-side only', () => {
           }
           if (BINARY_EXT.test(abs)) continue;
           const text = readFileSync(abs, 'utf8');
-          if (text.includes(NEXT_PUBLIC_NEEDLE)) hits.push(abs);
+          for (const needle of NEXT_PUBLIC_NEEDLES) {
+            if (text.includes(needle)) hits.push(abs);
+          }
           for (const prefix of keyPrefixes) {
             if (text.includes(prefix)) hits.push(abs);
           }
