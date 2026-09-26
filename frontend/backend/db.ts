@@ -5,8 +5,13 @@ import {Pool,PoolClient} from 'pg';
 export type User={id:string;phone:string;name?:string;artisanId?:string;place?:string;craft?:string;pinHash?:string;createdAt:number;updatedAt:number};
 export type OtpChallenge={phone:string;codeHash:string;expiresAt:number;attempts:number};
 export type Session={tokenHash:string;userId:string;expiresAt:number};
-export type ProductRecord={id:string;parentHash:string;childHash:string;serialNumber:string;artisanId:string;name:string;craft:string;price:number;description:string;materials:string[];status:'published'|'archived';ownership:'artisan'|'sold';soldAt?:number;orderId?:string;createdAt:number};
-export type OndcOrderIntent={id:string;items:{id:string;qty:number;price:number;serialNumbers?:string[]}[];buyer:{name:string;phone:string;line:string;city:string;state:string;pin:string;language:string};status:'created'|'paid'|'failed';childUnitsSold?:boolean;createdAt:number;updatedAt:number};
+export type ProductRecord={id:string;parentHash:string;childHash:string;serialNumber:string;artisanId:string;name:string;craft:string;price:number;description:string;materials:string[];status:'published'|'archived';ownership:'artisan'|'sold';soldAt?:number;orderId?:string;createdAt:number;/** Atomic Inventory Lock (#194): set once by lock_inventory_on_sale — the persisted 1-of-1 delist marker that outlives the in-process claim. */saleLockedAt?:number};
+// Beckn order callbacks the webhook accepts (#194). The intent status vocabulary
+// stays the pre-existing `created|paid|failed`; the callback stage is recorded
+// separately on the intent so select/init never invent parallel states.
+export const ONDC_CALLBACKS=['select','init','confirm','paid','failed'] as const;
+export type OndcCallbackStatus=(typeof ONDC_CALLBACKS)[number];
+export type OndcOrderIntent={id:string;items:{id:string;qty:number;price:number;serialNumbers?:string[]}[];buyer:{name:string;phone:string;line:string;city:string;state:string;pin:string;language:string};status:'created'|'paid'|'failed';/** Last applied Beckn order callback (select/init/confirm/paid/failed) — the replay-dedup key. */callback?:OndcCallbackStatus;childUnitsSold?:boolean;createdAt:number;updatedAt:number};
 export type AuditLog={id:string;ts:number;action:string;actor?:string|null;target?:string|null;ip?:string|null;detail?:Record<string,unknown>};
 export type MediaRecord={id:string;artisanId:string;productId:string;kind:'photo'|'voice';dataUrl:string;lat:number|null;lng:number|null;ts:number;createdAt:number};
 export type Database={users:User[];otpChallenges:OtpChallenge[];sessions:Session[];products:ProductRecord[];ondcOrders:OndcOrderIntent[];auditLogs:AuditLog[];media:MediaRecord[]};
