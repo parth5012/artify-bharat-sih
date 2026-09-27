@@ -210,6 +210,22 @@ describe('POST /api/gem/packet — guards mirror the ONDC listing route (#204)',
     expect(res.status).toBe(200);
   });
 
+  it('returns 400 for a non-positive product price instead of an unhandled 500 (OCR medium)', async () => {
+    await login('9876599307', '10.9.9.37');
+    const user = storeHolder.store.users.find((u) => u.phone === '9876599307');
+    storeHolder.store.products.push({
+      id: 'prd_bad_price', parentHash: 'e'.repeat(64), childHash: 'f'.repeat(64), serialNumber: '7',
+      artisanId: user!.id, name: 'Unpriced craft', craft: 'metal', price: 0,
+      description: 'd', materials: [], status: 'published', ownership: 'artisan', createdAt: Date.now(),
+    });
+    const {POST} = await import('../app/api/gem/packet/route');
+    const res = await POST(jsonRequest('http://x/api/gem/packet', {productId: 'prd_bad_price'}));
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(typeof data.error).toBe('string');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('rate-limits packet generation per user (429 after the hourly cap)', async () => {
     const product = await registerProduct('9876599306', '10.9.9.36');
     const {POST} = await import('../app/api/gem/packet/route');

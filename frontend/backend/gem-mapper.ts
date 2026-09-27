@@ -438,7 +438,10 @@ export const GEM_MANUAL_UPLOAD_NOTE =
  */
 export function buildGemManifest(input: GemManifestInput): GemManifest {
   const catalog = mapProductToGemCatalog(input);
-  const craft = resolveGemCraft(input.craft ?? catalog.seller_details.cluster_location);
+  // `??` alone is a bug here: a blank/whitespace craft string is NOT nullish,
+  // so it would skip the cluster fallback and silently land on the default rule
+  // (OCR medium finding). Trim first, then treat empty as "no craft given".
+  const craft = resolveGemCraft(input.craft?.trim() || catalog.seller_details.cluster_location);
   const offerPrice = input.offerPrice;
   const mrp = deriveGemMrp(offerPrice);
   const price = validateGemPricePair({mrp, offerPrice});

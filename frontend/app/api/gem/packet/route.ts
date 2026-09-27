@@ -31,6 +31,9 @@ export async function POST(request:Request){
  // so both must match or a legitimate packet request would 403.
  if(product.artisanId!==user.id&&product.artisanId!==user.artisanId)return jsonError('This product belongs to another artisan.',403);
  const artisan=db.users.find(u=>u.id===product.artisanId||u.artisanId===product.artisanId);
+ // Guard the G3 derivation (OCR medium): deriveGemMrp/validateGemPricePair throw
+ // on non-positive/non-finite prices, which would surface as an unhandled 500.
+ if(!Number.isFinite(product.price)||product.price<=0)return jsonError('Product price must be a positive number to build a GeM packet.',400);
  const gem=buildGemPacket({product,artisan:artisan??null,...(shortcode?{shortcode}:{})});
  await audit({action:'product.gem_packet',actor:user.id,target:product.id,ip,detail:{configured:gem.env.configured,reason:gem.env.reason??null,shortcoded:Boolean(shortcode)}});
  return NextResponse.json({gem});

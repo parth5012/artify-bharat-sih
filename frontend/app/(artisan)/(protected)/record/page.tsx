@@ -157,12 +157,14 @@ export default function Record(){
    setTimeout(()=>URL.revokeObjectURL(url),1000);
   };
   save(`gem-catalog-${productId}.xml`,xml,'application/xml');
-  // Stagger (#205): two synchronous downloads drop the second file on mobile
-  // browsers, which is exactly where these artisans work.
+  // Stagger (#205 + OCR medium): never two saves in the same tick — mobile
+  // browsers drop the later file. XML at 0ms, CSV at 350ms, manifest at 700ms.
   setTimeout(()=>{
    save(`gem-catalog-${productId}.csv`,csv,'text/csv');
-   save(`gem-manifest-${productId}.json`,JSON.stringify(manifest,null,2),'application/json');
   },350);
+  setTimeout(()=>{
+   save(`gem-manifest-${productId}.json`,JSON.stringify(manifest,null,2),'application/json');
+  },700);
  };
 
  // Try Again on a rejected listing (#195): re-run the seller publish for the
