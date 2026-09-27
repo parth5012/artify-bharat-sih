@@ -62,10 +62,11 @@
 
 ## 8. Which marketplaces can an artisan publish to in one tap?
 
-**Claim:** One `POST /api/v1/exports/sync` fans out to GeM XML/CSV, ONDC Beckn JSON, WhatsApp interactive card, SHG bulk CSV.
+**Claim:** In the active `frontend/` tree, the artisan publish run generates a GeM approval-ready packet (catalog XML + CSV + 5-stage manifest) for **manual upload** — GeM exposes no public seller catalog API, so no live push is claimed — alongside the real ONDC sandbox publish. The legacy Python fan-out (`legacy/`, excluded from CI) additionally covered WhatsApp interactive card + SHG bulk CSV adapters.
 **Evidence:**
-- `backend/app/api/v1/exports.py`, `backend/app/services/export_service.py`
-- `backend/tests/test_export_adapters.py` (7 tests: gem, ondc, whatsapp, shg, multi-channel, end-to-end, inventory-lock)
+- `frontend/backend/gem-mapper.ts`, `frontend/backend/gem.ts`, `frontend/app/api/gem/packet/route.ts`
+- `frontend/tests/gem-mapper.test.ts`, `frontend/tests/gem-packet.test.ts` (active CI), `docs/gem-basics.md`
+- Historical only: `legacy/backend/app/api/v1/exports.py`, `legacy/backend/app/services/export_service.py`, `legacy/backend/tests/test_export_adapters.py` (7 tests: gem, ondc, whatsapp, shg, multi-channel, end-to-end, inventory-lock) — `legacy/` is out of the CI gate
 
 ## 9. How does the Ministry monitor impact (heatmap / audit / skilling)?
 

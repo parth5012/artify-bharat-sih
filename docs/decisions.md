@@ -29,4 +29,6 @@ _Future thought: weekly panel recrawl (same SKU IDs, diff storage, festival mark
 
 > **Proposed draft, not accepted (#195):** ADR 0006 "Local Beckn Sandbox Seller Loop" is still a draft at `.tmp/sessions/2026-09-26-ondc-sandbox-integration/adr-0006-draft.md` (session scratch, gitignored). Nothing from it is recorded as an accepted decision here — move the draft to `docs/adr/0006-*.md` and append an entry under **Decisions** only after a human accepts it.
 
+> **Proposed draft, not accepted (#206):** the GeM packet-builder ADR draft for map #201 is referenced as `.opencode/design/gem-packet-builder/adr-0006-draft-gem.md`, but that session scratch is **not present in this worktree** (same absence reported on #202/#203 — the ticket body of #201's children is the standing authority). Its posture mirrors the ONDC draft above: **Proposed, not accepted.** Nothing from it is recorded as an accepted decision here — recreate the draft (grill locks G1–G8 live in the #201 map notes) at `docs/adr/0006-*.md` and append an entry under **Decisions** only after a human accepts it. Rationale for the design is written up in plain words at `docs/gem-basics.md`.
+
 _None yet — see `docs/adr/` for canonical records (0001 FastAPI+Celery, 0002 SHA-256 passports, 0003 responsive web, 0004 fair-wage engine). Append new significant choices here and as `docs/adr/NNNN-*.md`._

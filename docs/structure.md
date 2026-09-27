@@ -9,7 +9,7 @@
 ├── frontend/              # Next.js 14.2 + React 18.3 + TS 5.5 + Tailwind 3.4 (active app & API routes)
 ├── legacy/                # Archived legacy FastAPI backend & artifacts (out of active codebase & CI)
 ├── harness/               # Python agent-eval harness (action_space/observation/evaluator — unrelated to agent harness files)
-├── docs/adr/ (0001-0005), docs/api-specification.md, docs/agents/, docs/deployment-guide.md
+├── docs/adr/ (0001-0005), docs/api-specification.md, docs/agents/, docs/deployment-guide.md, docs/gem-basics.md
 ├── CONTEXT.md, CONTEXT-MAP.md, docker-compose.yml, .github/workflows/ci.yml
 └── graphify-out/ (to be built)
 ```
@@ -24,6 +24,7 @@
 - **PricingAI:** Fair Wage Floor calculation (`frontend/app/api/pricing/calculate`).
 - **VerifyService & Heritage Passport:** Deterministic SHA-256 heritage passport verification and shortcode lookup (`frontend/lib/hash.ts`, `/verify/[code]`).
 - **Exports & ONDC:** ONDC buyer checkout redirect, Beckn order-callback webhook (select/init/confirm + replay-safe idempotency) and seller webhook integration (`frontend/app/api/ondc/*` — checkout, webhook, listing retry; adapter `frontend/backend/ondc.ts`, Atomic Inventory Lock helper `frontend/backend/inventory.ts`), plus the Step 6 live publish status derivation (`frontend/lib/publishing.ts`, rendered by `frontend/components/PublishingFlow.tsx` from `frontend/app/(artisan)/(protected)/record/page.tsx`).
+- **GeM packet lane (manual upload, no listing API):** pure mapper `frontend/backend/gem-mapper.ts` (catalog/XML/CSV + `buildGemManifest` 5-stage checklist, G2 craft→HSN table, G3 MRP rule), packet assembly `frontend/backend/gem.ts` (`buildGemPacket`, `getGemEnv` with reserved `GEM_PORTAL_API_URL`/`GEM_SELLER_TOKEN`), server route `frontend/app/api/gem/packet/route.ts` (auth + ownership + rate limit + `product.gem_packet` audit); tests `frontend/tests/gem-mapper.test.ts` and `frontend/tests/gem-packet.test.ts`; plain-words primer `docs/gem-basics.md`. UI truth lives in the Exports & ONDC Step 6 files above (GeM step completes only on a packet result, badge `Packet ready (manual upload)`).
 - **Web Client:** Dual-role artisan UI, voice capture, translation, camera studio integration, responsive verification portal.
 
 ## Entry Points
