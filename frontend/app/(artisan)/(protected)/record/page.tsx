@@ -38,6 +38,7 @@ export default function Record(){
  const pending=useRef<PublishPayload|null>(null);
  const running=useRef(false);
  const relisting=useRef(false);
+ const packetting=useRef(false);
 
  useEffect(()=>{
    createRecord(s.photos,s.product)
@@ -92,6 +93,78 @@ export default function Record(){
   setStatus(prev=>({...prev,available:true}));
  };
 
+ // GeM packet (#204/#205): generate the manual-upload packet (XML + CSV +
+ // 5-stage manifest) for the ALREADY registered product. A failure parks the
+ // checklist on the GeM Try Again panel — it never re-registers the product
+ // and never claims a GeM listing (grill G5).
+ const requestPacket=async(productId:string):Promise<boolean>=>{
+  if(packetting.current)return false;
+  packetting.current=true;
+  // NOTE: no retryingPacket here — that flag means "GeM Try Again in flight"
+  // and is set only by retryPacket; the first request is the normal flow.
+  try{
+   const res=await fetch('/api/gem/packet',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({productId})
+   });
+   const data=await res.json().catch(()=>({}));
+   if(!res.ok)throw new Error(typeof data.error==='string'?data.error:'Unable to generate the GeM packet');
+   const gem=data.gem as {xml?:string;csv?:string;manifest?:unknown}|undefined;
+   if(!gem?.xml||!gem?.csv||!gem.manifest)throw new Error('The GeM packet response was incomplete. Try again.');
+   setStatus(prev=>({...prev,packet:{status:'ready'},retryingPacket:false}));
+   return true;
+  }catch(e){
+   const reason=e instanceof Error?e.message:'Unable to generate the GeM packet';
+   setStatus(prev=>({...prev,packet:{status:'failed',reason},retryingPacket:false}));
+   return false;
+  }finally{
+   packetting.current=false;
+  }
+ };
+
+ // Try Again on a failed packet: re-run POST /api/gem/packet only (#205).
+ const retryPacket=async()=>{
+  const productId=serverProductId.current;
+  if(!productId||packetting.current)return;
+  setStatus(prev=>({...prev,retryingPacket:true,error:null}));
+  const ready=await requestPacket(productId);
+  if(ready)finishPublish();
+ };
+
+ // Download the packet files for manual upload to the gem.gov.in dashboard.
+ const downloadGemPacket=async()=>{
+  // One packet request at a time: the route allows 10/hour per user.
+  if(packetting.current)throw new Error('A GeM packet request is already running. Try again in a moment.');
+  const productId=serverProductId.current;
+  if(!productId)throw new Error('No server product id for this craft yet.');
+  const res=await fetch('/api/gem/packet',{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({productId})
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(typeof data.error==='string'?data.error:'Unable to build the GeM packet');
+  const gem=data.gem as {xml?:string;csv?:string;manifest?:unknown}|undefined;
+  if(!gem?.xml||!gem?.csv||!gem.manifest)throw new Error('The GeM packet response was incomplete. Try again.');
+  // Local copies: TS property narrowing does not survive the setTimeout closure below.
+  const {xml,csv,manifest}=gem;
+  const save=(name:string,text:string,type:string)=>{
+   const url=URL.createObjectURL(new Blob([text],{type}));
+   const a=document.createElement('a');
+   a.href=url;a.download=name;
+   document.body.appendChild(a);a.click();a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };
+  save(`gem-catalog-${productId}.xml`,xml,'application/xml');
+  // Stagger (#205): two synchronous downloads drop the second file on mobile
+  // browsers, which is exactly where these artisans work.
+  setTimeout(()=>{
+   save(`gem-catalog-${productId}.csv`,csv,'text/csv');
+   save(`gem-manifest-${productId}.json`,JSON.stringify(manifest,null,2),'application/json');
+  },350);
+ };
+
  // Try Again on a rejected listing (#195): re-run the seller publish for the
  // product that already exists server-side.
  const retryListing=async()=>{
@@ -109,7 +182,7 @@ export default function Record(){
    if(!res.ok)throw new Error(typeof data.error==='string'?data.error:'Unable to retry the ONDC listing');
    const listing=(data.ondc??{listed:false,attempts:0,reason:'Listing retry returned no result'}) as OndcListingStatus;
    setStatus(prev=>({...prev,listing,retrying:false}));
-   if(listing.listed)finishPublish();
+   if(listing.listed&&await requestPacket(productId))finishPublish();
    }catch(e){
     // A failed Try Again stays INSIDE the checklist (#195: failure state with
     // Try Again). status.error owns the full-screen registration failure and
@@ -175,7 +248,9 @@ export default function Record(){
        pending.current={remote:data.product,imgs,id:'u-'+rec.id};
        setStatus(prev=>({...prev,listing}));
        if(!listing.listed)return; // failure panel + Try Again takes over
-       finishPublish();
+       // GeM packet is a REAL step (#205): the packet must exist before the
+       // checklist may complete; a failure lands on the packet Try Again panel.
+       if(await requestPacket(data.product.id))finishPublish();
      }catch(e){
        // Offline handling: queue for retry when the connection returns (kept).
        // Only while the server has NOT taken the product — once it has, a
@@ -230,6 +305,7 @@ export default function Record(){
          status={status}
          onComplete={() => setPublishingComplete(true)}
          onRetryListing={retryListing}
+         onRetryPacket={retryPacket}
        />
      </Screen>
    );
@@ -250,7 +326,8 @@ export default function Record(){
        onViewProducts={() => {set({photos:[],product:null,record:null,productId:null,catalogProductId:null});r.push('/home')}}
        onViewMarketplace={() => r.push('/buyer/product/'+s.productId)}
        ondcUrl="https://ondc.org/"
-       gemUrl={`https://gem.gov.in/product/${productId}`}
+       gemReady={status.packet?.status==='ready'}
+       onDownloadGemPacket={downloadGemPacket}
        ondc={ondcProof}
      />
    </Screen>

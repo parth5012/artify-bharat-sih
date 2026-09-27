@@ -20,7 +20,7 @@ STEP 6 OF 6 · READY
 ✓ Photos & product details saved
 ✓ Publishing to ONDC Network   [Live sandbox]
   on_search ack · 1 attempt · catalog cat_…
-→ Listing on GeM
+→ GeM approval packet   [Packet ready (manual upload)]
 ○ Making your product available to buyers
 ```
 
@@ -51,9 +51,10 @@ After publishing completes:
 ┌─────────────────────────────┐
 │ [GeM Logo]  Government      │
 │ e-Marketplace               │
-│ ✓ Listed                    │
-│ Available for govt buyers   │
-│ [View Listing]              │
+│ [Packet ready (manual       │
+│  upload)]                   │
+│ Manual upload · 5-stage form│
+│ [Download GeM packet]       │
 └─────────────────────────────┘
 
 Product ID: ART-P-0001
@@ -71,13 +72,15 @@ Ready to receive orders
 - Renders the 5-step checklist from **real** publish status (no timers)
 - Status derivation lives in `frontend/lib/publishing.ts` (`deriveChecklist`)
 - Shows the Live sandbox / Offline fallback source badge + `on_search` proof line
-- Failure state (`ondc.listed === false`) with **Try Again** relist
-- Keeps orange/emerald design, `role="status"` progress region, `role="alert"` failure
+- GeM step shows the **`Packet ready (manual upload)`** badge once `POST /api/gem/packet` returned a packet (XML + CSV + 5-stage manifest)
+- Failure states with **Try Again**: `ondc.listed === false` relists; a failed packet re-runs `POST /api/gem/packet` (never re-registers the product)
+- Keeps orange/emerald design, `role="status"` progress region, `role="alert"` failures
 - Calls `onComplete()` when every step is done
 
 #### `MarketplaceSuccess.tsx`
 - Displays success state with marketplace cards
 - ONDC card carries the same source badge + `on_search` catalog id
+- GeM card carries the `Packet ready (manual upload)` badge + a **Download GeM packet** action (no listing link — GeM has no listing API)
 - Shows ONDC and GeM logos (with fallbacks)
 - Displays product ID
 - Provides navigation to products or marketplace
@@ -88,6 +91,7 @@ Ready to receive orders
 - Creates product record
 - Runs the real publish pipeline and reports progress to `PublishingFlow`
 - Photos + passport hash → `POST /api/products` → durable local publish
+- After the ONDC listing succeeds → `POST /api/gem/packet` → the GeM packet step (block completion until ready)
 - Surfaces the hard-failure screen and re-runs the pipeline on Try Again
 - Handles offline queueing (queued on failure; dropped when a manual retry succeeds)
 - Shows `MarketplaceSuccess` on completion
@@ -95,7 +99,7 @@ Ready to receive orders
 #### APIs
 - `/api/products` - Product registration + ONDC listing (`{product, ondc}`)
 - `/api/ondc/listing` - Listing retry for an already-registered product (Try Again)
-- GeM integration (still a stub channel — no listing API; the step completes with the durable publish)
+- `/api/gem/packet` - GeM approval-ready packet generator (`{gem: {catalog, xml, csv, manifest, env}}`); manual-upload lane, GeM has no public seller catalog-upload API (Try Again re-runs this route only)
 
 ### Logo Assets
 
@@ -163,7 +167,7 @@ Product is queued for retry when connection returns (existing offline handling p
 
 ### Real API Integration
 - ONDC seller publish runs against the local beckn sandbox (`ONDC_SELLER_LISTING_URL`), with the Grill A1 offline fallback when it is down
-- GeM seller registration API (today the GeM step is a stub channel)
+- GeM: packet generator + manual upload (GeM exposes no seller catalog-upload API; a GeM API lane could replace manual upload when GeM publishes one)
 - Product listing endpoints for GeM / other portals
 
 ### Enhanced Status
@@ -202,6 +206,6 @@ Test with artisans to verify:
 
 - The checklist reads real publish progress (`frontend/lib/publishing.ts`); it is no longer simulated with delays
 - ONDC publish requires a reachable sandbox (`docker compose up beckn_sandbox`); otherwise the A1 fallback lists the mocked intent and the badge says so
-- GeM integration still requires seller credentials and an API (stub channel today)
+- GeM has no listing API: the flow generates an approval-ready packet (XML + CSV + manifest) and the artisan uploads it manually on the gem.gov.in 5-stage dashboard (GeM Admin approval, 3-day TAT)
 - Product IDs follow format: `ART-P-####` for display, `u-{recordId}` internally
 - Privacy: Artisan phone numbers are never published to marketplaces
