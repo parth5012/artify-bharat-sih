@@ -335,6 +335,14 @@ describe('buildGemManifest (#203 human manifest, grill G2+G3)', () => {
     expect(() => deriveGemMrp(Number.NaN)).toThrow();
   });
 
+  it('falls back to cluster_location when craft is blank (OCR medium: ?? misses empty strings)', () => {
+    const manifest = buildGemManifest(
+      baseManifestInput({craft: '   ', clusterName: 'Kashmir Pashmina Cluster'}),
+    );
+    expect(manifest.stage2_category.categoryCode).toBe('HANDLOOM_SHAWL_6214');
+    expect(manifest.stage3_price.hsn).toBe('621410');
+  });
+
   it('maps the GeM 5-stage dashboard trail 1:1', () => {
     const manifest = buildGemManifest(baseManifestInput());
     expect(Object.keys(manifest)).toEqual([

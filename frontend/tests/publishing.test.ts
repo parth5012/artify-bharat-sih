@@ -210,6 +210,18 @@ describe('#205 packet retry UX hardening (CodeReviewer findings)', () => {
     expect(download).toContain('packetting.current');
   });
 
+  it('never lets the manifest save share a tick with the CSV save (OCR medium)', () => {
+    const page = read('frontend/app/(artisan)/(protected)/record/page.tsx');
+    const download = page.slice(page.indexOf('const downloadGemPacket='));
+    const csvAt = download.lastIndexOf('gem-catalog-');
+    const manifestAt = download.indexOf('gem-manifest-');
+    expect(csvAt).not.toBe(-1);
+    expect(manifestAt).toBeGreaterThan(csvAt);
+    // Between the CSV save and the manifest save there must be its OWN timer,
+    // otherwise both fire synchronously and mobile browsers drop one.
+    expect(download.slice(csvAt, manifestAt)).toContain('setTimeout');
+  });
+
   it('disables the download button with a loading state while the packet fetch runs', () => {
     const flow = read('frontend/components/PublishingFlow.tsx');
     expect(flow).toContain('aria-busy={downloading}');
