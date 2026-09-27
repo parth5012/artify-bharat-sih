@@ -26,6 +26,9 @@ const NEXT_PUBLIC_NEEDLES = [
   // #193: every ONDC_* var (seller listing, gateway, webhook, checkout) is
   // server-only under frontend/app/api/** and frontend/backend/**.
   ['NEXT_PUBLIC', 'ONDC'].join('_'),
+  // #204: GEM_* (portal URL + seller token) is reserved server-only for a
+  // future GeM-approved API; packet generation needs neither.
+  ['NEXT_PUBLIC', 'GEM'].join('_'),
 ];                                  // each: expect(scanTracked(needle)).toEqual([])
 // 1) dot or bracket access off process.env; 2) quoted key literal
 // ('BHASHINI_X') wherever it appears (bracket on any object, quoted
@@ -35,7 +38,7 @@ const NEXT_PUBLIC_NEEDLES = [
 // for a fail-closed secret guard.
 // Built per provider prefix via new RegExp so this file never contains the
 // assembled literals (same fail-closed concatenation as the needles above).
-const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER', 'ONDC'] as const;
+const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER', 'ONDC', 'GEM'] as const;
 function clientEnvPatterns(prefix: string): RegExp[] {
   return [
     new RegExp(`process\\.env(?:\\.${prefix}|\\[['"]${prefix})`),
@@ -50,9 +53,15 @@ const ONDC_NEEDLE = ['NEXT_PUBLIC', 'ONDC'].join('_');
 const CLIENT_ONDC_PATTERNS: RegExp[] = clientEnvPatterns('ONDC');
 // Any import style: from '...', side-effect import '...', dynamic import('...').
 const SERVER_IMPORT_NEEDLE = ['backend', 'bhashini'].join('/');
-const SERVER_IMPORT_RE = new RegExp(
-  `(?:\\bfrom\\s*|\\bimport\\s*\\(?\\s*)['"][^'"]*${SERVER_IMPORT_NEEDLE}['"]`
-);
+function serverImportRe(needle: string): RegExp {
+  return new RegExp(`(?:\\bfrom\\s*|\\bimport\\s*\\(?\\s*)['"][^'"]*${needle}['"]`);
+}
+const SERVER_IMPORT_RE = serverImportRe(SERVER_IMPORT_NEEDLE);
+// #204: the GeM server module (`backend/gem`, which reads GEM_* env) must never
+// be value-imported by client-bundle code. The needle ends at `gem`, so the
+// pure `backend/gem-mapper` is deliberately NOT covered by this import guard.
+const GEM_SERVER_IMPORT_NEEDLE = ['backend', 'gem'].join('/');
+const GEM_SERVER_IMPORT_RE = serverImportRe(GEM_SERVER_IMPORT_NEEDLE);
 const SECRET_NAMES = [
   'BHASHINI_API_KEY', 'BHASHINI_USER_ID', 'BHASHINI_INFERENCE_API_KEY',
   'GROQ_API_KEY', 'OPENROUTER_API_KEY',
@@ -209,6 +218,30 @@ describe('Bhashini credentials stay server-side only', () => {
     for (const rel of clientSourceFiles()) {
       const text = readSafe(rel);
       if (text !== null && CLIENT_ONDC_PATTERNS.some((re) => re.test(text))) hits.push(rel);
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it('no NEXT_PUBLIC_-prefixed GeM var in any tracked file (#204)', () => {
+    expect(scanTracked(['NEXT_PUBLIC', 'GEM'].join('_'))).toEqual([]);
+  });
+
+  it('client-bundle sources never read GEM_* env vars (#204)', () => {
+    const gemPatterns = clientEnvPatterns('GEM');
+    const hits: string[] = [];
+    for (const rel of clientSourceFiles()) {
+      const text = readSafe(rel);
+      if (text !== null && gemPatterns.some((re) => re.test(text))) hits.push(rel);
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it('client-bundle sources never value-import the GeM server module (#204)', () => {
+    const hits: string[] = [];
+    for (const rel of clientSourceFiles()) {
+      const text = readSafe(rel);
+      if (text === null || !text.includes(GEM_SERVER_IMPORT_NEEDLE)) continue;
+      if (GEM_SERVER_IMPORT_RE.test(stripTypeImports(text))) hits.push(rel);
     }
     expect(hits).toEqual([]);
   });
