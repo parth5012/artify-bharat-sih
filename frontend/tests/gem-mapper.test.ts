@@ -3,10 +3,15 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 
 import {
+  GemManifestInput,
   GemProductInput,
+  buildGemManifest,
+  deriveGemMrp,
   mapProductToGemCatalog,
   mapProductToGemCsv,
   mapProductToGemXml,
+  resolveGemCraft,
+  validateGemPricePair,
 } from '@/backend/gem-mapper';
 
 // Wayfinder #202 — Artify product -> GeM approval-ready packet mapper.
@@ -289,5 +294,116 @@ describe('gem-mapper purity + server-only guard (#202)', () => {
     const source = readFileSync(MAPPER_PATH, 'utf8');
     expect(source).toContain('legacy/backend/app/services/export_service.py');
     expect(source).toContain('format_for_gem');
+  });
+});
+
+// --- Wayfinder #203: human manifest (GeM 5-stage trail) ----------------------
+
+function baseManifestInput(overrides: Partial<GemManifestInput> = {}): GemManifestInput {
+  return {
+    ...baseProduct(),
+    parentHash: 'p'.repeat(64),
+    craft: 'Banarasi Silk',
+    offerPrice: 1000,
+    stock: 1,
+    leadTimeDays: 7,
+    deliveryLocation: 'Varanasi, Uttar Pradesh',
+    images: ['/products/prd_9f21-studio-1.jpg'],
+    termsAccepted: true,
+    ...overrides,
+  };
+}
+
+describe('buildGemManifest (#203 human manifest, grill G2+G3)', () => {
+  it('enforces the locked G3 rule: offer=1000 -> MRP 1112 with >=10% gap', () => {
+    const manifest = buildGemManifest(baseManifestInput({offerPrice: 1000}));
+    const {mrp, offerPrice, discount, rule} = manifest.stage3_price;
+    expect(mrp).toBe(1112);
+    expect(offerPrice).toBe(1000);
+    expect(rule).toBe('offer >= 10% below MRP');
+    expect(discount).toBeGreaterThanOrEqual(10);
+    expect((mrp - offerPrice) / mrp * 100).toBeGreaterThanOrEqual(10);
+  });
+
+  it('rejects an invalid price pair (round() would yield 1111 = 9.99%, below the floor)', () => {
+    expect(validateGemPricePair({mrp: 1111, offerPrice: 1000}).valid).toBe(false);
+    expect(validateGemPricePair({mrp: 1112, offerPrice: 1000}).valid).toBe(true);
+    expect(validateGemPricePair({mrp: 1000, offerPrice: 1000}).valid).toBe(false);
+    expect(validateGemPricePair({mrp: 900, offerPrice: 1000}).valid).toBe(false);
+    expect(() => deriveGemMrp(0)).toThrow();
+    expect(() => deriveGemMrp(-5)).toThrow();
+    expect(() => deriveGemMrp(Number.NaN)).toThrow();
+  });
+
+  it('maps the GeM 5-stage dashboard trail 1:1', () => {
+    const manifest = buildGemManifest(baseManifestInput());
+    expect(Object.keys(manifest)).toEqual([
+      'stage1_general',
+      'stage2_category',
+      'stage3_price',
+      'stage4_spec',
+      'stage5_media',
+      'passport',
+      'manual_upload_note',
+    ]);
+    expect(manifest.stage1_general).toEqual({
+      sellerName: 'Ramesh Kumar Handloom Enterprise',
+      trifedArtisanId: 'TRF-2041',
+      state: 'Uttar Pradesh',
+      cluster: 'Varanasi Handloom Cluster',
+    });
+    expect(manifest.stage2_category.categoryCode).toBe('HANDLOOM_SAREE_7210');
+    expect(typeof manifest.stage2_category.brandNote).toBe('string');
+    expect(manifest.stage3_price.hsn).toBe('50072010');
+    expect(manifest.stage3_price.sku).toBeTruthy();
+    expect(manifest.stage3_price.deliveryLocation).toBe('Varanasi, Uttar Pradesh');
+    expect(manifest.stage3_price.stock).toBe(1);
+    expect(manifest.stage3_price.leadTime).toBe(7);
+    expect(manifest.stage4_spec.countryOfOrigin).toBe('India');
+    expect(manifest.stage4_spec.title).toBe('Banarasi Silk Saree');
+    expect(manifest.stage4_spec.certifications).toBeInstanceOf(Array);
+    expect(manifest.stage5_media.imageSlots).toHaveLength(3);
+    expect(manifest.stage5_media.images).toEqual(['/products/prd_9f21-studio-1.jpg']);
+    expect(manifest.stage5_media.termsAccepted).toBe(true);
+    expect(manifest.passport.shortcode).toBe('A7X-9B2');
+    expect(manifest.passport.parentHash).toBe('p'.repeat(64));
+    expect(manifest.passport.childHash).toBe('c'.repeat(64));
+    expect(manifest.passport.giTag).toBe('Banarasi Saree (GI-39)');
+    expect(manifest.passport.verifyUrl).toContain('/verify/A7X-9B2');
+    expect(manifest.manual_upload_note).toContain('gem.gov.in');
+  });
+
+  it('never claims golden-parameter completeness (GeM controls them)', () => {
+    const manifest = buildGemManifest(baseManifestInput());
+    expect(manifest.stage2_category.goldenParamsMustFillInDashboard.length).toBeGreaterThan(0);
+    expect(manifest.stage2_category.goldenParams.hsn_code).toBe('50072010');
+    expect(manifest.stage2_category.goldenParams.country_of_origin).toBe('India');
+    // Nothing the dashboard still owns may appear as "already filled".
+    for (const field of manifest.stage2_category.goldenParamsMustFillInDashboard) {
+      expect(manifest.stage2_category.goldenParams[field]).toBeUndefined();
+    }
+  });
+
+  it('seeds the locked G2 craft -> (category, HSN) table with the locked default', () => {
+    expect(resolveGemCraft('Banarasi Silk')).toEqual({
+      cluster: 'Varanasi Handloom Cluster',
+      categoryCode: 'HANDLOOM_SAREE_7210',
+      hsnCode: '50072010',
+    });
+    expect(resolveGemCraft('Pashmina & Wool Weaving').hsnCode).toBe('621410');
+    expect(resolveGemCraft('Madhubani Painting').hsnCode).toBe('970190');
+    expect(resolveGemCraft('Kutch Embroidery').hsnCode).toBe('580500');
+    expect(resolveGemCraft('Unknown craft')).toEqual({
+      cluster: 'Varanasi Handloom Cluster',
+      categoryCode: 'HANDLOOM_SAREE_7210',
+      hsnCode: '50072010',
+    });
+    expect(resolveGemCraft('').hsnCode).toBe('50072010');
+  });
+
+  it('resolves HSN/category from the craft into stage2 + stage3', () => {
+    const manifest = buildGemManifest(baseManifestInput({craft: 'Madhubani Painting'}));
+    expect(manifest.stage2_category.categoryCode).toBe('MADHUBANI_PAINTING_9701');
+    expect(manifest.stage3_price.hsn).toBe('970190');
   });
 });
