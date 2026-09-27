@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useMemo,useRef} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {Check,Loader2,ExternalLink,Printer,Download,QrCode,X} from 'lucide-react';
 import {QRCodeSVG} from 'qrcode.react';
 import {getVerificationUrl,shortenHash} from '@/lib/hash';
@@ -16,13 +16,15 @@ interface PublishingFlowProps {
   onComplete: () => void;
   /** Try Again on a rejected listing: re-attempts the sandbox publish. */
   onRetryListing: () => void;
+  /** Try Again on a failed GeM packet: re-runs POST /api/gem/packet (#205). */
+  onRetryPacket: () => void;
 }
 
 const STEP_LABELS:Record<PublishStepId,string>={
   registered:'Product registered',
   photos:'Photos & product details saved',
   ondc:'Publishing to ONDC Network',
-  gem:'Listing on GeM',
+  gem:'GeM approval packet',
   available:'Making your product available to buyers',
 };
 const STEP_LOGOS:Partial<Record<PublishStepId,{src:string;alt:string}>>={
@@ -33,8 +35,12 @@ const SOURCE_LABEL:Record<PublishSource,string>={
   'live-sandbox':'Live sandbox',
   'offline-fallback':'Offline fallback',
 };
+// Grill G4 (LOCKED): the badge states the truth — a packet for MANUAL upload,
+// never a GeM listing claim (grill G5: GeM exposes no seller catalog API).
+const GEM_PACKET_BADGE = 'Packet ready (manual upload)';
+const GEM_PACKET_DETAIL = 'XML + CSV + 5-stage manifest — paste into the gem.gov.in dashboard';
 
-export function PublishingFlow({ status, onComplete, onRetryListing }: PublishingFlowProps) {
+export function PublishingFlow({ status, onComplete, onRetryListing, onRetryPacket }: PublishingFlowProps) {
   const view = useMemo(() => deriveChecklist(status), [status]);
   const firedRef = useRef(false);
 
@@ -47,6 +53,10 @@ export function PublishingFlow({ status, onComplete, onRetryListing }: Publishin
   }, [view.complete, onComplete]);
 
   const failed = view.listingFailure !== null;
+  const packetFailed = view.packetFailure !== null;
+  // While Try Again runs the old failure text is still attached — the hero
+  // must show the retry spinner, not a red X (#205 CodeReviewer finding).
+  const inRetry = view.retrying || view.retryingPacket;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8">
@@ -59,11 +69,11 @@ export function PublishingFlow({ status, onComplete, onRetryListing }: Publishin
         {/* Animated Circle */}
         <div className="flex justify-center">
           <div className="relative">
-            <div className={`h-32 w-32 rounded-full border-4 animate-pulse ${failed ? 'border-red-200' : 'border-orange-200'}`} />
+            <div className={`h-32 w-32 rounded-full border-4 animate-pulse ${(failed || packetFailed) && !inRetry ? 'border-red-200' : 'border-orange-200'}`} />
             <div className="absolute inset-0 flex items-center justify-center">
               {view.complete ? (
                 <Check size={48} className="text-emerald-600 animate-bounce" />
-              ) : failed ? (
+              ) : (failed || packetFailed) && !inRetry ? (
                 <X size={48} className="text-red-600" />
               ) : (
                 <Loader2 size={48} className="animate-spin text-orange-600" />
@@ -75,31 +85,42 @@ export function PublishingFlow({ status, onComplete, onRetryListing }: Publishin
         {/* Title and Subtitle */}
         <div className="text-center">
           <h1 className="text-3xl font-extrabold text-[#3B2418]">
-            {view.complete ? '🎉 Your craft is now live!' : failed ? 'ONDC listing needs attention' : 'Taking your craft to market'}
+            {view.complete ? '🎉 Your craft is now live!' : inRetry ? 'Retrying…' : packetFailed ? 'GeM packet needs attention' : failed ? 'ONDC listing needs attention' : 'Taking your craft to market'}
           </h1>
           <p className="mt-2 text-stone-600">
             {view.complete
               ? 'Your product has been successfully published.'
-              : failed
-                ? 'The product is registered, but the ONDC Network rejected the listing.'
-                : 'Your product is being published...'}
+              : inRetry
+                ? 'Hang tight — trying that step again.'
+                : packetFailed
+                  ? 'The ONDC listing is live, but the GeM upload packet could not be generated.'
+                  : failed
+                    ? 'The product is registered, but the ONDC Network rejected the listing.'
+                    : 'Your product is being published...'}
           </p>
         </div>
 
         {/* Publishing Steps Checklist */}
         <div role="status" aria-live="polite" aria-label="Publishing progress" className="space-y-3 rounded-2xl border-2 border-[#E8D7C3] bg-white p-6 shadow-lg">
-          {view.steps.map((step) => (
-            <PublishingStepItem
-              key={step.id}
-              label={STEP_LABELS[step.id]}
-              status={step.status}
-              logo={STEP_LOGOS[step.id]?.src}
-              logoAlt={STEP_LOGOS[step.id]?.alt}
-              badge={step.id === 'ondc' && view.source ? SOURCE_LABEL[view.source] : undefined}
-              badgeSource={step.id === 'ondc' ? view.source ?? undefined : undefined}
-              detail={step.id === 'ondc' ? view.ondcDetail ?? undefined : undefined}
-            />
-          ))}
+          {view.steps.map((step) => {
+            const badge = step.id === 'ondc' ? (view.source ? SOURCE_LABEL[view.source] : undefined)
+              : step.id === 'gem' && step.status === 'done' ? GEM_PACKET_BADGE : undefined;
+            const badgeSource = step.id === 'ondc' ? view.source ?? undefined : undefined;
+            const detail = step.id === 'ondc' ? view.ondcDetail ?? undefined
+              : step.id === 'gem' && step.status === 'done' ? GEM_PACKET_DETAIL : undefined;
+            return (
+              <PublishingStepItem
+                key={step.id}
+                label={STEP_LABELS[step.id]}
+                status={step.status}
+                logo={STEP_LOGOS[step.id]?.src}
+                logoAlt={STEP_LOGOS[step.id]?.alt}
+                badge={badge}
+                badgeSource={badgeSource}
+                detail={detail}
+              />
+            );
+          })}
         </div>
 
         {/* Listing failure (#195): never claim success the sandbox rejected. */}
@@ -115,6 +136,24 @@ export function PublishingFlow({ status, onComplete, onRetryListing }: Publishin
             >
               {view.retrying && <Loader2 size={18} className="animate-spin" />}
               {view.retrying ? 'Retrying…' : 'Try Again'}
+            </button>
+          </div>
+        )}
+
+        {/* GeM packet failure (#205): the packet route failed — retry the packet,
+            never re-register the product, and never claim a GeM listing. */}
+        {packetFailed && (
+          <div role="alert" className="rounded-2xl border-2 border-red-200 bg-red-50 p-5 text-center">
+            <p className="font-bold text-red-700">Could not build the GeM upload packet</p>
+            <p className="mt-1 text-sm text-red-600">{view.packetFailure}</p>
+            <button
+              onClick={onRetryPacket}
+              disabled={view.retryingPacket}
+              aria-busy={view.retryingPacket}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700 active:scale-95 transition-transform disabled:opacity-60"
+            >
+              {view.retryingPacket && <Loader2 size={18} className="animate-spin" />}
+              {view.retryingPacket ? 'Retrying…' : 'Try Again'}
             </button>
           </div>
         )}
@@ -166,6 +205,8 @@ function PublishingStepItem({ label, status, logo, logoAlt, badge, badgeSource, 
         ${completed ? 'font-semibold text-stone-900' : failed ? 'font-semibold text-red-600' : active ? 'font-semibold text-orange-600' : 'text-stone-500'}
       `}>
           {label}
+          {/* Screen readers get the raw state; sighted users read the icons. */}
+          <span className="sr-only"> — {status}</span>
         </p>
         {detail && <p className="mt-0.5 text-xs text-stone-500">{detail}</p>}
       </div>
@@ -192,7 +233,10 @@ interface MarketplaceSuccessProps {
   onViewProducts: () => void;
   onViewMarketplace: () => void;
   ondcUrl?: string;
-  gemUrl?: string;
+  /** Real packet verdict from POST /api/gem/packet (#204/#205) — never a GeM listing. */
+  gemReady?: boolean;
+  /** Downloads the packet (gem-catalog.xml + gem-catalog.csv) for manual upload. */
+  onDownloadGemPacket?: () => Promise<void>;
   /** Real publish verdict from POST /api/products (#195): source badge + catalog proof. */
   ondc?: { source: PublishSource; catalogId?: string } | null;
 }
@@ -204,10 +248,12 @@ export function MarketplaceSuccess({
   onViewProducts,
   onViewMarketplace,
   ondcUrl,
-  gemUrl,
+  gemReady,
+  onDownloadGemPacket,
   ondc,
 }: MarketplaceSuccessProps) {
   const verificationUrl = getVerificationUrl(productId);
+  const [downloading, setDownloading] = useState(false);
   
   const handlePrintQR = () => {
     // Get the SVG and convert to data URL for printing
@@ -501,22 +547,41 @@ export function MarketplaceSuccess({
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-stone-900">Government e-Marketplace</h3>
-                <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-600" />
-                  Listed
-                </span>
+                {gemReady ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                    {GEM_PACKET_BADGE}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[11px] font-bold text-stone-600">
+                    No packet generated yet
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-xs text-stone-500 uppercase tracking-wide font-semibold">GeM Portal</p>
-              <p className="mt-1 text-sm text-stone-600">Eligible for government procurement orders</p>
-              {gemUrl && (
-                <a
-                  href={gemUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:text-orange-700"
+              <p className="mt-1 text-sm text-stone-600">
+                {gemReady
+                  ? 'Upload the packet by hand: 5-stage dashboard form, then GeM Admin approval (3-day TAT).'
+                  : 'Generate the upload packet from the publish flow — GeM has no listing API.'}
+              </p>
+              {gemReady && onDownloadGemPacket && (
+                <button
+                  // In-flight guard (#205): rapid taps burned the 10/hr packet
+                  // rate limit; also honest loading feedback on a slow network.
+                  disabled={downloading}
+                  aria-busy={downloading}
+                  onClick={() => {
+                    setDownloading(true);
+                    onDownloadGemPacket()
+                      .catch((error: unknown) => {
+                        alert(error instanceof Error ? error.message : 'Unable to download the GeM packet');
+                      })
+                      .finally(() => setDownloading(false));
+                  }}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:text-orange-700 disabled:opacity-60"
                 >
-                  View Listing <ExternalLink size={14} />
-                </a>
+                  {downloading ? 'Downloading…' : 'Download GeM packet'}{' '}
+                  {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                </button>
               )}
             </div>
           </div>
