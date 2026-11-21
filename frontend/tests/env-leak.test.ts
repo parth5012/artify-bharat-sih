@@ -23,6 +23,8 @@ const NEXT_PUBLIC_NEEDLES = [
   NEXT_PUBLIC_NEEDLE,
   ['NEXT_PUBLIC', 'GROQ'].join('_'),
   ['NEXT_PUBLIC', 'OPENROUTER'].join('_'),
+  // Clairic extraction: Cloudflare credentials are server-only under app/api/**.
+  ['NEXT_PUBLIC', 'CLOUDFLARE'].join('_'),
   // #193: every ONDC_* var (seller listing, gateway, webhook, checkout) is
   // server-only under frontend/app/api/** and frontend/backend/**.
   ['NEXT_PUBLIC', 'ONDC'].join('_'),
@@ -38,7 +40,7 @@ const NEXT_PUBLIC_NEEDLES = [
 // for a fail-closed secret guard.
 // Built per provider prefix via new RegExp so this file never contains the
 // assembled literals (same fail-closed concatenation as the needles above).
-const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER', 'ONDC', 'GEM'] as const;
+const CLIENT_ENV_PREFIXES = ['BHASHINI', 'GROQ', 'OPENROUTER', 'CLOUDFLARE', 'ONDC', 'GEM'] as const;
 function clientEnvPatterns(prefix: string): RegExp[] {
   return [
     new RegExp(`process\\.env(?:\\.${prefix}|\\[['"]${prefix})`),
@@ -64,7 +66,7 @@ const GEM_SERVER_IMPORT_NEEDLE = ['backend', 'gem'].join('/');
 const GEM_SERVER_IMPORT_RE = serverImportRe(GEM_SERVER_IMPORT_NEEDLE);
 const SECRET_NAMES = [
   'BHASHINI_API_KEY', 'BHASHINI_USER_ID', 'BHASHINI_INFERENCE_API_KEY',
-  'GROQ_API_KEY', 'OPENROUTER_API_KEY',
+  'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'CLOUDFLARE_API_TOKEN',
 ];
 const BINARY_EXT = /\.(jpg|jpeg|png|gif|pdf|zip|woff2?|ico|mp4|db|ttf)$/i;
 const MAX_SCAN_BYTES = 2_000_000;

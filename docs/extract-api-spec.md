@@ -813,3 +813,31 @@ shared/production exposure of the route** (see §2 "Admission controls & third-p
   live fixture runs.
 - **Re-pinning provider model IDs** as free-tier catalogs churn (OpenRouter `:free` deprecations) — ops
   follow-up; the `OPENROUTER_MODEL` override exists precisely for this.
+
+---
+
+## 11. Addendum — Clairic as primary provider (2026-11-21)
+
+The §3 Groq → OpenRouter chain is retained **as fallback**, but when Cloudflare
+credentials are configured the route now tries **Clairic** first:
+
+- Model: `@cf/cloudflare/clairic` (default) or `@cf/cloudflare/clairic-flash`
+  via `CLOUDFLARE_CLAIRIC_MODEL`. Env vars `CLOUDFLARE_API_TOKEN` and
+  `CLOUDFLARE_ACCOUNT_ID` are read **only** in `frontend/app/api/extract/route.ts`.
+- Contract: `POST .../ai/run/@cf/cloudflare/clairic` with
+  `{model, state: text, fields}` — **not** chat `messages`/`response_format`.
+  `buildClairicFields()` maps each kind to typed text fields with "copy exactly,
+  never infer" instructions, plain text with vocab instructions for `craft` /
+  `craftCategory` / `description`, and a bounded `list` for `materials`.
+  **`source_only` is deliberately NOT used on text fields** — the live Workers AI
+  API rejects it there (it is valid only for number/date types).
+- `runClairicExtraction()` returns the same `ChainResult` as the chat chain, so
+  attempt logs, 8s/26s budgets, outcome classes, fallback and PII-free logging
+  are unchanged. `attempts[]` now carries `provider: 'clairic'`.
+- Order: Clairic → Groq 20B → Groq 120B → OpenRouter → regex. With no Cloudflare
+  keys the route behaves exactly as before; an empty transcript still skips all
+  providers.
+
+This also narrows the §2 "third-party disclosure" concern: with only Clairic
+configured, transcripts go to Cloudflare (zero-data-retention Workers AI model)
+instead of Groq/OpenRouter. The admission-control gap from §2 remains open.

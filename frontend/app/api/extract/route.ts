@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import { jsonError } from '@/backend/http';
 import {
+  CLAIRIC_MODEL,
   ExtractRequestSchema,
   buildResult,
+  runClairicExtraction,
   runExtractionChain,
   runRegex,
+  type AttemptLogEntry,
+  type ClairicConfig,
   type ExtractionAttempt,
+  type LlmPayload,
 } from '@/lib/extract';
 
 export const runtime = 'nodejs';
@@ -18,6 +23,23 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GROQ_MODEL_20B = 'openai/gpt-oss-20b';
 const GROQ_MODEL_120B = 'openai/gpt-oss-120b';
 const OPENROUTER_MODEL_DEFAULT = 'qwen/qwen3.8-27b:free';
+
+/**
+ * Clairic is the primary extractor: grounded typed fields, no JSON-in-markdown
+ * parsing, and no third-party transcript disclosure beyond Cloudflare. The
+ * Groq/OpenRouter chain stays as a fallback for keyless / degraded operation.
+ * Only place provider env is read (server-only, under app/api/**).
+ */
+function buildClairicConfig(): ClairicConfig | null {
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (!apiToken || !accountId) return null;
+  return {
+    apiToken,
+    accountId,
+    model: process.env.CLOUDFLARE_CLAIRIC_MODEL || CLAIRIC_MODEL,
+  };
+}
 
 /** Only place provider env is read (server-only, under app/api/**). */
 function buildAttempts(): ExtractionAttempt[] {
@@ -64,10 +86,22 @@ export async function POST(request: Request): Promise<Response> {
     // Regex always runs first (§4a step 1); flags forced low_confidence inside runRegex.
     const regex =
       kind === 'identity' ? runRegex('identity', text) : runRegex('product', text);
+    const clairic = empty ? null : buildClairicConfig();
     const attempts = empty ? [] : buildAttempts();
-    const { llm, attempts: attemptLog } = empty
-      ? { llm: null, attempts: [] as never[] }
-      : await runExtractionChain({ text, kind, attempts, deadlineAt });
+    let llm: LlmPayload | null = null;
+    let attemptLog: AttemptLogEntry[] = [];
+    if (!empty) {
+      if (clairic) {
+        const primary = await runClairicExtraction({ text, kind, config: clairic, deadlineAt });
+        llm = primary.llm;
+        attemptLog = primary.attempts;
+      }
+      if (!llm) {
+        const fallback = await runExtractionChain({ text, kind, attempts, deadlineAt });
+        llm = fallback.llm;
+        attemptLog = [...attemptLog, ...fallback.attempts];
+      }
+    }
     const result =
       kind === 'identity'
         ? buildResult('identity', text, llm as never, regex as never)
