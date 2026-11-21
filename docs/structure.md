@@ -19,7 +19,7 @@
 - **AuthService** (`frontend/app/api/auth/*`): Artisan OTP generation, verification, session tokens.
 - **ImageAI & Studio:** Child-process OpenCV + rembg studio enhancement worker (`frontend/app/api/studio/enhance`).
 - **LangAI / Bhashini:** Voice ASR & Indic translation via Dhruva pipeline (`frontend/backend/bhashini.ts` + `/api/voice`, `/api/translate`).
-- **ExtractAI / LLM Form Extraction:** Transcript → structured-field extraction via bounded Groq/OpenRouter chain with regex enrichment floor (`frontend/app/api/extract/route.ts`, `frontend/lib/extract.ts`).
+- **ExtractAI / LLM Form Extraction:** Transcript → structured-field extraction via grounded Cloudflare Clairic typed fields (primary), bounded Groq/OpenRouter chain (fallback), and regex enrichment floor (`frontend/app/api/extract/route.ts`, `frontend/lib/extract.ts`).
 - **ExtractAI Eval Harness:** JSONL-backed scoring of the extraction pipelines — record schema + loader (`frontend/scripts/eval/schema.ts`, `dataset.ts`), metrics (`metrics.ts`, incl. flag-calibration rates `trustErrorRate` / `lowConfErrorRate` / `errorCatchRate`), pluggable regex/canned/llm pipelines (`pipelines.ts`), report + CLI (`report.ts`, `run.ts`), `.env.local` loader (`env.ts`), golden-fixture converter (`convert-golden.ts`). Datasets in `frontend/eval/datasets/`, compiled to `frontend/.tmp/eval-dist/` by `npm run build:eval`.
 - **PricingAI:** Fair Wage Floor calculation (`frontend/app/api/pricing/calculate`).
 - **VerifyService & Heritage Passport:** Deterministic SHA-256 heritage passport verification and shortcode lookup (`frontend/lib/hash.ts`, `/verify/[code]`).

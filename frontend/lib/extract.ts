@@ -109,6 +109,74 @@ export function providerJsonSchema(kind: ExtractKind) {
 }
 
 // ---------------------------------------------------------------------------
+// Clairic (Cloudflare Workers AI) typed extraction
+// ---------------------------------------------------------------------------
+
+export const CLAIRIC_MODEL = 'clairic';
+export const CLAIRIC_FLASH_MODEL = 'clairic-flash';
+const CLAIRIC_BASE_URL = 'https://api.cloudflare.com/client/v4/accounts';
+
+export interface ClairicConfig {
+  accountId: string;
+  apiToken: string;
+  model: string;
+  baseUrl?: string;
+}
+
+/** Resolved config only — env vars are read in the server route, never here. */
+export interface ClairicArgs {
+  text: string;
+  kind: ExtractKind;
+  config: ClairicConfig;
+  deadlineAt: number;
+}
+
+const EXACT = (instructions: string) => ({ type: 'text', instructions });
+
+/**
+ * Translate the existing extraction contract into Clairic's `fields` schema.
+ * Grounding is enforced by instructions ("copy exactly, never infer") rather
+ * than `source_only`: the live Workers AI API rejects `source_only` on text
+ * and text-list fields (it is only valid for number/date types). Vocabulary
+ * re-labelling fields carry the label lists in their instructions.
+ */
+export function buildClairicFields(kind: ExtractKind): Record<string, Record<string, unknown>> {
+  const craftLabels = CRAFT_TYPES.map((c) => c.label).join(' · ');
+  if (kind === 'identity') {
+    return {
+      name: EXACT('The artisan’s own name as stated. Copy exactly; no honorifics or punctuation.'),
+      phone: EXACT('The phone number exactly as stated, in any formatting.'),
+      artisanId: EXACT('The artisan ID / Pehchan ID exactly as stated, e.g. ART-2041.'),
+      location: EXACT('The place, cluster or state as stated.'),
+      craft: {
+        type: 'text',
+        instructions: `The craft they practice. Prefer one of these labels on a close match: ${craftLabels}. Otherwise copy the stated words. Never invent a craft; return null if unstated.`,
+      },
+      pin: EXACT('The 6-digit Indian postal PIN code as stated. Return null if no postal PIN is stated.'),
+    };
+  }
+  const materialLabels = MATERIALS_DICTIONARY.map((m) => m.label).join(' · ');
+  return {
+    productName: EXACT('What the speaker calls the piece. Copy exactly as stated.'),
+    materials: {
+      type: 'list', items: 'text', max_items: 12,
+      instructions: `Only raw materials explicitly named, e.g. ${materialLabels}. Never colors, techniques or uses.`,
+    },
+    makingProcess: EXACT('How it is made, in the speaker’s own words, exactly as stated.'),
+    usage: EXACT('What it is used for, exactly as stated.'),
+    timeRequired: EXACT('The time to make it — number and unit exactly as stated. Never convert days to hours or vice versa.'),
+    craftCategory: {
+      type: 'text',
+      instructions: `The craft category. Prefer one of these labels on a close match: ${craftLabels}. Otherwise copy the stated words. Never invent a category; return null if unstated.`,
+    },
+    description: {
+      type: 'text',
+      instructions: 'Condense only what the speaker stated about the piece into one sentence. Add no facts, colors, materials or uses that were not said.',
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Field normalization (§4 field-by-field tables)
 // ---------------------------------------------------------------------------
 
@@ -498,6 +566,94 @@ export async function runExtractionChain(args: ChainArgs): Promise<ChainResult> 
   }
 
   return { llm: null, attempts: log };
+}
+
+/**
+ * Run one Clairic extraction call with the same budget/outcome contract as a
+ * chat-provider attempt. Clairic's response is `{result:{answers:{...}}}` where
+ * each answer is a typed value; no JSON-in-markdown parsing is needed.
+ */
+export async function runClairicExtraction(args: ClairicArgs): Promise<ChainResult> {
+  const { text, kind, config, deadlineAt } = args;
+  const log: AttemptLogEntry[] = [];
+  const remaining = deadlineAt - Date.now();
+  if (remaining < MIN_REMAINING_MS) return { llm: null, attempts: log };
+
+  const model = config.model;
+  const base = (config.baseUrl ?? CLAIRIC_BASE_URL).replace(/\/$/, '');
+  const tag = model.startsWith('@cf/') ? model : `@cf/cloudflare/${model}`;
+  const url = `${base}/${config.accountId}/ai/run/${tag}`;
+  const fields = buildClairicFields(kind);
+  const timeoutMs = Math.min(ATTEMPT_TIMEOUT_MS, remaining);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const started = Date.now();
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiToken}`,
+      },
+      body: JSON.stringify({
+        model: model.split('/').pop(),
+        state: text,
+        fields,
+      }),
+      signal: controller.signal,
+    });
+  } catch {
+    clearTimeout(timer);
+    log.push({
+      provider: 'clairic', model,
+      outcome: controller.signal.aborted ? 'timeout' : 'network',
+      ms: Date.now() - started,
+    });
+    return { llm: null, attempts: log };
+  }
+  clearTimeout(timer);
+  const ms = Date.now() - started;
+
+  if (!response.ok) {
+    log.push({ provider: 'clairic', model, outcome: classifyStatus(response.status), ms });
+    return { llm: null, attempts: log };
+  }
+
+  let envelope: unknown;
+  try {
+    envelope = await response.json();
+  } catch {
+    log.push({ provider: 'clairic', model, outcome: 'bad_response', ms });
+    return { llm: null, attempts: log };
+  }
+
+  const result = (envelope as { result?: unknown } | null)?.result;
+  const answers =
+    (result as { answers?: unknown } | null)?.answers ??
+    (envelope as { answers?: unknown } | null)?.answers;
+  if (answers === null || typeof answers !== 'object' || Array.isArray(answers)) {
+    log.push({ provider: 'clairic', model, outcome: 'bad_response', ms });
+    return { llm: null, attempts: log };
+  }
+
+  const payload: Record<string, unknown> = {};
+  for (const field of Object.keys(fields)) {
+    const answer = (answers as Record<string, unknown>)[field] as { value?: unknown } | undefined;
+    payload[field] = answer && typeof answer === 'object' && 'value' in answer
+      ? (answer.value ?? null)
+      : null;
+  }
+  const schema = kind === 'identity' ? identityLlmSchema : productLlmSchema;
+  const checked = schema.safeParse(payload);
+  if (!checked.success) {
+    log.push({ provider: 'clairic', model, outcome: 'validation', ms });
+    return { llm: null, attempts: log };
+  }
+
+  log.push({ provider: 'clairic', model, outcome: 'ok', ms });
+  return { llm: checked.data as LlmPayload, attempts: log };
 }
 
 // ---------------------------------------------------------------------------
