@@ -58,6 +58,7 @@ describe('POST /api/extract — Clairic primary provider', () => {
   it('calls Clairic first and never reaches Groq when it succeeds', async () => {
     process.env.CLOUDFLARE_API_TOKEN = 'tok';
     process.env.CLOUDFLARE_ACCOUNT_ID = 'acct';
+    process.env.GROQ_API_KEY = 'groq-key'; // detects an unintended fallback after Clairic succeeds
     const calls = stubFetch([cfOk()]);
 
     const res = await POST(request());

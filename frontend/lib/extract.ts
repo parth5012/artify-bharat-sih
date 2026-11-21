@@ -613,47 +613,57 @@ export async function runClairicExtraction(args: ClairicArgs): Promise<ChainResu
     });
     return { llm: null, attempts: log };
   }
-  clearTimeout(timer);
-  const ms = Date.now() - started;
-
-  if (!response.ok) {
-    log.push({ provider: 'clairic', model, outcome: classifyStatus(response.status), ms });
-    return { llm: null, attempts: log };
-  }
-
-  let envelope: unknown;
+  // The abort timer must stay active until the body is consumed: fetch() can
+  // resolve on headers while the body stalls past the route's 26s budget.
   try {
-    envelope = await response.json();
-  } catch {
-    log.push({ provider: 'clairic', model, outcome: 'bad_response', ms });
-    return { llm: null, attempts: log };
-  }
+    if (!response.ok) {
+      log.push({
+        provider: 'clairic', model, outcome: classifyStatus(response.status),
+        ms: Date.now() - started,
+      });
+      return { llm: null, attempts: log };
+    }
 
-  const result = (envelope as { result?: unknown } | null)?.result;
-  const answers =
-    (result as { answers?: unknown } | null)?.answers ??
-    (envelope as { answers?: unknown } | null)?.answers;
-  if (answers === null || typeof answers !== 'object' || Array.isArray(answers)) {
-    log.push({ provider: 'clairic', model, outcome: 'bad_response', ms });
-    return { llm: null, attempts: log };
-  }
+    let envelope: unknown;
+    try {
+      envelope = await response.json();
+    } catch {
+      log.push({
+        provider: 'clairic', model,
+        outcome: controller.signal.aborted ? 'timeout' : 'bad_response',
+        ms: Date.now() - started,
+      });
+      return { llm: null, attempts: log };
+    }
 
-  const payload: Record<string, unknown> = {};
-  for (const field of Object.keys(fields)) {
-    const answer = (answers as Record<string, unknown>)[field] as { value?: unknown } | undefined;
-    payload[field] = answer && typeof answer === 'object' && 'value' in answer
-      ? (answer.value ?? null)
-      : null;
-  }
-  const schema = kind === 'identity' ? identityLlmSchema : productLlmSchema;
-  const checked = schema.safeParse(payload);
-  if (!checked.success) {
-    log.push({ provider: 'clairic', model, outcome: 'validation', ms });
-    return { llm: null, attempts: log };
-  }
+    const result = (envelope as { result?: unknown } | null)?.result;
+    const answers =
+      (result as { answers?: unknown } | null)?.answers ??
+      (envelope as { answers?: unknown } | null)?.answers;
+    if (answers === null || typeof answers !== 'object' || Array.isArray(answers)) {
+      log.push({ provider: 'clairic', model, outcome: 'bad_response', ms: Date.now() - started });
+      return { llm: null, attempts: log };
+    }
 
-  log.push({ provider: 'clairic', model, outcome: 'ok', ms });
-  return { llm: checked.data as LlmPayload, attempts: log };
+    const payload: Record<string, unknown> = {};
+    for (const field of Object.keys(fields)) {
+      const answer = (answers as Record<string, unknown>)[field] as { value?: unknown } | undefined;
+      payload[field] = answer && typeof answer === 'object' && 'value' in answer
+        ? (answer.value ?? null)
+        : null;
+    }
+    const schema = kind === 'identity' ? identityLlmSchema : productLlmSchema;
+    const checked = schema.safeParse(payload);
+    if (!checked.success) {
+      log.push({ provider: 'clairic', model, outcome: 'validation', ms: Date.now() - started });
+      return { llm: null, attempts: log };
+    }
+
+    log.push({ provider: 'clairic', model, outcome: 'ok', ms: Date.now() - started });
+    return { llm: checked.data as LlmPayload, attempts: log };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ---------------------------------------------------------------------------
