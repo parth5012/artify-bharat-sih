@@ -840,4 +840,7 @@ credentials are configured the route now tries **Clairic** first:
 
 This also narrows the §2 "third-party disclosure" concern: with only Clairic
 configured, transcripts go to Cloudflare (zero-data-retention Workers AI model)
-instead of Groq/OpenRouter. The admission-control gap from §2 remains open.
+instead of Groq/OpenRouter. When Clairic is unconfigured or fails, the fallback
+chain still receives the transcript — Cloudflare-only disclosure requires leaving
+`GROQ_API_KEY` and `OPENROUTER_API_KEY` unset. The admission-control gap from §2
+remains open.

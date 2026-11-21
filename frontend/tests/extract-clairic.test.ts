@@ -160,6 +160,23 @@ describe('runClairicExtraction', () => {
     expect(wrong.attempts[0].outcome).toBe('validation');
   });
 
+  it('times out when the response body stalls after headers arrive', async () => {
+    stubFetch((_url, init) => ({
+      ok: true,
+      status: 200,
+      json: () => new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      }),
+    }) as unknown as Response);
+
+    const res = await runClairicExtraction({
+      text: TEXT, kind: 'identity', config: CF, deadlineAt: Date.now() + 1_200,
+    });
+
+    expect(res.llm).toBeNull();
+    expect(res.attempts).toMatchObject([{ provider: 'clairic', outcome: 'timeout' }]);
+  });
+
   it('never puts the transcript in the attempt log', async () => {
     stubFetch(() => okJson(envelope({
       name: { value: 'Ramesh Kumar' }, phone: { value: null }, artisanId: { value: null },

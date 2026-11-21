@@ -26,8 +26,9 @@ const OPENROUTER_MODEL_DEFAULT = 'qwen/qwen3.8-27b:free';
 
 /**
  * Clairic is the primary extractor: grounded typed fields, no JSON-in-markdown
- * parsing, and no third-party transcript disclosure beyond Cloudflare. The
- * Groq/OpenRouter chain stays as a fallback for keyless / degraded operation.
+ * parsing. A successful Clairic request keeps the transcript on Cloudflare; the
+ * Groq/OpenRouter fallback still receives the transcript when it runs. The chain
+ * stays for keyless / degraded operation.
  * Only place provider env is read (server-only, under app/api/**).
  */
 function buildClairicConfig(): ClairicConfig | null {
